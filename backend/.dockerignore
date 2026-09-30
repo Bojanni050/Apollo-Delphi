@@ -1,0 +1,16 @@
+# Keep the build context small: none of this belongs in the image.
+# Model weights are large (GBs) and are bind-mounted by docker-compose (./backend:/app) or downloaded at runtime.
+models/
+*.gguf
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+tests/
+# Local data and secrets
+*.db
+*.sqlite3
+uploads/
+workspaces/
+.env

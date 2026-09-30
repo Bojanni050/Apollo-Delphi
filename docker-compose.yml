@@ -20,17 +20,31 @@ services:
       context: ./backend
     environment:
       APOLLO_DATABASE_URL: postgresql+psycopg2://apollo:apollo@db:5432/apollo
+      # Everything below can also be set in the app (Instellingen); values chosen there win.
       LLM_PROVIDER: ${LLM_PROVIDER:-mock}
       LLM_MODEL: ${LLM_MODEL:-mock-model}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      BACKGROUND_LLM_PROVIDER: ${BACKGROUND_LLM_PROVIDER:-}
+      BACKGROUND_LLM_MODEL: ${BACKGROUND_LLM_MODEL:-}
+      BACKGROUND_LLM_BASE_URL: ${BACKGROUND_LLM_BASE_URL:-}
+      BACKGROUND_LLM_API_KEY: ${BACKGROUND_LLM_API_KEY:-}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-mock}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-mock-embedder}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_RUNTIME: ${EMBEDDING_RUNTIME:-ollama}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       UPLOAD_DIR: /data/uploads
+      # Werkmappen are git repositories: keep them outside the image so they survive rebuilds.
+      WORKSPACES_ROOT: /data/workspaces
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
       - apollo_uploads:/data/uploads
+      - apollo_workspaces:/data/workspaces
     depends_on:
       db:
         condition: service_healthy
@@ -52,3 +66,4 @@ services:
 volumes:
   apollo_pgdata:
   apollo_uploads:
+  apollo_workspaces:

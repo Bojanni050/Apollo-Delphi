@@ -1,0 +1,5 @@
+# Installed inside the image; host copies are for another OS and only slow the build down.
+node_modules/
+dist/
+*.tsbuildinfo
+.env
