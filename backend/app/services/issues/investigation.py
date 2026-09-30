@@ -71,6 +71,16 @@ class InvestigationEngine:
         db.refresh(investigation)
         return investigation
 
+    @staticmethod
+    def _workspace_document_ids(db: Session, issue: Issue) -> list[int]:
+        """Ids of the documents in the werkmap this issue's analysis ran on (unassigned documents for legacy runs)."""
+        from app.models import AnalysisRun, Document
+
+        run = db.get(AnalysisRun, issue.analysis_run_id)
+        workspace_id = run.workspace_id if run is not None else None
+        rows = db.query(Document.id).filter(Document.workspace_id == workspace_id).all()
+        return [r[0] for r in rows]
+
     async def _gather_evidence(self, db: Session, issue: Issue) -> list[Evidence]:
         """Evidence linked to the issue plus semantically retrieved evidence from the collection."""
         linked = (
@@ -83,11 +93,13 @@ class InvestigationEngine:
         seen_ids = {e.id for e in linked}
 
         query_text = issue.question or issue.title
-        try:
-            hits = await self.search.search(db, query_text, top_k=5)
-        except Exception as exc:
-            log.warning("Semantic evidence retrieval failed for issue %s: %s", issue.id, exc)
-            hits = []
+        scope = self._workspace_document_ids(db, issue)
+        hits = []
+        if scope:  # an empty scope must not fall back to searching every werkmap
+            try:
+                hits = await self.search.search(db, query_text, top_k=5, document_ids=scope)
+            except Exception as exc:
+                log.warning("Semantic evidence retrieval failed for issue %s: %s", issue.id, exc)
 
         from app.models import DocumentChunk
 
