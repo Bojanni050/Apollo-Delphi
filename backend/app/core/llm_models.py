@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from app.core.llm import LLMError
+from app.core.llm import LLMError, http_verify
 
 ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 OPENAI_BASE_URL = "https://api.openai.com/v1"
@@ -26,7 +26,7 @@ async def list_models(provider: str, base_url: str = "", api_key: str = "", time
         return []
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with httpx.AsyncClient(timeout=timeout, verify=http_verify()) as client:
             resp = await client.get(url, headers=headers)
     except httpx.HTTPError as exc:
         raise LLMError(f"Could not reach {url}: {exc.__class__.__name__}") from exc

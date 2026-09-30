@@ -85,7 +85,7 @@ def test_provider_selection_and_tiers(monkeypatch):
         assert llm.get_llm_provider("background").model == "small"
         monkeypatch.setattr(s, "anthropic_api_key", "")
         llm.set_llm_provider(None)
-        with pytest.raises(llm.LLMError, match="ANTHROPIC_API_KEY"):
+        with pytest.raises(llm.LLMError, match="Anthropic API key"):
             llm.get_llm_provider()
     finally:
         monkeypatch.undo()
@@ -94,5 +94,5 @@ def test_provider_selection_and_tiers(monkeypatch):
 
 def test_status_endpoint_never_leaks_keys(client):
     body = client.get("/api/llm/status").json()
-    assert body["provider"] == "mock" and all(t["configured"] for t in body["tiers"])
+    assert all(t["provider"] == "mock" and t["configured"] for t in body["tiers"])
     assert client.post("/api/llm/test").json()["ok"] is True

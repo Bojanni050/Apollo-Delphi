@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field, ValidationError
 
 from app.core.config import get_settings
-from app.core.llm import LLMError, LLMProvider, get_llm_provider
+from app.core.llm import LLMError, LLMProvider, get_llm_provider, tier_config
 from app.core.logging import get_logger
 
 log = get_logger(__name__)
@@ -155,7 +155,7 @@ def normalize_value(value: str) -> str:
 
 
 def get_claim_extractor() -> ClaimExtractorBackend:
-    if get_settings().llm_provider == "mock":
+    if tier_config("background").provider == "mock":
         return HeuristicClaimExtractor()
     return LLMClaimExtractor()
 

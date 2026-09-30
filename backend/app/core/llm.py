@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel
@@ -77,6 +78,24 @@ class MockLLMProvider(LLMProvider):
         return json.dumps({"mock": True, "marker": marker})
 
 
+def http_verify():
+    """TLS verification context that trusts the operating system's certificate store.
+
+    httpx ships its own CA bundle, which misses roots installed on the machine (corporate
+    proxies, antivirus TLS inspection) and then fails with CERTIFICATE_VERIFY_FAILED while
+    the browser and curl work. ``truststore`` uses the OS store; without it we fall back
+    to httpx's default.
+    """
+    try:
+        import ssl
+
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except ImportError:
+        return True
+
+
 def _retryable(status: int) -> bool:
     return status == 429 or status >= 500
 
@@ -88,7 +107,7 @@ async def _post_json(url: str, payload: dict[str, Any], headers: dict[str, str],
     last: str = ""
     for attempt in range(attempts):
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout, verify=http_verify()) as client:
                 resp = await client.post(url, json=payload, headers=headers)
         except httpx.TimeoutException:
             last = f"timed out after {timeout:.0f}s"
@@ -173,9 +192,56 @@ class AnthropicLLMProvider(LLMProvider):
 
 
 #: "main" is for reasoning (investigation, generation); "background" is the cheaper
-#: tier for bulk work over many documents (claim extraction, Pulse).
+#: tier for bulk work over many documents (claim extraction, Delphi Pulse). Each tier has
+#: its own provider, endpoint, key and model, so they can live at different vendors.
 TIERS = ("main", "background")
+PROVIDERS = ("mock", "openai", "anthropic")
 _instances: dict[str, LLMProvider] = {}
+
+
+@dataclass(frozen=True)
+class TierConfig:
+    tier: str
+    provider: str
+    model: str
+    base_url: str
+    api_key: str
+    #: True when the background tier simply follows the main tier.
+    inherits: bool = False
+
+
+def _legacy_key(provider: str) -> str:
+    s = get_settings()
+    return s.anthropic_api_key if provider == "anthropic" else s.openai_api_key
+
+
+def tier_config(tier: str = "main") -> TierConfig:
+    """Resolve what a tier runs on.
+
+    The background tier inherits from main *per field* when left empty, with one safety rule:
+    main's API key is only ever sent to the endpoint it was set for, so the key is inherited
+    only while the provider and base URL are inherited too.
+    """
+    if tier not in TIERS:
+        raise ValueError(f"Unknown LLM tier: {tier}")
+    s = get_settings()
+    main_provider = s.llm_provider
+    main_key = s.llm_api_key or _legacy_key(main_provider)
+    if tier == "main":
+        return TierConfig("main", main_provider, s.llm_model, s.llm_base_url, main_key)
+
+    follows_endpoint = not s.background_llm_provider and not s.background_llm_base_url
+    provider = s.background_llm_provider or main_provider
+    base_url = s.llm_base_url if follows_endpoint else s.background_llm_base_url
+    if s.background_llm_api_key:
+        key = s.background_llm_api_key
+    else:
+        same_endpoint = provider == main_provider and base_url == s.llm_base_url
+        key = main_key if (follows_endpoint or same_endpoint) else ""
+    same_endpoint = provider == main_provider and base_url == s.llm_base_url
+    model = s.background_llm_model or (s.llm_model if same_endpoint else "")
+    inherits = follows_endpoint and not s.background_llm_model and not s.background_llm_api_key
+    return TierConfig("background", provider, model, base_url, key, inherits)
 
 
 def set_llm_provider(provider: LLMProvider | None) -> None:
@@ -187,27 +253,28 @@ def set_llm_provider(provider: LLMProvider | None) -> None:
 
 
 def model_for(tier: str = "main") -> str:
-    s = get_settings()
-    return (s.background_llm_model or s.llm_model) if tier == "background" else s.llm_model
+    return tier_config(tier).model
 
 
 def _build(tier: str) -> LLMProvider:
-    s = get_settings()
-    model = model_for(tier)
-    if s.llm_provider == "mock":
+    cfg = tier_config(tier)
+    timeout = get_settings().llm_timeout_seconds
+    if cfg.provider == "mock":
         return MockLLMProvider()
-    if s.llm_provider in ("openai", "anthropic") and not model:
-        raise LLMError("No model selected. Choose one in Settings.")
-    if s.llm_provider == "openai":
-        if not s.llm_base_url and not s.openai_api_key:
-            raise LLMError("LLM_PROVIDER=openai requires OPENAI_API_KEY (or LLM_BASE_URL for a local runtime such as Ollama)")
-        kwargs = {"base_url": s.llm_base_url} if s.llm_base_url else {}
-        return OpenAICompatibleLLMProvider(model, s.openai_api_key, timeout=s.llm_timeout_seconds, **kwargs)
-    if s.llm_provider == "anthropic":
-        if not s.anthropic_api_key:
-            raise LLMError("LLM_PROVIDER=anthropic requires ANTHROPIC_API_KEY")
-        return AnthropicLLMProvider(model, s.anthropic_api_key, timeout=s.llm_timeout_seconds)
-    raise LLMError(f"Unknown LLM provider: {s.llm_provider}")
+    if cfg.provider not in PROVIDERS:
+        raise LLMError(f"Unknown LLM provider: {cfg.provider}")
+    label = "Main" if tier == "main" else "Background"
+    if not cfg.model:
+        raise LLMError(f"{label} model: no model selected. Choose one in Settings.")
+    if cfg.provider == "openai":
+        if not cfg.base_url and not cfg.api_key:
+            raise LLMError(f"{label} model: set an API key (OpenAI) or a base URL for a local runtime such as Ollama")
+        kwargs = {"base_url": cfg.base_url} if cfg.base_url else {}
+        return OpenAICompatibleLLMProvider(cfg.model, cfg.api_key, timeout=timeout, **kwargs)
+    if not cfg.api_key:
+        raise LLMError(f"{label} model: an Anthropic API key is required")
+    kwargs = {"base_url": cfg.base_url} if cfg.base_url else {}
+    return AnthropicLLMProvider(cfg.model, cfg.api_key, timeout=timeout, **kwargs)
 
 
 def get_llm_provider(tier: str = "main") -> LLMProvider:

@@ -193,33 +193,48 @@ export interface PulseResult {
   items: PulseItem[]
 }
 
+export type LLMTierName = 'main' | 'background'
+
 export interface LLMTier {
-  tier: string
+  tier: LLMTierName
   provider: string
   model: string
+  base_url: string
   configured: boolean
+  inherits: boolean
   error: string | null
 }
 
 export interface LLMStatus {
-  provider: string
-  base_url: string | null
   tiers: LLMTier[]
 }
 
-export interface LLMSettings {
-  provider: 'mock' | 'openai' | 'anthropic'
+export type Provider = 'mock' | 'openai' | 'anthropic'
+
+export interface TierSettings {
+  provider: Provider | ''
   model: string
-  background_model: string
   base_url: string
-  timeout_seconds: number
-  openai_key_set: boolean
-  anthropic_key_set: boolean
+  api_key_set: boolean
 }
 
-export type LLMSettingsUpdate = Partial<Omit<LLMSettings, 'openai_key_set' | 'anthropic_key_set'>> & {
-  openai_api_key?: string
-  anthropic_api_key?: string
+export interface LLMSettings {
+  main: TierSettings
+  background: TierSettings
+  timeout_seconds: number
+}
+
+export interface TierUpdate {
+  provider?: Provider | ''
+  model?: string
+  base_url?: string
+  api_key?: string
+}
+
+export interface LLMSettingsUpdate {
+  main?: TierUpdate
+  background?: TierUpdate
+  timeout_seconds?: number
 }
 
 export interface ModelList {
@@ -308,7 +323,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
-  llmModels: (provider: string, baseUrl: string) =>
-    request<ModelList>(`/api/llm/models?provider=${provider}&base_url=${encodeURIComponent(baseUrl)}`),
-  llmTest: (tier: string) => request<LLMTestResult>(`/api/llm/test?tier=${tier}`, { method: 'POST' }),
+  llmModels: (tier: LLMTierName, provider: string, baseUrl: string) =>
+    request<ModelList>(`/api/llm/models?tier=${tier}&provider=${provider}&base_url=${encodeURIComponent(baseUrl)}`),
+  llmTest: (tier: LLMTierName) => request<LLMTestResult>(`/api/llm/test?tier=${tier}`, { method: 'POST' }),
 }

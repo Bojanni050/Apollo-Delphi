@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { api, type LLMSettings, type LLMStatus, type LLMTestResult } from '../api'
+import {
+  api,
+  type LLMSettings,
+  type LLMStatus,
+  type LLMTestResult,
+  type LLMTierName,
+  type Provider,
+  type TierSettings,
+  type TierUpdate,
+} from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
 
-const PROVIDERS: { id: LLMSettings['provider']; label: string; hint: string }[] = [
-  { id: 'openai', label: 'OpenAI-compatibel', hint: 'OpenAI, Ollama, LM Studio, vLLM, OpenRouter, …' },
+const PROVIDERS: { id: Provider; label: string; hint: string }[] = [
+  { id: 'openai', label: 'OpenAI-compatibel', hint: 'OpenAI, Ollama, EdenAI, Gemini, OpenRouter, …' },
   { id: 'anthropic', label: 'Anthropic', hint: 'Claude via de Messages API' },
   { id: 'mock', label: 'Mock (offline)', hint: 'Deterministisch, geen echt model' },
 ]
@@ -12,11 +21,19 @@ const PRESETS = [
   { label: 'OpenAI', url: '' },
   { label: 'Ollama', url: 'http://localhost:11434/v1' },
   { label: 'LM Studio', url: 'http://localhost:1234/v1' },
+  { label: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
+  { label: 'EdenAI', url: 'https://api.edenai.run/v3' },
 ]
 
-const TIER_LABELS: Record<string, string> = {
-  main: 'Hoofdmodel (redeneren, onderzoek, genereren)',
-  background: 'Achtergrondmodel (bulk: claims, Delphi Pulse)',
+const TIER_INFO: Record<LLMTierName, { title: string; blurb: string }> = {
+  main: {
+    title: 'Hoofdmodel',
+    blurb: 'Redeneren: onderzoek van issues en het genereren van documenten. Een sterker model is hier nuttig.',
+  },
+  background: {
+    title: 'Achtergrondmodel',
+    blurb: 'Bulkwerk over veel documenten: claims uitlezen en Delphi Pulse. Een snel, goedkoop model volstaat.',
+  },
 }
 
 const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100'
@@ -31,124 +48,140 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   )
 }
 
-export default function SettingsPage() {
-  const [saved, setSaved] = useState<LLMSettings | null>(null)
-  const [form, setForm] = useState<LLMSettings | null>(null)
+type Draft = { provider: Provider | ''; model: string; base_url: string }
+
+function toDraft(t: TierSettings): Draft {
+  return { provider: t.provider, model: t.model, base_url: t.base_url }
+}
+
+function TierCard({
+  tier,
+  saved,
+  status,
+  onSaved,
+  onError,
+}: {
+  tier: LLMTierName
+  saved: TierSettings
+  status: LLMStatus['tiers'][number] | undefined
+  onSaved: () => Promise<void>
+  onError: (m: string | null) => void
+}) {
+  const info = TIER_INFO[tier]
+  const isBackground = tier === 'background'
+  const [draft, setDraft] = useState<Draft>(toDraft(saved))
   const [apiKey, setApiKey] = useState('')
   const [clearKey, setClearKey] = useState(false)
   const [models, setModels] = useState<string[]>([])
   const [modelsNote, setModelsNote] = useState<string | null>(null)
-  const [status, setStatus] = useState<LLMStatus | null>(null)
-  const [results, setResults] = useState<Record<string, LLMTestResult>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const [result, setResult] = useState<LLMTestResult | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  const refreshStatus = useCallback(async () => {
-    setStatus(await api.llmStatus())
-  }, [])
+  // The background tier follows the main tier's provider and endpoint while both are left empty.
+  const followsMain = isBackground && draft.provider === '' && draft.base_url === ''
+  const effectiveProvider = draft.provider || status?.provider || 'openai'
+  const showFields = effectiveProvider !== 'mock'
+  const showEndpoint = !followsMain && effectiveProvider === 'openai'
 
-  const loadModels = useCallback(async (provider: string, baseUrl: string) => {
-    if (provider === 'mock') {
-      setModels([])
-      setModelsNote(null)
-      return
-    }
-    const res = await api.llmModels(provider, baseUrl)
-    setModels(res.models)
-    setModelsNote(res.error ?? (res.models.length === 0 ? 'Geen modellen gevonden.' : null))
-  }, [])
+  const loadModels = useCallback(
+    async (p: string, baseUrl: string) => {
+      if (!p || p === 'mock') {
+        setModels([])
+        setModelsNote(null)
+        return
+      }
+      const res = await api.llmModels(tier, p, baseUrl)
+      setModels(res.models)
+      setModelsNote(res.error ?? (res.models.length === 0 ? 'Geen modellen gevonden.' : null))
+    },
+    [tier],
+  )
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const s = await api.getLlmSettings()
-        setSaved(s)
-        setForm(s)
-        await refreshStatus()
-        await loadModels(s.provider, s.base_url)
-      } catch (e) {
-        setError((e as Error).message)
-      }
-    })()
-  }, [refreshStatus, loadModels])
+    void loadModels(saved.provider || status?.provider || '', saved.base_url || status?.base_url || '').catch(() => undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  if (!form || !saved) {
-    return <Card>{error ? <ErrorText message={error} /> : 'Laden…'}</Card>
-  }
-
-  const set = <K extends keyof LLMSettings>(key: K, value: LLMSettings[K]) => setForm({ ...form, [key]: value })
-  const keySet = form.provider === 'anthropic' ? saved.anthropic_key_set : saved.openai_key_set
-  const keyField = form.provider === 'anthropic' ? 'anthropic_api_key' : 'openai_api_key'
-  const real = form.provider !== 'mock'
   const dirty =
-    JSON.stringify({ ...form, openai_key_set: 0, anthropic_key_set: 0 }) !==
-      JSON.stringify({ ...saved, openai_key_set: 0, anthropic_key_set: 0 }) ||
+    draft.provider !== saved.provider ||
+    draft.model !== saved.model ||
+    draft.base_url !== saved.base_url ||
     apiKey !== '' ||
     clearKey
 
   const save = async () => {
     setBusy('save')
-    setError(null)
+    onError(null)
     setMessage(null)
     try {
-      const body: Parameters<typeof api.updateLlmSettings>[0] = {
-        provider: form.provider,
-        model: form.model.trim(),
-        background_model: form.background_model.trim(),
-        base_url: form.base_url.trim(),
-        timeout_seconds: form.timeout_seconds,
-      }
-      if (real && apiKey) body[keyField] = apiKey
-      if (real && clearKey) body[keyField] = ''
-      const s = await api.updateLlmSettings(body)
-      setSaved(s)
-      setForm(s)
+      const body: TierUpdate = { provider: draft.provider, model: draft.model.trim(), base_url: draft.base_url.trim() }
+      if (apiKey) body.api_key = apiKey
+      if (clearKey) body.api_key = ''
+      await api.updateLlmSettings({ [tier]: body })
       setApiKey('')
       setClearKey(false)
-      setResults({})
+      setResult(null)
       setMessage('Opgeslagen en direct actief.')
-      await refreshStatus()
-      await loadModels(s.provider, s.base_url)
+      await onSaved()
     } catch (e) {
-      setError((e as Error).message)
+      onError((e as Error).message)
     } finally {
       setBusy(null)
     }
   }
 
-  const test = async (tier: string) => {
-    setBusy(`test-${tier}`)
+  const test = async () => {
+    setBusy('test')
     try {
-      const r = await api.llmTest(tier)
-      setResults((prev) => ({ ...prev, [tier]: r }))
+      setResult(await api.llmTest(tier))
     } catch (e) {
-      setError((e as Error).message)
+      onError((e as Error).message)
     } finally {
       setBusy(null)
     }
   }
+
+  const keyHint = isBackground
+    ? 'Leeg = sleutel van het hoofdmodel, maar alleen bij hetzelfde endpoint.'
+    : 'Wordt alleen geschreven en nooit teruggetoond. Voor een lokaal model niet nodig.'
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <h2 className="text-lg font-semibold">Taalmodel</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Wijzigingen worden in de database bewaard, gelden direct en winnen van de omgevingsvariabelen.
-        </p>
+    <Card>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">{info.title}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">{info.blurb}</p>
+        </div>
+        {status && (
+          <Badge kind={status.configured ? 'ok' : 'err'}>{status.configured ? 'ingesteld' : 'niet ingesteld'}</Badge>
+        )}
+      </div>
 
+      {isBackground && (
+        <label className="mt-4 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={followsMain}
+            onChange={(e) =>
+              setDraft(e.target.checked ? { ...draft, provider: '', base_url: '' } : { ...draft, provider: 'openai' })
+            }
+          />
+          Zelfde provider en endpoint als het hoofdmodel
+        </label>
+      )}
+
+      {!followsMain && (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {PROVIDERS.map((p) => (
             <button
               key={p.id}
               onClick={() => {
-                set('provider', p.id)
-                setApiKey('')
-                setClearKey(false)
-                void loadModels(p.id, p.id === 'openai' ? form.base_url : '')
+                setDraft({ ...draft, provider: p.id })
+                void loadModels(p.id, draft.base_url).catch(() => undefined)
               }}
               className={`rounded border px-3 py-2 text-left text-sm ${
-                form.provider === p.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
+                draft.provider === p.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
               }`}
             >
               <span className="block font-medium">{p.label}</span>
@@ -156,36 +189,35 @@ export default function SettingsPage() {
             </button>
           ))}
         </div>
+      )}
 
-        {real && (
-          <div className="mt-5 space-y-4">
-            {form.provider === 'openai' && (
-              <Field label="Base URL" hint="Leeg = api.openai.com. Voor een lokaal model hoeft er geen sleutel bij.">
-                <input
-                  className={inputCls}
-                  value={form.base_url}
-                  onChange={(e) => set('base_url', e.target.value)}
-                  placeholder="https://api.openai.com/v1"
-                />
-                <span className="mt-1.5 flex flex-wrap gap-1.5">
-                  {PRESETS.map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => set('base_url', p.url)}
-                      className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </span>
-              </Field>
-            )}
+      {showFields && (
+        <div className="mt-5 space-y-4">
+          {showEndpoint && (
+            <Field label="Base URL" hint="Leeg = api.openai.com.">
+              <input
+                className={inputCls}
+                value={draft.base_url}
+                onChange={(e) => setDraft({ ...draft, base_url: e.target.value })}
+                placeholder="https://api.openai.com/v1"
+              />
+              <span className="mt-1.5 flex flex-wrap gap-1.5">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => setDraft({ ...draft, base_url: p.url })}
+                    className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </span>
+            </Field>
+          )}
 
-            <Field
-              label="API-sleutel"
-              hint="Wordt alleen geschreven en nooit teruggetoond. Sla eerst op; daarna kun je modellen ophalen."
-            >
+          {!followsMain && (
+            <Field label="API-sleutel" hint={keyHint}>
               <span className="flex items-center gap-2">
                 <input
                   type="password"
@@ -194,9 +226,9 @@ export default function SettingsPage() {
                   value={apiKey}
                   disabled={clearKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={keySet ? '•••••••• (ingesteld — typ om te vervangen)' : 'Nog niet ingesteld'}
+                  placeholder={saved.api_key_set ? '•••••••• (ingesteld — typ om te vervangen)' : 'Nog niet ingesteld'}
                 />
-                {keySet && (
+                {saved.api_key_set && (
                   <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600">
                     <input
                       type="checkbox"
@@ -211,100 +243,147 @@ export default function SettingsPage() {
                 )}
               </span>
             </Field>
+          )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Hoofdmodel" hint="Voor onderzoek, redeneren en genereren.">
-                <input
-                  className={inputCls}
-                  list="llm-models"
-                  value={form.model}
-                  onChange={(e) => set('model', e.target.value)}
-                />
-              </Field>
-              <Field label="Achtergrondmodel (optioneel)" hint="Goedkoper model voor bulkwerk; leeg = hoofdmodel.">
-                <input
-                  className={inputCls}
-                  list="llm-models"
-                  value={form.background_model}
-                  onChange={(e) => set('background_model', e.target.value)}
-                />
-              </Field>
-            </div>
-            <datalist id="llm-models">
-              {models.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
+          <Field
+            label="Model"
+            hint={isBackground ? 'Leeg = het model van het hoofdmodel (alleen bij hetzelfde endpoint).' : undefined}
+          >
+            <input
+              className={inputCls}
+              list={`llm-models-${tier}`}
+              value={draft.model}
+              onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+              placeholder={isBackground ? 'zelfde als hoofdmodel' : 'modelnaam'}
+            />
+          </Field>
+          <datalist id={`llm-models-${tier}`}>
+            {models.map((m) => (
+              <option key={m} value={m} />
+            ))}
+          </datalist>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="secondary"
-                disabled={busy !== null}
-                onClick={() => {
-                  setBusy('models')
-                  loadModels(form.provider, form.base_url)
-                    .catch((e: Error) => setError(e.message))
-                    .finally(() => setBusy(null))
-                }}
-              >
-                {busy === 'models' ? 'Ophalen…' : 'Modellen ophalen'}
-              </Button>
-              <span className="text-xs text-slate-500">
-                {models.length > 0 ? `${models.length} modellen beschikbaar — kies in de velden hierboven.` : modelsNote}
-              </span>
-            </div>
-
-            <Field label="Time-out (seconden)">
-              <input
-                type="number"
-                min={1}
-                max={1800}
-                className={`${inputCls} max-w-[8rem]`}
-                value={form.timeout_seconds}
-                onChange={(e) => set('timeout_seconds', Number(e.target.value))}
-              />
-            </Field>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="secondary"
+              disabled={busy !== null}
+              onClick={() => {
+                setBusy('models')
+                loadModels(effectiveProvider, followsMain ? (status?.base_url ?? '') : draft.base_url)
+                  .catch((e: Error) => onError(e.message))
+                  .finally(() => setBusy(null))
+              }}
+            >
+              {busy === 'models' ? 'Ophalen…' : 'Modellen ophalen'}
+            </Button>
+            <span className="text-xs text-slate-500">
+              {models.length > 0 ? `${models.length} modellen — kies in het veld hierboven.` : modelsNote}
+              {dirty && ' Sla een nieuwe sleutel of endpoint eerst op, dan gebruikt het ophalen die.'}
+            </span>
           </div>
-        )}
-
-        <div className="mt-5 flex items-center gap-3">
-          <Button onClick={() => void save()} disabled={!dirty || busy !== null}>
-            {busy === 'save' ? 'Opslaan…' : 'Opslaan'}
-          </Button>
-          {message && !dirty && <span className="text-sm text-emerald-700">{message}</span>}
         </div>
+      )}
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button onClick={() => void save()} disabled={!dirty || busy !== null}>
+          {busy === 'save' ? 'Opslaan…' : 'Opslaan'}
+        </Button>
+        <Button variant="secondary" disabled={!status?.configured || busy !== null || dirty} onClick={() => void test()}>
+          {busy === 'test' ? 'Testen…' : 'Testen'}
+        </Button>
+        {status && (
+          <span className="font-mono text-xs text-slate-500">
+            {status.model || '—'}
+            {status.inherits && ' (volgt hoofdmodel)'}
+          </span>
+        )}
+        {message && !dirty && <span className="text-sm text-emerald-700">{message}</span>}
+      </div>
+      {status?.error && <ErrorText message={status.error} />}
+      {result && (
+        <p className={`mt-3 text-sm ${result.ok ? 'text-emerald-700' : 'text-red-600'}`}>
+          {result.ok ? `Antwoord: ${result.reply}` : result.error}
+        </p>
+      )}
+    </Card>
+  )
+}
+
+export default function SettingsPage() {
+  const [settings, setSettings] = useState<LLMSettings | null>(null)
+  const [status, setStatus] = useState<LLMStatus | null>(null)
+  const [timeout, setTimeoutValue] = useState(120)
+  const [savedTimeout, setSavedTimeout] = useState(120)
+  const [error, setError] = useState<string | null>(null)
+  const [version, setVersion] = useState(0)
+
+  const load = useCallback(async () => {
+    const [s, st] = await Promise.all([api.getLlmSettings(), api.llmStatus()])
+    setSettings(s)
+    setStatus(st)
+    setTimeoutValue(s.timeout_seconds)
+    setSavedTimeout(s.timeout_seconds)
+    setVersion((v) => v + 1)
+  }, [])
+
+  useEffect(() => {
+    load().catch((e: Error) => setError(e.message))
+  }, [load])
+
+  if (!settings || !status) {
+    return <Card>{error ? <ErrorText message={error} /> : 'Laden…'}</Card>
+  }
+
+  const saveTimeout = async () => {
+    setError(null)
+    try {
+      await api.updateLlmSettings({ timeout_seconds: timeout })
+      await load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <h2 className="text-lg font-semibold">Taalmodellen</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Twee niveaus die elk een eigen provider, endpoint, sleutel en model kunnen hebben — bijvoorbeeld een sterk model
+          voor redeneren en een snel, goedkoop model voor bulkwerk. Wijzigingen worden in de database bewaard, gelden direct
+          en winnen van de omgevingsvariabelen.
+        </p>
         <ErrorText message={error} />
       </Card>
 
-      {status?.tiers.map((t) => {
-        const r = results[t.tier]
-        return (
-          <Card key={t.tier}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="font-semibold">{TIER_LABELS[t.tier] ?? t.tier}</h3>
-                <p className="mt-0.5 font-mono text-xs text-slate-500">{t.model || '—'}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge kind={t.configured ? 'ok' : 'err'}>{t.configured ? 'ingesteld' : 'niet ingesteld'}</Badge>
-                <Button
-                  variant="secondary"
-                  disabled={!t.configured || busy !== null}
-                  onClick={() => void test(t.tier)}
-                >
-                  {busy === `test-${t.tier}` ? 'Testen…' : 'Testen'}
-                </Button>
-              </div>
-            </div>
-            {t.error && <ErrorText message={t.error} />}
-            {r && (
-              <p className={`mt-3 text-sm ${r.ok ? 'text-emerald-700' : 'text-red-600'}`}>
-                {r.ok ? `Antwoord: ${r.reply}` : r.error}
-              </p>
-            )}
-          </Card>
-        )
-      })}
+      {(['main', 'background'] as const).map((tier) => (
+        <TierCard
+          key={`${tier}-${version}`}
+          tier={tier}
+          saved={settings[tier]}
+          status={status.tiers.find((t) => t.tier === tier)}
+          onSaved={load}
+          onError={setError}
+        />
+      ))}
+
+      <Card>
+        <Field label="Time-out (seconden)" hint="Geldt voor beide modellen.">
+          <span className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={1800}
+              className={`${inputCls} max-w-[8rem]`}
+              value={timeout}
+              onChange={(e) => setTimeoutValue(Number(e.target.value))}
+            />
+            <Button variant="secondary" disabled={timeout === savedTimeout} onClick={() => void saveTimeout()}>
+              Opslaan
+            </Button>
+          </span>
+        </Field>
+      </Card>
     </div>
   )
 }

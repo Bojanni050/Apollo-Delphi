@@ -74,7 +74,7 @@ def _system_prompt() -> str:
         "produce a concise summary (one sentence), 1-5 thematic tags (single words or short "
         "hyphenated phrases, lowercase), and connections to OTHER documents from the provided id "
         "list only. A connection states the relation (relates-to, supports, contradicts, extends) "
-        "and one short sentence why. Only connect documents when the content genuinely supports "
+        "and one short sentence why, naming documents by filename and never by id. Only connect documents when the content genuinely supports "
         "it; an empty connection list is a valid answer. Respond with JSON only, shaped as "
         '{"documents": [{"id": "...", "summary": "...", "tags": ["..."], '
         '"connections": [{"id": "...", "relation": "relates-to", "why": "..."}], "confidence": 0.0}]}.'

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import json
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -19,7 +21,8 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     workspaces_root: str = "./workspaces"
     max_upload_size_mb: int = 25
-    allowed_extensions: list[str] = [".pdf", ".docx", ".txt", ".md"]
+    # Comma separated (".pdf,.docx") or a JSON list.
+    allowed_extensions: Annotated[list[str], NoDecode] = [".pdf", ".docx", ".txt", ".md"]
 
     llm_provider: str = "mock"
     llm_model: str = "mock-model"
@@ -30,15 +33,31 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     # Base URL of an OpenAI-compatible endpoint; set for local runtimes, e.g. http://localhost:11434/v1 (Ollama).
     llm_base_url: str = ""
-    # Optional cheaper model for bulk work (claim extraction, Pulse); defaults to llm_model.
+    # Model for bulk work (claim extraction, Delphi Pulse); empty = the main model.
     background_llm_model: str = ""
     llm_timeout_seconds: float = 120.0
+    # Main tier key (any provider). Falls back to OPENAI_API_KEY / ANTHROPIC_API_KEY.
+    llm_api_key: str = ""
+    # Background tier: each field left empty follows the main tier (see core.llm.tier_config).
+    background_llm_provider: str = ""
+    background_llm_base_url: str = ""
+    background_llm_api_key: str = ""
     anthropic_api_key: str = ""
     github_token: str = Field(default="", validation_alias="APOLLO_GITHUB_TOKEN")
 
     chunk_size_chars: int = 1200
     chunk_overlap_chars: int = 150
     search_top_k: int = 8
+
+    @field_validator("allowed_extensions", mode="before")
+    @classmethod
+    def _split_extensions(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("["):
+                return json.loads(v)
+            return [part.strip() for part in v.split(",") if part.strip()]
+        return v
 
     @property
     def max_upload_size_bytes(self) -> int:

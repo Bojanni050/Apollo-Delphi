@@ -12,25 +12,29 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.llm import set_llm_provider
+from app.core.llm import PROVIDERS, set_llm_provider
 from app.core.logging import get_logger
 from app.models.app_setting import AppSetting
 
 log = get_logger(__name__)
 
-PROVIDERS = ("mock", "openai", "anthropic")
 
 #: setting key -> type used to read it back from its stored string
 FIELDS: dict[str, type] = {
     "llm_provider": str,
     "llm_model": str,
-    "background_llm_model": str,
     "llm_base_url": str,
+    "llm_api_key": str,
+    "background_llm_provider": str,
+    "background_llm_model": str,
+    "background_llm_base_url": str,
+    "background_llm_api_key": str,
     "llm_timeout_seconds": float,
+    # Legacy: written by the first settings page; still read as a fallback key.
     "openai_api_key": str,
     "anthropic_api_key": str,
 }
-SECRETS = frozenset({"openai_api_key", "anthropic_api_key"})
+SECRETS = frozenset({"llm_api_key", "background_llm_api_key", "openai_api_key", "anthropic_api_key"})
 
 
 class SettingsError(ValueError):
@@ -61,9 +65,13 @@ def load_overrides(db: Session) -> None:
 def validate(updates: dict[str, object]) -> None:
     if "llm_provider" in updates and updates["llm_provider"] not in PROVIDERS:
         raise SettingsError(f"Provider must be one of: {', '.join(PROVIDERS)}")
-    base_url = updates.get("llm_base_url")
-    if base_url and not str(base_url).startswith(("http://", "https://")):
-        raise SettingsError("Base URL must start with http:// or https://")
+    bg = updates.get("background_llm_provider")
+    if bg and bg not in PROVIDERS:
+        raise SettingsError(f"Background provider must be empty (same as main) or one of: {', '.join(PROVIDERS)}")
+    for key in ("llm_base_url", "background_llm_base_url"):
+        base_url = updates.get(key)
+        if base_url and not str(base_url).startswith(("http://", "https://")):
+            raise SettingsError("Base URL must start with http:// or https://")
     timeout = updates.get("llm_timeout_seconds")
     if timeout is not None and not (1 <= float(timeout) <= 1800):  # type: ignore[arg-type]
         raise SettingsError("Timeout must be between 1 and 1800 seconds")
