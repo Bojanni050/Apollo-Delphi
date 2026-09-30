@@ -14,7 +14,7 @@ type Page = 'documents' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'gener
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: 'documents', label: 'Documents', icon: '▦' },
-  { id: 'pulse', label: 'Pulse', icon: '✦' },
+  { id: 'pulse', label: 'Delphi Pulse', icon: '✦' },
   { id: 'analysis', label: 'Analysis', icon: '◔' },
   { id: 'issues', label: 'Issues', icon: '⚠' },
   { id: 'knowledge', label: 'Knowledge', icon: '❖' },

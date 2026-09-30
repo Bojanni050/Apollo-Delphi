@@ -67,12 +67,12 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
           <div>
             <h2 className="text-lg font-semibold">Delphi Pulse</h2>
             <p className="text-sm text-slate-500">
-              Thema&apos;s en verbanden tussen de documenten in deze werkmap. Pulse doet alleen voorstellen; jij beslist.
+              Thema&apos;s en verbanden tussen de documenten in deze werkmap. Delphi Pulse doet alleen voorstellen; jij beslist.
             </p>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => void runPulse(false)} disabled={busy}>
-              {busy ? 'Bezig…' : 'Pulse draaien'}
+              {busy ? 'Bezig…' : 'Delphi Pulse draaien'}
             </Button>
             <Button variant="secondary" onClick={() => void runPulse(true)} disabled={busy}>
               Alles opnieuw

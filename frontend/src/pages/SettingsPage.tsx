@@ -16,7 +16,7 @@ const PRESETS = [
 
 const TIER_LABELS: Record<string, string> = {
   main: 'Hoofdmodel (redeneren, onderzoek, genereren)',
-  background: 'Achtergrondmodel (bulk: claims, Pulse)',
+  background: 'Achtergrondmodel (bulk: claims, Delphi Pulse)',
 }
 
 const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100'
