@@ -4,21 +4,30 @@ import AnalysisPage from './pages/AnalysisPage'
 import IssuesPage from './pages/IssuesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
+import PulsePage from './pages/PulsePage'
+import WorkspacePage from './pages/WorkspacePage'
+import SettingsPage from './pages/SettingsPage'
 import AppShell from './layout/AppShell'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'analysis' | 'issues' | 'knowledge' | 'generated'
+type Page = 'documents' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: 'documents', label: 'Documents', icon: '▦' },
+  { id: 'pulse', label: 'Pulse', icon: '✦' },
   { id: 'analysis', label: 'Analysis', icon: '◔' },
   { id: 'issues', label: 'Issues', icon: '⚠' },
   { id: 'knowledge', label: 'Knowledge', icon: '❖' },
   { id: 'generated', label: 'Generated', icon: '▤' },
+  { id: 'workspace', label: 'Werkmap', icon: '⎇' },
+  { id: 'settings', label: 'Instellingen', icon: '⚙' },
 ]
 
 const CONTEXT_TITLES: Record<Page, string> = {
   documents: 'Document details',
+  pulse: 'Voorstel',
+  workspace: 'Repository',
+  settings: 'Model',
   analysis: 'Run details',
   issues: 'Issue context',
   knowledge: 'Provenance',
@@ -31,6 +40,7 @@ export default function App() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [newDir, setNewDir] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -70,8 +80,9 @@ export default function App() {
     const name = newName.trim()
     if (!name) return
     try {
-      const ws = await api.createWorkspace(name)
+      const ws = await api.createWorkspace(name, newDir.trim() || undefined)
       setNewName('')
+      setNewDir('')
       setCreating(false)
       setMenuOpen(false)
       await loadWorkspaces(false)
@@ -132,6 +143,12 @@ export default function App() {
                   placeholder="Naam nieuwe werkmap…"
                   className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
                 />
+                <input
+                  value={newDir}
+                  onChange={(e) => setNewDir(e.target.value)}
+                  placeholder="Map (optioneel, absoluut pad)"
+                  className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                />
                 <button
                   onClick={() => void createWorkspace()}
                   className="mt-1 w-full rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700"
@@ -170,10 +187,13 @@ export default function App() {
     >
       {page === 'issues' && <IssuesPage />}
       {page === 'generated' && <GeneratedPage />}
-      {(page === 'documents' || page === 'analysis' || page === 'knowledge') && (
+      {(page === 'documents' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
             {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} onChanged={() => void loadWorkspaces()} />}
+            {page === 'pulse' && <PulsePage workspaceId={activeWorkspaceId} />}
+            {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
+            {page === 'settings' && <SettingsPage />}
             {page === 'analysis' && <AnalysisPage workspaceId={activeWorkspaceId} />}
             {page === 'knowledge' && <KnowledgePage />}
           </div>

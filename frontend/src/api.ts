@@ -146,7 +146,73 @@ export interface GeneratedDocument {
 export interface Workspace {
   id: number
   name: string
+  working_dir: string | null
   created_at: string
+}
+
+export interface Commit {
+  sha: string
+  author: string
+  date: string
+  message: string
+}
+
+export interface PulseConnection {
+  document_id: number
+  filename: string | null
+  relation: 'relates-to' | 'supports' | 'contradicts' | 'extends'
+  why: string
+}
+
+export interface PulseItem {
+  id: number
+  run_id: number
+  document_id: number
+  filename: string
+  summary: string
+  tags: string[]
+  connections: PulseConnection[]
+  confidence: number
+  decision: 'pending' | 'accepted' | 'dismissed'
+}
+
+export interface PulseRun {
+  id: number
+  workspace_id: number
+  status: string
+  provider: string
+  model: string
+  stats: { documents: number; analysed: number; skipped: number; errors: number } | null
+  error_message: string | null
+  started_at: string
+  completed_at: string | null
+}
+
+export interface PulseResult {
+  run: PulseRun | null
+  items: PulseItem[]
+}
+
+export interface LLMTier {
+  tier: string
+  provider: string
+  model: string
+  configured: boolean
+  error: string | null
+}
+
+export interface LLMStatus {
+  provider: string
+  base_url: string | null
+  tiers: LLMTier[]
+}
+
+export interface LLMTestResult {
+  ok: boolean
+  tier: string
+  model: string
+  reply: string | null
+  error: string | null
 }
 
 export interface WorkspaceDetail extends Workspace {
@@ -198,10 +264,22 @@ export const api = {
       },
     ),
   listWorkspaces: () => request<Workspace[]>('/api/workspaces'),
-  createWorkspace: (name: string) =>
+  createWorkspace: (name: string, workingDir?: string) =>
     request<Workspace>('/api/workspaces', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, working_dir: workingDir || null }),
     }),
+  workspaceHistory: (id: number) => request<Commit[]>(`/api/workspaces/${id}/history`),
+  getPulse: (workspaceId: number) => request<PulseResult>(`/api/workspaces/${workspaceId}/pulse`),
+  runPulse: (workspaceId: number, force = false) =>
+    request<PulseResult>(`/api/workspaces/${workspaceId}/pulse${force ? '?force=true' : ''}`, { method: 'POST' }),
+  decidePulseItem: (id: number, decision: 'accepted' | 'dismissed') =>
+    request<PulseItem>(`/api/pulse/items/${id}/decision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    }),
+  llmStatus: () => request<LLMStatus>('/api/llm/status'),
+  llmTest: (tier: string) => request<LLMTestResult>(`/api/llm/test?tier=${tier}`, { method: 'POST' }),
 }
