@@ -184,6 +184,26 @@ generate → verify
 
 All tests use the deterministic mock providers; no external API is required.
 
+## GitHub repository ingestion
+
+You can add a **GitHub repository** to a workspace (Documents page, "GitHub
+repository" card, or `POST /api/github/ingest`):
+
+```json
+{"repo_url": "https://github.com/owner/repo", "workspace_id": 1}
+```
+
+- The repository (docs, config, code) is downloaded and indexed as **one
+  document per repository** — the interface stays clean, not one row per file.
+- The digest keeps per-file sections (`## FILE: path`) so extracted claims
+  remain traceable to concrete repo paths.
+- The standard analysis pipeline then finds **discrepancies between your
+  documents and the repository**: e.g. a plan stating "the frontend is Vue"
+  against a repo whose README says React/TypeScript surfaces as a
+  contradiction issue with evidence on both sides.
+- Public repos work without configuration; for higher rate limits or private
+  repos set `APOLLO_GITHUB_TOKEN` in the environment.
+
 ## Security
 
 - Upload validation: extension allowlist, size limit, empty-file rejection

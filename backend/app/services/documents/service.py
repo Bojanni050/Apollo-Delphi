@@ -87,6 +87,10 @@ class DocumentService:
         doc = db.get(Document, document_id)
         if doc is None:
             return False
+        if doc.source_type == "github":
+            db.delete(doc)
+            db.commit()
+            return True
         path = get_settings().ensure_upload_dir() / doc.stored_filename
         try:
             path.unlink(missing_ok=True)
@@ -97,6 +101,13 @@ class DocumentService:
         return True
 
     def read_file(self, doc: Document) -> bytes:
+        if doc.source_type == "github":
+            from app.services.github.service import github_ingest_service
+
+            content = github_ingest_service.get_document_content(doc)
+            if content is None:
+                raise DocumentValidationError(f"Kon GitHub-inhoud voor {doc.repo_path} niet ophalen")
+            return content
         path = get_settings().ensure_upload_dir() / doc.stored_filename
         return path.read_bytes()
 

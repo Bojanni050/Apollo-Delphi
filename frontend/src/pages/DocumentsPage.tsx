@@ -14,6 +14,9 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
   const [busy, setBusy] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchHit[] | null>(null)
+  const [repoUrl, setRepoUrl] = useState('')
+  const [repoBusy, setRepoBusy] = useState(false)
+  const [repoMessage, setRepoMessage] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const refresh = async () => {
@@ -82,6 +85,27 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
     }
   }
 
+  const ingestRepo = async () => {
+    const url = repoUrl.trim()
+    if (!url) return
+    setRepoBusy(true)
+    setRepoMessage(null)
+    try {
+      const result = await api.ingestGithub(url, workspaceId)
+      setRepoMessage(
+        `${result.repository}: ${result.documents_created} document aangemaakt van ${result.files_selected} bestanden` +
+          (result.errors.length ? ` (${result.errors.length} fouten)` : ''),
+      )
+      setRepoUrl('')
+      await refresh()
+      onChanged?.()
+    } catch (e) {
+      setRepoMessage(`Fout: ${(e as Error).message}`)
+    } finally {
+      setRepoBusy(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -100,6 +124,28 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
       </Card>
 
       <Card>
+        <h2 className="text-lg font-semibold mb-3">GitHub repository</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Voeg een publieke GitHub-repository toe. De inhoud (docs, config, code) wordt gedownload en als
+          één document geïndexeerd, zodat analyse discrepanties tussen je documenten en de repo vindt.
+        </p>
+        <div className="flex gap-2">
+          <input
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void ingestRepo()}
+            placeholder="https://github.com/owner/repo"
+            className="flex-1 border rounded px-3 py-1.5 text-sm"
+            disabled={repoBusy}
+          />
+          <Button onClick={() => void ingestRepo()} disabled={repoBusy || !repoUrl.trim()}>
+            {repoBusy ? 'Ophalen…' : 'Repository toevoegen'}
+          </Button>
+        </div>
+        {repoMessage && <p className="text-sm mt-2 text-slate-600">{repoMessage}</p>}
+      </Card>
+
+      <Card>
         <h2 className="text-lg font-semibold mb-3">Documents</h2>
         <table className="w-full text-sm">
           <thead>
@@ -115,7 +161,7 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
           <tbody>
             {documents.map((d) => (
               <tr key={d.id} className="border-b last:border-0">
-                <td className="py-2 font-medium">
+                <td className="py-2 font-medium">{d.source_type === 'github' && <span className="mr-1 text-slate-400" title={d.source_url ?? ''}>⌥</span>}
                   {d.filename}
                   {d.error_message && (
                     <p className="text-xs text-red-600 mt-1" title={d.error_message}>

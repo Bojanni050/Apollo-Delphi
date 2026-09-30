@@ -27,6 +27,9 @@ class Document(Base):
     updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     indexed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     document_date: Mapped[dt.date | None] = mapped_column(nullable=True)
+    source_type: Mapped[str] = mapped_column(String(32), default="upload")
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    repo_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     chunks: Mapped[list[DocumentChunk]] = relationship(back_populates="document", cascade="all, delete-orphan")
 

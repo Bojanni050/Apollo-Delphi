@@ -19,6 +19,7 @@ from app.models import (
 )
 from app.services.analysis.claim_extraction import ExtractedClaim, get_claim_extractor, normalize_value
 from app.services.issues.detection import (
+    detect_entity_contradictions,
     DetectedContradiction,
     DetectedOpenQuestion,
     detect_contradictions,
@@ -101,8 +102,7 @@ class AnalysisService:
 
         claim_rows = db.query(Claim).filter(Claim.analysis_run_id == run.id).all()
         row_pairs: list[tuple[Claim, int]] = [(c, c.document_id) for c in claim_rows]
-        contradictions = detect_contradictions(
-            [
+        extracteds = [
                 (
                     ExtractedClaim(
                         statement=c.statement,
@@ -116,8 +116,10 @@ class AnalysisService:
                     ),
                     doc_id,
                 )
-                for c, doc_id in row_pairs
-            ]
+            for c, doc_id in row_pairs
+        ]
+        contradictions = _dedupe_contradictions(
+            detect_contradictions(extracteds) + detect_entity_contradictions(extracteds)
         )
         claim_by_quote: dict[str, Claim] = {}
         for claim_row in claim_rows:
@@ -226,3 +228,16 @@ class AnalysisService:
 
 
 analysis_service = AnalysisService()
+
+
+def _dedupe_contradictions(found: list) -> list:
+    """Drop contradictions that cover the same claim pair (quote pair)."""
+    seen: set[tuple[str, str]] = set()
+    out = []
+    for contra in found:
+        pair = tuple(sorted([contra.claim_a.quote, contra.claim_b.quote]))
+        if pair in seen:
+            continue
+        seen.add(pair)
+        out.append(contra)
+    return out

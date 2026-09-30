@@ -11,6 +11,9 @@ class DocumentOut(BaseModel):
     id: int
     workspace_id: int | None
     filename: str
+    source_type: str = "upload"
+    source_url: str | None = None
+    repo_path: str | None = None
     title: str | None
     file_type: str
     file_size: int

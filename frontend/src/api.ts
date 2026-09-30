@@ -27,6 +27,9 @@ export interface DocumentRecord {
   created_at: string
   indexed_at: string | null
   document_date: string | null
+  source_type: string
+  source_url: string | null
+  repo_path: string | null
 }
 
 export interface AnalysisStats {
@@ -185,6 +188,15 @@ export const api = {
     ),
   getVerification: (id: number) => request<VerificationFinding[]>(`/api/documents/generated/${id}/verification`),
   health: () => request<Record<string, string>>('/api/health'),
+  ingestGithub: (repoUrl: string, workspaceId?: number | null) =>
+    request<{ repository: string; branch: string; files_selected: number; documents_created: number; errors: string[] }>(
+      '/api/github/ingest',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo_url: repoUrl, workspace_id: workspaceId ?? null }),
+      },
+    ),
   listWorkspaces: () => request<Workspace[]>('/api/workspaces'),
   createWorkspace: (name: string) =>
     request<Workspace>('/api/workspaces', {

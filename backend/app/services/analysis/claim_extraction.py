@@ -88,7 +88,7 @@ _QUESTION_MARKERS = re.compile(
 
 
 def _sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+|\n{2,}", text)
+    parts = re.split(r"(?<=[.!?])\s+|\n+", text)
     return [p.strip() for p in parts if p and p.strip()]
 
 
@@ -104,12 +104,20 @@ class HeuristicClaimExtractor(ClaimExtractorBackend):
     def extract(self, text: str) -> list[ExtractedClaim]:
         claims: list[ExtractedClaim] = []
         seen_quotes: set[str] = set()
+        for claim in self._extract_table_rows(text):
+            if claim.quote not in seen_quotes:
+                seen_quotes.add(claim.quote)
+                claims.append(claim)
         for sentence in _sentences(text):
             s = sentence.strip()
             if len(s) < 10:
                 continue
             m = _VALUE_RE.match(s)
             if not m:
+                entity_claim = extract_entity_claim(s)
+                if entity_claim is not None and entity_claim.quote not in seen_quotes:
+                    seen_quotes.add(entity_claim.quote)
+                    claims.append(entity_claim)
                 continue
             subject = m.group("subject").strip().rstrip(",:;")
             value = m.group("value")
@@ -150,3 +158,86 @@ def get_claim_extractor() -> ClaimExtractorBackend:
     if get_settings().llm_provider == "mock":
         return HeuristicClaimExtractor()
     return LLMClaimExtractor()
+
+
+_ENTITY_CLAIM_RE = re.compile(
+    r"^(?P<subject>.+?)\s+(?P<predicate>written in|built with|powered by|supports?|uses?|is|are|was|were)\s+"
+    r"(?P<value>[A-Za-z][A-Za-z0-9 .+/#-]{0,40})\.?\s*$",
+    re.IGNORECASE,
+)
+_ENTITY_CATEGORY = {
+    "react": "framework", "vue": "framework", "angular": "framework",
+    "svelte": "framework", "next.js": "framework", "sveltekit": "framework",
+    "postgresql": "database", "mysql": "database", "mongodb": "database",
+    "sqlite": "database", "mariadb": "database", "redis": "database",
+    "fastapi": "backend", "django": "backend", "flask": "backend",
+    "express": "backend", "node.js": "backend",
+    "python": "language", "typescript": "language", "javascript": "language",
+    "tailwind": "styling", "bootstrap": "styling",
+}
+_KNOWN_ENTITIES = set(_ENTITY_CATEGORY)
+
+
+def extract_entity_claim(sentence: str) -> ExtractedClaim | None:
+    """Extract 'X is/uses <entity>' claims where <entity> is a known technology."""
+    m = _ENTITY_CLAIM_RE.match(sentence.strip())
+    if not m:
+        return None
+    value = m.group("value").strip().rstrip(".")
+    if value.lower() not in _KNOWN_ENTITIES:
+        # try the last token as the entity ("written in Vue.js 3" -> "vue.js")
+        last = value.split()[-1].rstrip(".").lower() if value.split() else ""
+        if last not in _KNOWN_ENTITIES:
+            return None
+        value = value.split()[-1].rstrip(".")
+    subject = m.group("subject").strip().rstrip(",:;")
+    return ExtractedClaim(
+        statement=sentence.strip(),
+        subject=subject,
+        predicate=m.group("predicate").lower(),
+        value=value,
+        unit=None,
+        qualifiers=f"category:{_ENTITY_CATEGORY[value.lower()]}",
+        quote=sentence.strip(),
+        confidence=0.7,
+    )
+
+
+_TABLE_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|$")
+
+
+def _extract_table_rows(self, text: str) -> list[ExtractedClaim]:
+    """Markdown table rows like '| Frontend | React, TypeScript |' become
+    one claim per recognized entity in the value cell."""
+    claims: list[ExtractedClaim] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("|") or set(line) <= {"|", "-", " ", ":"}:
+            continue
+        m = _TABLE_ROW_RE.match(line)
+        if not m:
+            continue
+        subject = m.group(1).strip().rstrip(":")
+        value_text = m.group(2).strip()
+        if not subject or not value_text:
+            continue
+        for token in re.split(r"[,;/+]|\s+and\s+", value_text):
+            token = token.strip().rstrip("().").lower()
+            token = re.sub(r"\s*\(.*$", "", token).strip()
+            if token in _ENTITY_CATEGORY:
+                claims.append(
+                    ExtractedClaim(
+                        statement=f"{subject} is {token}",
+                        subject=subject,
+                        predicate="is",
+                        value=token,
+                        unit=None,
+                        qualifiers=f"category:{_ENTITY_CATEGORY[token]}",
+                        quote=line,
+                        confidence=0.6,
+                    )
+                )
+    return claims
+
+
+HeuristicClaimExtractor._extract_table_rows = _extract_table_rows

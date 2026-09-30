@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    github_token: str = Field(default="", validation_alias="APOLLO_GITHUB_TOKEN")
 
     chunk_size_chars: int = 1200
     chunk_overlap_chars: int = 150

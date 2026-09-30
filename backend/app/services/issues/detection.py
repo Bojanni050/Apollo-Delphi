@@ -53,6 +53,54 @@ def claim_key(claim: ExtractedClaim) -> str | None:
     return None
 
 
+def _category(claim: ExtractedClaim) -> str | None:
+    if claim.qualifiers and claim.qualifiers.startswith("category:"):
+        return claim.qualifiers.split(":", 1)[1]
+    return None
+
+
+def _subjects_related(a: str, b: str) -> bool:
+    """True when one subject contains the other ('frontend' vs 'apollo frontend')."""
+    return a in b or b in a
+
+
+def detect_entity_contradictions(claims: list[tuple[ExtractedClaim, int]]) -> list[DetectedContradiction]:
+    """Detect conflicting technology claims across documents.
+
+    Two claims contradict when they concern the same category (framework,
+    database, ...) with related subjects but assert different entities,
+    e.g. 'the frontend is Vue' vs 'the frontend is React'.
+    """
+    contradictions: list[DetectedContradiction] = []
+    seen_pairs: set[tuple[str, str]] = set()
+    for i in range(len(claims)):
+        for j in range(i + 1, len(claims)):
+            a, doc_a = claims[i]
+            b, doc_b = claims[j]
+            if doc_a == doc_b:
+                continue
+            cat_a, cat_b = _category(a), _category(b)
+            if not cat_a or cat_a != cat_b:
+                continue
+            if a.value is None or b.value is None:
+                continue
+            va, vb = a.value.strip().lower(), b.value.strip().lower()
+            if va == vb:
+                continue
+            key_a = claim_key(a)
+            key_b = claim_key(b)
+            if not key_a or not key_b or not _subjects_related(key_a, key_b):
+                continue
+            pair_key = tuple(sorted([a.quote, b.quote]))
+            if pair_key in seen_pairs:
+                continue
+            seen_pairs.add(pair_key)
+            contradictions.append(
+                DetectedContradiction(claim_a=a, claim_b=b, key=f"{key_a}:{cat_a}", value_a=va, value_b=vb)
+            )
+    return contradictions
+
+
 def detect_contradictions(claims: list[tuple[ExtractedClaim, int]]) -> list[DetectedContradiction]:
     """Detect conflicting claims: same subject+predicate, different normalized values.
 
