@@ -28,6 +28,7 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
   }
 
   useEffect(() => {
+    setSearchResults(null)
     void refresh()
   }, [workspaceId])
 
@@ -78,7 +79,7 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
     if (!searchQuery.trim()) return
     setError(null)
     try {
-      const res = await api.search(searchQuery)
+      const res = await api.search(searchQuery, workspaceId)
       setSearchResults(res.results)
     } catch (e) {
       setError((e as Error).message)

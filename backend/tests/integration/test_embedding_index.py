@@ -57,20 +57,20 @@ def test_status_reports_nothing_stale_for_the_active_model(client):
 def test_switching_model_hides_old_vectors_from_search_until_reindexed(client, db):
     ws = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
     _upload(client, ws)
-    assert client.get("/api/search", params={"q": "harbour budget"}).json()["results"]
+    assert client.get("/api/search", params={"q": "harbour budget", "workspace_id": ws}).json()["results"]
 
     _use_mock(client, "other-model", dims=32)  # a different model with another dimension
     st = client.get("/api/embeddings/status").json()
     assert st["model"] == "other-model" and st["dimensions"] == 32
     assert st["documents_stale"] == 1 and st["chunks_current"] == 0 and st["by_model"] == {"mock-embedder": 1}
-    assert client.get("/api/search", params={"q": "harbour budget"}).json()["results"] == [], "never compare across models"
+    assert client.get("/api/search", params={"q": "harbour budget", "workspace_id": ws}).json()["results"] == [], "never compare across models"
 
     result = client.post("/api/embeddings/reindex").json()
     assert result["model"] == "other-model" and result["requested"] == 1 and result["reindexed"] == 1 and not result["failed"]
     db.expire_all()
     chunk = db.query(DocumentChunk).one()
     assert (chunk.embedding_model, chunk.embedding_dim, len(chunk.embedding)) == ("other-model", 32, 32)
-    assert client.get("/api/search", params={"q": "harbour budget"}).json()["results"]
+    assert client.get("/api/search", params={"q": "harbour budget", "workspace_id": ws}).json()["results"]
     assert client.get("/api/embeddings/status").json()["documents_stale"] == 0
     # nothing left to do: a second reindex requests nothing
     assert client.post("/api/embeddings/reindex").json()["requested"] == 0

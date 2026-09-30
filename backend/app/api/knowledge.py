@@ -11,8 +11,12 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
 
 @router.get("", response_model=list[KnowledgeItemOut])
-def get_knowledge(analysis_run_id: int | None = Query(None), db: Session = Depends(get_session)):
-    return KnowledgeService().get_knowledge_state(db, analysis_run_id)
+def get_knowledge(
+    analysis_run_id: int | None = Query(None),
+    workspace_id: int | None = Query(None, description="Latest knowledge of this werkmap; omitted = no werkmap"),
+    db: Session = Depends(get_session),
+):
+    return KnowledgeService().get_knowledge_state(db, analysis_run_id, workspace_id)
 
 
 @router.post("/build", response_model=list[KnowledgeItemOut])

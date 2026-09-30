@@ -21,6 +21,7 @@ class GeneratedDocumentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    workspace_id: int | None = None
     title: str
     status: str
     content: str | None

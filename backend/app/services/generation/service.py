@@ -36,15 +36,19 @@ class GenerationService:
     def __init__(self, llm: LLMProvider | None = None):
         self.llm = llm or get_llm_provider()
 
-    async def generate(self, db: Session, title: str, analysis_run_id: int | None = None) -> GeneratedDocument:
-        items = KnowledgeService().get_knowledge_state(db, analysis_run_id)
+    async def generate(
+        self, db: Session, title: str, analysis_run_id: int | None = None, workspace_id: int | None = None
+    ) -> GeneratedDocument:
+        items = KnowledgeService().get_knowledge_state(db, analysis_run_id, workspace_id)
         if not items:
             raise ValueError("No knowledge state available; run an analysis first")
 
         outline = await self._plan(title, items)
         content = await self._draft(outline, items)
 
+        run = db.get(AnalysisRun, items[0].analysis_run_id)
         doc = GeneratedDocument(
+            workspace_id=run.workspace_id if run else workspace_id,
             title=outline.title,
             status="drafted",
             outline=outline.model_dump_json(),

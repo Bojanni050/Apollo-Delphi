@@ -22,28 +22,31 @@ const TYPE_ORDER = [
   'remaining_contradiction',
 ]
 
-export default function KnowledgePage() {
+export default function KnowledgePage({ workspaceId }: { workspaceId?: number | null }) {
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = async () => {
     try {
-      setItems(await api.getKnowledge())
+      setItems(await api.getKnowledge(workspaceId))
     } catch (e) {
       setError((e as Error).message)
     }
   }
 
   useEffect(() => {
+    setItems([])
+    setError(null)
     void load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId])
 
   const buildFromLatest = async () => {
     setBusy(true)
     setError(null)
     try {
-      const issues = await api.listIssues()
+      const issues = await api.listIssues(undefined, workspaceId)
       if (issues.length === 0) {
         setError('No analysis runs found. Run an analysis first.')
         return

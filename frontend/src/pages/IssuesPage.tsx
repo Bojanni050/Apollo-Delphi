@@ -3,7 +3,7 @@ import { api, type Issue, type IssueDetail } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 import { SplitView } from '../layout/AppShell'
 
-export default function IssuesPage() {
+export default function IssuesPage({ workspaceId }: { workspaceId?: number | null }) {
   const [issues, setIssues] = useState<Issue[]>([])
   const [selected, setSelected] = useState<IssueDetail | null>(null)
   const [note, setNote] = useState('')
@@ -11,14 +11,17 @@ export default function IssuesPage() {
   const [error, setError] = useState<string | null>(null)
 
   const loadIssues = async () => {
-    const all = await api.listIssues()
+    const all = await api.listIssues(undefined, workspaceId)
     setIssues(all)
     return all
   }
 
   useEffect(() => {
+    setSelected(null)
+    setError(null)
     void loadIssues().catch((e) => setError((e as Error).message))
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId])
 
   const select = async (id: number) => {
     setError(null)

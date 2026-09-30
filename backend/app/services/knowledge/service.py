@@ -95,12 +95,20 @@ class KnowledgeService:
         db.commit()
         return items
 
-    def get_knowledge_state(self, db: Session, analysis_run_id: int | None = None) -> list[KnowledgeItem]:
+    def get_knowledge_state(
+        self, db: Session, analysis_run_id: int | None = None, workspace_id: int | None = None
+    ) -> list[KnowledgeItem]:
+        """Knowledge of a run, or of the latest completed analysis of a werkmap (none = unassigned)."""
         q = db.query(KnowledgeItem)
         if analysis_run_id:
             q = q.filter(KnowledgeItem.analysis_run_id == analysis_run_id)
         else:
-            latest = db.query(AnalysisRun).filter(AnalysisRun.status == "completed").order_by(AnalysisRun.id.desc()).first()
+            latest = (
+                db.query(AnalysisRun)
+                .filter(AnalysisRun.status == "completed", AnalysisRun.workspace_id == workspace_id)
+                .order_by(AnalysisRun.id.desc())
+                .first()
+            )
             if latest is None:
                 return []
             q = q.filter(KnowledgeItem.analysis_run_id == latest.id)

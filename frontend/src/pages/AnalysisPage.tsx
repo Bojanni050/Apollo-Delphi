@@ -16,12 +16,15 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
   const [error, setError] = useState<string | null>(null)
 
   const loadIssues = async () => {
-    const allIssues = await api.listIssues()
+    const allIssues = await api.listIssues(undefined, workspaceId)
     setIssues(allIssues)
     return allIssues
   }
 
   useEffect(() => {
+    setRun(null)
+    setClaims([])
+    setIssues([])
     void (async () => {
       try {
         const allIssues = await loadIssues()
@@ -34,7 +37,8 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
         // no analysis yet
       }
     })()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId])
 
   const analyze = async () => {
     setBusy(true)

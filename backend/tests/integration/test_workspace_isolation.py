@@ -35,7 +35,7 @@ def test_investigation_only_uses_evidence_from_its_own_werkmap(client, db):
     client.post("/api/analysis", params={"workspace_id": b})
     issue = next(
         i
-        for i in client.get("/api/issues").json()
+        for i in client.get("/api/issues", params={"workspace_id": a}).json()
         if i["issue_type"] == "contradiction" and i["analysis_run_id"] == run_a["id"]
     )
 

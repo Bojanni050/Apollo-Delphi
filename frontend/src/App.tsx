@@ -185,8 +185,8 @@ export default function App() {
       contextTitle={CONTEXT_TITLES[page]}
       workspaceBar={workspaceBar}
     >
-      {page === 'issues' && <IssuesPage />}
-      {page === 'generated' && <GeneratedPage />}
+      {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
+      {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
       {(page === 'documents' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
@@ -195,7 +195,7 @@ export default function App() {
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
             {page === 'settings' && <SettingsPage />}
             {page === 'analysis' && <AnalysisPage workspaceId={activeWorkspaceId} />}
-            {page === 'knowledge' && <KnowledgePage />}
+            {page === 'knowledge' && <KnowledgePage workspaceId={activeWorkspaceId} />}
           </div>
         </div>
       )}

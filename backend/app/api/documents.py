@@ -64,23 +64,25 @@ async def index_document(document_id: int, db: Session = Depends(get_session)):
 async def generate_document(
     title: str = "Synthesized Report",
     analysis_run_id: int | None = None,
+    workspace_id: int | None = None,
     db: Session = Depends(get_session),
 ):
     try:
-        doc = await GenerationService().generate(db, title, analysis_run_id)
+        doc = await GenerationService().generate(db, title, analysis_run_id, workspace_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    knowledge = KnowledgeService().get_knowledge_state(db, analysis_run_id)
+    knowledge = KnowledgeService().get_knowledge_state(db, analysis_run_id, workspace_id)
     VerificationService().verify(db, doc, knowledge)
     db.refresh(doc)
     return doc
 
 
 @router.get("/generated/list", response_model=list[GeneratedDocumentOut])
-def list_generated_documents(db: Session = Depends(get_session)):
+def list_generated_documents(workspace_id: int | None = None, db: Session = Depends(get_session)):
+    """Generated documents of one werkmap; omitted = those that belong to no werkmap."""
     from app.models import GeneratedDocument
 
-    return db.query(GeneratedDocument).order_by(GeneratedDocument.id.desc()).all()
+    return db.query(GeneratedDocument).filter(GeneratedDocument.workspace_id == workspace_id).order_by(GeneratedDocument.id.desc()).all()
 
 
 @router.get("/generated/{generated_id}", response_model=GeneratedDocumentOut)

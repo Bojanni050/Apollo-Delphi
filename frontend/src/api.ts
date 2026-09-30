@@ -133,6 +133,7 @@ export interface VerificationFinding {
 
 export interface GeneratedDocument {
   id: number
+  workspace_id: number | null
   title: string
   status: string
   content: string | null
@@ -350,11 +351,16 @@ export const api = {
   },
   indexDocument: (id: number) => request<DocumentRecord>(`/api/documents/${id}/index`, { method: 'POST' }),
   deleteDocument: (id: number) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
-  search: (q: string) => request<{ query: string; results: SearchHit[] }>(`/api/search?q=${encodeURIComponent(q)}`),
+  search: (q: string, workspaceId?: number | null) =>
+    request<{ query: string; results: SearchHit[] }>(
+      `/api/search?q=${encodeURIComponent(q)}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
+    ),
   runAnalysis: (workspaceId?: number | null) =>
     request<AnalysisRun>(`/api/analysis${workspaceId ? `?workspace_id=${workspaceId}` : ''}`, { method: 'POST' }),
-  listIssues: (status?: string) =>
-    request<Issue[]>(`/api/issues${status ? `?status=${status}` : ''}`),
+  listIssues: (status?: string, workspaceId?: number | null) => {
+    const qs = [status ? `status=${status}` : '', workspaceId ? `workspace_id=${workspaceId}` : ''].filter(Boolean).join('&')
+    return request<Issue[]>(`/api/issues${qs ? `?${qs}` : ''}`)
+  },
   getIssue: (id: number) => request<IssueDetail>(`/api/issues/${id}`),
   investigateIssue: (id: number) => request<IssueDetail>(`/api/issues/${id}/investigate`, { method: 'POST' }),
   resolveIssue: (id: number, decision: string, note?: string) =>
@@ -365,12 +371,15 @@ export const api = {
     }),
   buildKnowledge: (analysisRunId: number) =>
     request<KnowledgeItem[]>(`/api/knowledge/build?analysis_run_id=${analysisRunId}`, { method: 'POST' }),
-  getKnowledge: () => request<KnowledgeItem[]>('/api/knowledge'),
-  generateDocument: (title: string, analysisRunId?: number) =>
+  getKnowledge: (workspaceId?: number | null) =>
+    request<KnowledgeItem[]>(`/api/knowledge${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
+  generateDocument: (title: string, analysisRunId?: number, workspaceId?: number | null) =>
     request<GeneratedDocument>(
-      `/api/documents/generate?title=${encodeURIComponent(title)}${analysisRunId ? `&analysis_run_id=${analysisRunId}` : ''}`,
+      `/api/documents/generate?title=${encodeURIComponent(title)}${analysisRunId ? `&analysis_run_id=${analysisRunId}` : ''}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
       { method: 'POST' },
     ),
+  listGenerated: (workspaceId?: number | null) =>
+    request<GeneratedDocument[]>(`/api/documents/generated/list${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
   getVerification: (id: number) => request<VerificationFinding[]>(`/api/documents/generated/${id}/verification`),
   health: () => request<Record<string, string>>('/api/health'),
   ingestGithub: (repoUrl: string, workspaceId?: number | null) =>

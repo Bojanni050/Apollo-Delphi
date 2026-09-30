@@ -42,10 +42,8 @@ class AnalysisService:
     """
 
     def run_analysis(self, db: Session, workspace_id: int | None = None) -> AnalysisRun:
-        docs = db.query(Document).filter(Document.indexing_status == "indexed")
-        if workspace_id is not None:
-            docs = docs.filter(Document.workspace_id == workspace_id)
-        docs = docs.all()
+        # Documents of this werkmap; without one, only documents that belong to no werkmap.
+        docs = db.query(Document).filter(Document.indexing_status == "indexed", Document.workspace_id == workspace_id).all()
         run = AnalysisRun(status="running", workspace_id=workspace_id)
         db.add(run)
         db.commit()

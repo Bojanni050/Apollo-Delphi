@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
-from app.models import Claim, Evidence, Issue, IssueClaim, IssueEvidence, Resolution
+from app.models import AnalysisRun, Claim, Evidence, Issue, IssueClaim, IssueEvidence, Resolution
 from app.schemas.issues import ClaimOut, EvidenceOut, IssueDetail, IssueOut, ResolveRequest, ResolutionOut
 from app.services.issues.investigation import InvestigationEngine, ResolutionEngine
 
@@ -12,8 +12,9 @@ router = APIRouter(prefix="/issues", tags=["issues"])
 
 
 @router.get("", response_model=list[IssueOut])
-def list_issues(status: str | None = None, db: Session = Depends(get_session)):
-    q = db.query(Issue)
+def list_issues(status: str | None = None, workspace_id: int | None = None, db: Session = Depends(get_session)):
+    """Issues of one werkmap (those whose analysis ran on it); omitted = analyses that belong to no werkmap."""
+    q = db.query(Issue).join(AnalysisRun, AnalysisRun.id == Issue.analysis_run_id).filter(AnalysisRun.workspace_id == workspace_id)
     if status:
         q = q.filter(Issue.status == status)
     return q.order_by(Issue.created_at.desc()).all()

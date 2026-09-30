@@ -12,6 +12,7 @@ class GeneratedDocument(Base):
     __tablename__ = "generated_documents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int | None] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="drafting")
     outline: Mapped[str | None] = mapped_column(Text, nullable=True)

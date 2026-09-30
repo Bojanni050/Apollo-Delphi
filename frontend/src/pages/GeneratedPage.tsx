@@ -19,7 +19,7 @@ function renderMarkdown(text: string): string {
     .replace(/\n{2,}/g, '<br/><br/>')
 }
 
-export default function GeneratedPage() {
+export default function GeneratedPage({ workspaceId }: { workspaceId?: number | null }) {
   const [docs, setDocs] = useState<GeneratedDocument[]>([])
   const [selected, setSelected] = useState<GeneratedDocument | null>(null)
   const [findings, setFindings] = useState<VerificationFinding[]>([])
@@ -28,19 +28,22 @@ export default function GeneratedPage() {
   const [error, setError] = useState<string | null>(null)
 
   const loadDocs = async () => {
-    const res = await fetch('/api/documents/generated/list').catch(() => null)
-    if (res && res.ok) setDocs(await res.json())
+    setDocs(await api.listGenerated(workspaceId))
   }
 
   useEffect(() => {
+    setSelected(null)
+    setFindings([])
+    setError(null)
     void loadDocs().catch(() => setError('Could not load generated documents'))
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId])
 
   const generate = async () => {
     setBusy(true)
     setError(null)
     try {
-      const doc = await api.generateDocument(title)
+      const doc = await api.generateDocument(title, undefined, workspaceId)
       setSelected(doc)
       setFindings(await api.getVerification(doc.id))
       await loadDocs()
