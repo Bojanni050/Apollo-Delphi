@@ -73,7 +73,7 @@ class DocumentService:
         )
         ws = db.get(Workspace, workspace_id) if workspace_id is not None else None
         if ws is not None:
-            doc.repo_path = self._mirror_into_repo(db, ws, filename, data)
+            doc.inbox_path = self._mirror_into_repo(db, ws, filename, data)
         db.add(doc)
         db.commit()
         db.refresh(doc)

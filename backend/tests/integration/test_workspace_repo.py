@@ -31,6 +31,12 @@ def test_upload_lands_in_inbox_and_is_committed(client, db):
     _upload(client, ws["id"], "notes.txt")
     _upload(client, ws["id"], "notes.txt", "second version, different text")
 
+    from app.models import Document
+
+    docs = db.query(Document).filter(Document.workspace_id == ws["id"]).order_by(Document.id).all()
+    assert [d.inbox_path for d in docs] == ["Inbox/notes.txt", "Inbox/notes-2.txt"]
+    assert all(d.repo_path is None for d in docs), "repo_path belongs to GitHub-sourced documents"
+
     assert (repo / "Inbox" / "notes.txt").read_text() == "Project Alpha budget is 100 EUR."
     assert (repo / "Inbox" / "notes-2.txt").exists(), "same filename must never overwrite"
     assert _git(repo, "status", "--porcelain").strip() == ""
