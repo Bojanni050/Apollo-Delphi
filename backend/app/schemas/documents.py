@@ -9,6 +9,7 @@ class DocumentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    workspace_id: int | None
     filename: str
     title: str | None
     file_type: str

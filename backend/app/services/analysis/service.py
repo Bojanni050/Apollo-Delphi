@@ -40,9 +40,12 @@ class AnalysisService:
     output is persisted as inspectable relational data before the next runs.
     """
 
-    def run_analysis(self, db: Session) -> AnalysisRun:
-        docs = db.query(Document).filter(Document.indexing_status == "indexed").all()
-        run = AnalysisRun(status="running")
+    def run_analysis(self, db: Session, workspace_id: int | None = None) -> AnalysisRun:
+        docs = db.query(Document).filter(Document.indexing_status == "indexed")
+        if workspace_id is not None:
+            docs = docs.filter(Document.workspace_id == workspace_id)
+        docs = docs.all()
+        run = AnalysisRun(status="running", workspace_id=workspace_id)
         db.add(run)
         db.commit()
         db.refresh(run)

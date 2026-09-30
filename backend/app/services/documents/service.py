@@ -57,7 +57,7 @@ def store_file(data: bytes, ext: str) -> tuple[str, str]:
 
 
 class DocumentService:
-    def create_document(self, db: Session, filename: str, data: bytes) -> Document:
+    def create_document(self, db: Session, filename: str, data: bytes, workspace_id: int | None = None) -> Document:
         ext = validate_upload(filename, data)
         stored, content_hash = store_file(data, ext)
         doc = Document(
@@ -67,6 +67,7 @@ class DocumentService:
             file_size=len(data),
             content_hash=content_hash,
             indexing_status="pending",
+            workspace_id=workspace_id,
         )
         db.add(doc)
         db.commit()
@@ -76,8 +77,11 @@ class DocumentService:
     def get_document(self, db: Session, document_id: int) -> Document | None:
         return db.get(Document, document_id)
 
-    def list_documents(self, db: Session) -> list[Document]:
-        return db.query(Document).order_by(Document.created_at.desc()).all()
+    def list_documents(self, db: Session, workspace_id: int | None = None) -> list[Document]:
+        q = db.query(Document)
+        if workspace_id is not None:
+            q = q.filter(Document.workspace_id == workspace_id)
+        return q.order_by(Document.created_at.desc()).all()
 
     def delete_document(self, db: Session, document_id: int) -> bool:
         doc = db.get(Document, document_id)

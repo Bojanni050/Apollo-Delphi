@@ -54,6 +54,7 @@ def _clean_tables(db):
         KnowledgeItem,
         Resolution,
         VerificationFinding,
+        Workspace,
     )
 
     for table in (

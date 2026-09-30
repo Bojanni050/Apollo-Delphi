@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DocumentsPage from './pages/DocumentsPage'
 import AnalysisPage from './pages/AnalysisPage'
 import IssuesPage from './pages/IssuesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
 import AppShell from './layout/AppShell'
+import { api, type Workspace } from './api'
 
 type Page = 'documents' | 'analysis' | 'issues' | 'knowledge' | 'generated'
 
@@ -25,24 +26,155 @@ const CONTEXT_TITLES: Record<Page, string> = {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('issues')
+  const [page, setPage] = useState<Page>('documents')
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  const loadWorkspaces = async (preserveActive = true) => {
+    try {
+      const list = await api.listWorkspaces()
+      setWorkspaces(list)
+      if (!preserveActive || activeWorkspaceId === null || !list.some((w) => w.id === activeWorkspaceId)) {
+        const stored = localStorage.getItem('apollo.activeWorkspaceId')
+        const id = stored ? Number(stored) : null
+        setActiveWorkspaceId(list.some((w) => w.id === id) ? id : (list[0]?.id ?? null))
+      }
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  useEffect(() => {
+    void loadWorkspaces()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (activeWorkspaceId !== null) localStorage.setItem('apollo.activeWorkspaceId', String(activeWorkspaceId))
+  }, [activeWorkspaceId])
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const createWorkspace = async () => {
+    const name = newName.trim()
+    if (!name) return
+    try {
+      const ws = await api.createWorkspace(name)
+      setNewName('')
+      setCreating(false)
+      setMenuOpen(false)
+      await loadWorkspaces(false)
+      setActiveWorkspaceId(ws.id)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null
   const activeLabel = NAV.find((n) => n.id === page)?.label ?? page
+
+  const workspaceBar = (
+    <div className="relative">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded border border-slate-200 px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+          title="Werkmap wisselen"
+        >
+          <span className="text-slate-400">📁</span>
+          <span className="truncate font-medium text-slate-800">
+            {activeWorkspace ? activeWorkspace.name : 'Geen werkmap'}
+          </span>
+          <span className="ml-auto text-slate-400">▾</span>
+        </button>
+      </div>
+      {menuOpen && (
+        <div ref={menuRef} className="absolute left-0 right-0 top-full z-20 mt-1 rounded border border-slate-200 bg-white p-1 shadow-lg">
+          {workspaces.map((w) => (
+            <button
+              key={w.id}
+              onClick={() => {
+                setActiveWorkspaceId(w.id)
+                setMenuOpen(false)
+              }}
+              className={`flex w-full items-center rounded px-2 py-1.5 text-left text-sm ${
+                w.id === activeWorkspaceId ? 'bg-slate-100 font-medium' : 'hover:bg-slate-50'
+              }`}
+            >
+              <span className="truncate">{w.name}</span>
+            </button>
+          ))}
+          {workspaces.length === 0 && (
+            <p className="px-2 py-1.5 text-xs text-slate-400">Nog geen werkmaps.</p>
+          )}
+          <div className="mt-1 border-t border-slate-100 pt-1">
+            {creating ? (
+              <div className="px-1 py-1">
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void createWorkspace()
+                    if (e.key === 'Escape') setCreating(false)
+                  }}
+                  placeholder="Naam nieuwe werkmap…"
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                />
+                <button
+                  onClick={() => void createWorkspace()}
+                  className="mt-1 w-full rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700"
+                >
+                  Aanmaken
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setCreating(true)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-600 hover:bg-slate-50"
+              >
+                <span className="text-slate-400">＋</span> Nieuwe werkmap…
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  )
 
   return (
     <AppShell
       nav={NAV}
       active={page}
       onNavigate={(id) => setPage(id as Page)}
-      breadcrumb={<span className="truncate text-sm font-medium text-slate-700">{activeLabel}</span>}
+      breadcrumb={
+        <span className="truncate text-sm font-medium text-slate-700">
+          {activeWorkspace ? `${activeWorkspace.name} / ` : ''}
+          {activeLabel}
+        </span>
+      }
       contextTitle={CONTEXT_TITLES[page]}
+      workspaceBar={workspaceBar}
     >
       {page === 'issues' && <IssuesPage />}
       {page === 'generated' && <GeneratedPage />}
       {(page === 'documents' || page === 'analysis' || page === 'knowledge') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
-            {page === 'documents' && <DocumentsPage />}
-            {page === 'analysis' && <AnalysisPage />}
+            {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} onChanged={() => void loadWorkspaces()} />}
+            {page === 'analysis' && <AnalysisPage workspaceId={activeWorkspaceId} />}
             {page === 'knowledge' && <KnowledgePage />}
           </div>
         </div>

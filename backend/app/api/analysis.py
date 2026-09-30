@@ -15,9 +15,9 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 
 @router.post("", response_model=AnalysisRunOut, status_code=201)
-def run_analysis(db: Session = Depends(get_session)):
+def run_analysis(workspace_id: int | None = None, db: Session = Depends(get_session)):
     try:
-        run = AnalysisService().run_analysis(db)
+        run = AnalysisService().run_analysis(db, workspace_id=workspace_id)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
     out = AnalysisRunOut(

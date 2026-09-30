@@ -10,6 +10,7 @@ type AppShellProps = {
   topActions?: ReactNode
   contextTitle?: string
   contextPane?: ReactNode
+  workspaceBar?: ReactNode
   children: ReactNode
 }
 
@@ -21,6 +22,7 @@ export default function AppShell({
   topActions,
   contextTitle,
   contextPane,
+  workspaceBar,
   children,
 }: AppShellProps) {
   // Left expanded by default, right collapsed by default (contextual)
@@ -61,6 +63,11 @@ export default function AppShell({
             </button>
           )}
         </div>
+
+        {/* Workspace bar: current werkmap name + create new */}
+        {workspaceBar && !leftCollapsed && (
+          <div className="border-b border-slate-200 px-3 py-2">{workspaceBar}</div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           <nav className="mt-1 space-y-0.5">

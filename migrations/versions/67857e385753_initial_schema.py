@@ -11,6 +11,7 @@ Create Date: 2026-09-30 12:53:59.063860
 """
 from alembic import op
 import sqlalchemy as sa
+import pgvector.sqlalchemy
 from sqlalchemy import text
 
 

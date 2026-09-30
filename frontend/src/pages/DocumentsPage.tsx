@@ -8,7 +8,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-export default function DocumentsPage() {
+export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?: number | null; onChanged?: () => void }) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -18,7 +18,7 @@ export default function DocumentsPage() {
 
   const refresh = async () => {
     try {
-      setDocuments(await api.listDocuments())
+      setDocuments(await api.listDocuments(workspaceId))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -26,7 +26,7 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     void refresh()
-  }, [])
+  }, [workspaceId])
 
   const upload = async (files: FileList | null) => {
     if (!files?.length) return
@@ -34,7 +34,8 @@ export default function DocumentsPage() {
     setError(null)
     try {
       for (const file of Array.from(files)) {
-        await api.uploadDocument(file)
+        await api.uploadDocument(file, workspaceId)
+        onChanged?.()
       }
       await refresh()
     } catch (e) {

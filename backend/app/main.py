@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analysis, documents, issues, knowledge, search
+from app.api import analysis, documents, issues, knowledge, search, workspaces
 from app.core.config import get_settings
 from app.core.logging import get_logger
 
@@ -25,6 +25,7 @@ app.include_router(search.router, prefix=settings.api_prefix)
 app.include_router(analysis.router, prefix=settings.api_prefix)
 app.include_router(issues.router, prefix=settings.api_prefix)
 app.include_router(knowledge.router, prefix=settings.api_prefix)
+app.include_router(workspaces.router, prefix=settings.api_prefix)
 
 
 @app.on_event("startup")

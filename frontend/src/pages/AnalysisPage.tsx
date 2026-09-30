@@ -8,7 +8,7 @@ async function fetchJson<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export default function AnalysisPage() {
+export default function AnalysisPage({ workspaceId }: { workspaceId?: number | null }) {
   const [run, setRun] = useState<AnalysisRun | null>(null)
   const [claims, setClaims] = useState<Claim[]>([])
   const [issues, setIssues] = useState<Issue[]>([])
@@ -40,7 +40,7 @@ export default function AnalysisPage() {
     setBusy(true)
     setError(null)
     try {
-      const newRun = await api.runAnalysis()
+      const newRun = await api.runAnalysis(workspaceId)
       setRun(newRun)
       setClaims(await fetchJson<Claim[]>(`/api/analysis/${newRun.id}/claims`))
       await loadIssues()

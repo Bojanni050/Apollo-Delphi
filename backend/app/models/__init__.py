@@ -1,4 +1,5 @@
 from .analysis import AnalysisRun
+from .workspace import Workspace
 from .claim import Claim, ClaimEvidence, Evidence
 from .document import Document, DocumentChunk
 from .generated_document import GeneratedDocument, VerificationFinding
@@ -23,4 +24,5 @@ __all__ = [
     "KnowledgeItem",
     "Resolution",
     "VerificationFinding",
+    "Workspace",
 ]

@@ -13,6 +13,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int | None] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     filename: Mapped[str] = mapped_column(String(512))
     stored_filename: Mapped[str] = mapped_column(String(128), unique=True)
     file_type: Mapped[str] = mapped_column(String(32))

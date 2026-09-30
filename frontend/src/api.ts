@@ -140,17 +140,31 @@ export interface GeneratedDocument {
   created_at: string
 }
 
+export interface Workspace {
+  id: number
+  name: string
+  created_at: string
+}
+
+export interface WorkspaceDetail extends Workspace {
+  document_count: number
+  latest_analysis_run_id: number | null
+}
+
 export const api = {
-  listDocuments: () => request<DocumentRecord[]>('/api/documents'),
-  uploadDocument: (file: File) => {
+  listDocuments: (workspaceId?: number | null) =>
+    request<DocumentRecord[]>(`/api/documents${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
+  uploadDocument: (file: File, workspaceId?: number | null) => {
     const form = new FormData()
     form.append('file', file)
-    return request<DocumentRecord>('/api/documents', { method: 'POST', body: form })
+    const qs = workspaceId ? `?workspace_id=${workspaceId}` : ''
+    return request<DocumentRecord>(`/api/documents${qs}`, { method: 'POST', body: form })
   },
   indexDocument: (id: number) => request<DocumentRecord>(`/api/documents/${id}/index`, { method: 'POST' }),
   deleteDocument: (id: number) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
   search: (q: string) => request<{ query: string; results: SearchHit[] }>(`/api/search?q=${encodeURIComponent(q)}`),
-  runAnalysis: () => request<AnalysisRun>('/api/analysis', { method: 'POST' }),
+  runAnalysis: (workspaceId?: number | null) =>
+    request<AnalysisRun>(`/api/analysis${workspaceId ? `?workspace_id=${workspaceId}` : ''}`, { method: 'POST' }),
   listIssues: (status?: string) =>
     request<Issue[]>(`/api/issues${status ? `?status=${status}` : ''}`),
   getIssue: (id: number) => request<IssueDetail>(`/api/issues/${id}`),
@@ -171,4 +185,11 @@ export const api = {
     ),
   getVerification: (id: number) => request<VerificationFinding[]>(`/api/documents/generated/${id}/verification`),
   health: () => request<Record<string, string>>('/api/health'),
+  listWorkspaces: () => request<Workspace[]>('/api/workspaces'),
+  createWorkspace: (name: string) =>
+    request<Workspace>('/api/workspaces', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
 }

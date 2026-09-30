@@ -17,18 +17,22 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 
 
 @router.post("", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)
-async def upload_document(file: UploadFile = File(...), db: Session = Depends(get_session)):
+async def upload_document(
+    file: UploadFile = File(...),
+    workspace_id: int | None = None,
+    db: Session = Depends(get_session),
+):
     data = await file.read()
     try:
-        doc = document_service.create_document(db, file.filename or "upload", data)
+        doc = document_service.create_document(db, file.filename or "upload", data, workspace_id=workspace_id)
     except DocumentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return doc
 
 
 @router.get("", response_model=list[DocumentOut])
-def list_documents(db: Session = Depends(get_session)):
-    return document_service.list_documents(db)
+def list_documents(workspace_id: int | None = None, db: Session = Depends(get_session)):
+    return document_service.list_documents(db, workspace_id=workspace_id)
 
 
 @router.get("/{document_id}", response_model=DocumentOut)
