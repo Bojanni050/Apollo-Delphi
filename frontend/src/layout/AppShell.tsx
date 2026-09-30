@@ -42,7 +42,6 @@ export default function AppShell({
           {!leftCollapsed && (
             <>
               <span className="truncate text-sm font-semibold">Apollo</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">Free</span>
               <button
                 onClick={() => setLeftCollapsed(true)}
                 title="Collapse sidebar"
@@ -64,15 +63,7 @@ export default function AppShell({
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
-          {!leftCollapsed && <p className="px-2 text-[11px] uppercase tracking-wide text-slate-400">Project</p>}
-          {!leftCollapsed && (
-            <button className="mt-1 flex w-full items-center gap-1 rounded px-2 py-1.5 text-left text-sm font-medium hover:bg-slate-100">
-              <span className="truncate">AS Production</span>
-              <span className="ml-auto text-slate-400">⇅</span>
-            </button>
-          )}
-
-          <nav className="mt-3 space-y-0.5">
+          <nav className="mt-1 space-y-0.5">
             {nav.map((n) => (
               <button
                 key={n.id}
@@ -89,33 +80,7 @@ export default function AppShell({
               </button>
             ))}
           </nav>
-
-          {!leftCollapsed && (
-            <>
-              <p className="mt-6 px-2 text-[11px] uppercase tracking-wide text-slate-400">Quick access</p>
-              <div className="mt-1 space-y-0.5 text-sm text-slate-600">
-                {['API key', 'Setup for agents', 'Invite members', 'Resources', 'Help', 'Settings'].map((l) => (
-                  <div key={l} className="rounded px-2 py-1.5 hover:bg-slate-50">
-                    {l}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </div>
-
-        {!leftCollapsed && (
-          <div className="border-t border-slate-200 p-2">
-            <div className="flex items-center justify-between rounded border px-2 py-2 text-sm">
-              <span className="text-slate-600">Usage ›</span>
-              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[11px] text-white">Upgrade</span>
-            </div>
-            <div className="mt-2 flex items-center gap-2 px-2 py-1 text-xs text-slate-500">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200">U</span>
-              <span className="truncate">user@example.com</span>
-            </div>
-          </div>
-        )}
       </aside>
 
       {/* Center: topbar + content */}
