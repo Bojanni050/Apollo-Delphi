@@ -1,7 +1,7 @@
 """werkmap is a repository: workspaces.working_dir, documents.repo_path
 
 Revision ID: 3f1a9c2b7d10
-Revises: ca82a5d7702b
+Revises: b6861c4fa3ad
 Create Date: 2026-09-30 21:30:00
 """
 from alembic import op
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 
 revision = '3f1a9c2b7d10'
-down_revision = 'ca82a5d7702b'
+down_revision = 'b6861c4fa3ad'
 branch_labels = None
 depends_on = None
 
