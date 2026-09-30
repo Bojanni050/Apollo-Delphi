@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import datetime as dt
 import json
 import re
@@ -53,7 +52,7 @@ class InvestigationEngine:
         db.commit()
         db.refresh(investigation)
 
-        evidence_rows = self._gather_evidence(db, issue)
+        evidence_rows = await self._gather_evidence(db, issue)
         findings = await self._reason(db, issue, evidence_rows)
 
         investigation.evidence_summary = json.dumps(
@@ -72,7 +71,7 @@ class InvestigationEngine:
         db.refresh(investigation)
         return investigation
 
-    def _gather_evidence(self, db: Session, issue: Issue) -> list[Evidence]:
+    async def _gather_evidence(self, db: Session, issue: Issue) -> list[Evidence]:
         """Evidence linked to the issue plus semantically retrieved evidence from the collection."""
         linked = (
             db.query(Evidence)
@@ -84,14 +83,11 @@ class InvestigationEngine:
         seen_ids = {e.id for e in linked}
 
         query_text = issue.question or issue.title
-        loop = asyncio.new_event_loop()
         try:
-            hits = loop.run_until_complete(self.search.search(db, query_text, top_k=5))
+            hits = await self.search.search(db, query_text, top_k=5)
         except Exception as exc:
             log.warning("Semantic evidence retrieval failed for issue %s: %s", issue.id, exc)
             hits = []
-        finally:
-            loop.close()
 
         from app.models import DocumentChunk
 
