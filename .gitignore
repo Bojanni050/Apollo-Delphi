@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Databases / uploads
+*.db
+*.sqlite3
+uploads/
+backend/uploads/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Env and secrets
+.env
+backend/.env
+
+# Tooling
+.pytest_cache/
+.coverage
+.idea/
+.vscode/

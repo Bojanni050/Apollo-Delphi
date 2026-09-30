@@ -1,0 +1,101 @@
+import { useEffect, useState } from 'react'
+import { api, type KnowledgeItem } from '../api'
+import { Button, Card, ErrorText } from '../components'
+
+const TYPE_LABELS: Record<string, string> = {
+  fact: 'Facts',
+  derived_conclusion: 'Derived conclusions',
+  assumption: 'Assumptions',
+  decision: 'Decisions',
+  unresolved_question: 'Unresolved questions',
+  resolved_contradiction: 'Resolved contradictions',
+  remaining_contradiction: 'Remaining contradictions',
+}
+
+const TYPE_ORDER = [
+  'fact',
+  'derived_conclusion',
+  'assumption',
+  'decision',
+  'resolved_contradiction',
+  'unresolved_question',
+  'remaining_contradiction',
+]
+
+export default function KnowledgePage() {
+  const [items, setItems] = useState<KnowledgeItem[]>([])
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async () => {
+    try {
+      setItems(await api.getKnowledge())
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  const buildFromLatest = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const issues = await api.listIssues()
+      if (issues.length === 0) {
+        setError('No analysis runs found. Run an analysis first.')
+        return
+      }
+      const runId = Math.max(...issues.map((i) => i.analysis_run_id))
+      setItems(await api.buildKnowledge(runId))
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const grouped = TYPE_ORDER.map((t) => ({
+    type: t,
+    items: items.filter((i) => i.item_type === t),
+  })).filter((g) => g.items.length > 0)
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Knowledge state</h2>
+          <Button onClick={() => void buildFromLatest()} disabled={busy}>
+            {busy ? 'Building…' : 'Build from latest analysis'}
+          </Button>
+        </div>
+        <ErrorText message={error} />
+      </Card>
+
+      {grouped.map((g) => (
+        <Card key={g.type}>
+          <h3 className="font-semibold mb-3">{TYPE_LABELS[g.type] ?? g.type}</h3>
+          <ul className="space-y-2 text-sm">
+            {g.items.map((i) => (
+              <li key={i.id} className="border-b last:border-0 pb-2">
+                <p>{i.statement}</p>
+                {i.explanation && <p className="text-slate-500 text-xs mt-0.5">{i.explanation}</p>}
+                <p className="text-slate-400 text-xs mt-0.5">
+                  {i.provenance} · confidence {i.confidence.toFixed(2)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ))}
+
+      {items.length === 0 && (
+        <Card>
+          <p className="text-slate-400 text-sm">No knowledge state yet. Run an analysis, investigate issues, then build knowledge.</p>
+        </Card>
+      )}
+    </div>
+  )
+}
