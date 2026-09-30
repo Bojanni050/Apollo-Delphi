@@ -1,4 +1,5 @@
 from .analysis import AnalysisRun
+from .app_setting import AppSetting
 from .workspace import Workspace
 from .claim import Claim, ClaimEvidence, Evidence
 from .document import Document, DocumentChunk
@@ -11,6 +12,7 @@ from .resolution import HumanDecision, Resolution
 
 __all__ = [
     "AnalysisRun",
+    "AppSetting",
     "Claim",
     "ClaimEvidence",
     "Document",

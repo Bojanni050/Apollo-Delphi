@@ -31,6 +31,20 @@ app.include_router(workspaces.router, prefix=settings.api_prefix)
 app.include_router(github.router, prefix=settings.api_prefix)
 
 
+def _load_runtime_settings() -> None:
+    """Apply settings chosen in the UI (app_settings) over the environment."""
+    from app.db.session import SessionLocal
+    from app.services import llm_settings
+
+    db = SessionLocal()
+    try:
+        llm_settings.load_overrides(db)
+    except Exception as exc:  # table missing before migrations ran, etc.
+        log.warning("Could not load stored settings: %s", exc)
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def startup() -> None:
     settings.ensure_upload_dir()
@@ -38,6 +52,7 @@ def startup() -> None:
         from app.db.session import init_db
 
         init_db()
+    _load_runtime_settings()
     log.info("Apollo started (environment=%s, llm=%s/%s, embeddings=%s/%s)", settings.environment, settings.llm_provider, settings.llm_model, settings.embedding_provider, settings.embedding_model)
 
 

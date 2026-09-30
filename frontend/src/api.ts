@@ -207,6 +207,26 @@ export interface LLMStatus {
   tiers: LLMTier[]
 }
 
+export interface LLMSettings {
+  provider: 'mock' | 'openai' | 'anthropic'
+  model: string
+  background_model: string
+  base_url: string
+  timeout_seconds: number
+  openai_key_set: boolean
+  anthropic_key_set: boolean
+}
+
+export type LLMSettingsUpdate = Partial<Omit<LLMSettings, 'openai_key_set' | 'anthropic_key_set'>> & {
+  openai_api_key?: string
+  anthropic_api_key?: string
+}
+
+export interface ModelList {
+  models: string[]
+  error: string | null
+}
+
 export interface LLMTestResult {
   ok: boolean
   tier: string
@@ -281,5 +301,14 @@ export const api = {
       body: JSON.stringify({ decision }),
     }),
   llmStatus: () => request<LLMStatus>('/api/llm/status'),
+  getLlmSettings: () => request<LLMSettings>('/api/llm/settings'),
+  updateLlmSettings: (body: LLMSettingsUpdate) =>
+    request<LLMSettings>('/api/llm/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  llmModels: (provider: string, baseUrl: string) =>
+    request<ModelList>(`/api/llm/models?provider=${provider}&base_url=${encodeURIComponent(baseUrl)}`),
   llmTest: (tier: string) => request<LLMTestResult>(`/api/llm/test?tier=${tier}`, { method: 'POST' }),
 }

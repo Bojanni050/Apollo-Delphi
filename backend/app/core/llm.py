@@ -196,6 +196,8 @@ def _build(tier: str) -> LLMProvider:
     model = model_for(tier)
     if s.llm_provider == "mock":
         return MockLLMProvider()
+    if s.llm_provider in ("openai", "anthropic") and not model:
+        raise LLMError("No model selected. Choose one in Settings.")
     if s.llm_provider == "openai":
         if not s.llm_base_url and not s.openai_api_key:
             raise LLMError("LLM_PROVIDER=openai requires OPENAI_API_KEY (or LLM_BASE_URL for a local runtime such as Ollama)")

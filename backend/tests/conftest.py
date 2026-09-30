@@ -53,6 +53,7 @@ def _clean_tables(db):
         IssueClaim,
         IssueEvidence,
         KnowledgeItem,
+        AppSetting,
         PulseItem,
         PulseRun,
         Resolution,
@@ -61,6 +62,7 @@ def _clean_tables(db):
     )
 
     for table in (
+        AppSetting,
         PulseItem,
         PulseRun,
         VerificationFinding,
