@@ -6,6 +6,7 @@ from .generated_document import GeneratedDocument, VerificationFinding
 from .issue import Issue, IssueClaim, IssueEvidence
 from .investigation import Investigation
 from .knowledge import KnowledgeItem
+from .pulse import PulseItem, PulseRun
 from .resolution import HumanDecision, Resolution
 
 __all__ = [
@@ -22,6 +23,8 @@ __all__ = [
     "IssueClaim",
     "IssueEvidence",
     "KnowledgeItem",
+    "PulseItem",
+    "PulseRun",
     "Resolution",
     "VerificationFinding",
     "Workspace",

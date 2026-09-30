@@ -6,6 +6,7 @@ import tempfile
 os.environ["APOLLO_DATABASE_URL"] = "sqlite:///./test_apollo.db"
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["EMBEDDING_PROVIDER"] = "mock"
+os.environ["WORKSPACES_ROOT"] = tempfile.mkdtemp(prefix="apollo_test_workspaces_")
 os.environ["UPLOAD_DIR"] = tempfile.mkdtemp(prefix="apollo_test_uploads_")
 
 import pytest
@@ -52,12 +53,16 @@ def _clean_tables(db):
         IssueClaim,
         IssueEvidence,
         KnowledgeItem,
+        PulseItem,
+        PulseRun,
         Resolution,
         VerificationFinding,
         Workspace,
     )
 
     for table in (
+        PulseItem,
+        PulseRun,
         VerificationFinding,
         HumanDecision,
         Resolution,

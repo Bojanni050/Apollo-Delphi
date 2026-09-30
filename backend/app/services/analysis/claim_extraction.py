@@ -42,7 +42,7 @@ class LLMClaimExtractor(ClaimExtractorBackend):
     name = "llm"
 
     def __init__(self, provider: LLMProvider | None = None):
-        self.provider = provider or get_llm_provider()
+        self.provider = provider or get_llm_provider("background")
 
     def extract(self, text: str) -> list[ExtractedClaim]:
         if not text.strip():

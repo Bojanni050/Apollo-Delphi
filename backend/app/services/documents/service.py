@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+from pathlib import Path
 import datetime as dt
 
 from sqlalchemy.orm import Session
@@ -10,8 +11,9 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.db.session import SessionLocal
-from app.models import Document
+from app.models import Document, Workspace
 from app.services.extraction.extractors import get_extractor
+from app.services import workspace_repo
 from app.services.extraction.base import ExtractionError, ExtractionResult, normalize_text
 
 log = get_logger(__name__)
@@ -69,10 +71,23 @@ class DocumentService:
             indexing_status="pending",
             workspace_id=workspace_id,
         )
+        ws = db.get(Workspace, workspace_id) if workspace_id is not None else None
+        if ws is not None:
+            doc.repo_path = self._mirror_into_repo(db, ws, filename, data)
         db.add(doc)
         db.commit()
         db.refresh(doc)
         return doc
+
+    def _mirror_into_repo(self, db: Session, ws: Workspace, filename: str, data: bytes) -> str | None:
+        """Keep the original in the werkmap's repository. Failing here must not lose the upload."""
+        try:
+            if ws.working_dir is None:  # werkmap created before werkmappen were repositories
+                ws.working_dir = str(workspace_repo.init_repo(workspace_repo.default_working_dir(ws.id, ws.name)))
+            return workspace_repo.store_in_inbox(Path(ws.working_dir), filename, data)
+        except (OSError, workspace_repo.GitError) as exc:
+            log.warning("Could not store %s in werkmap %s: %s", filename, ws.id, exc)
+            return None
 
     def get_document(self, db: Session, document_id: int) -> Document | None:
         return db.get(Document, document_id)

@@ -9,6 +9,8 @@ venv/
 *.db
 *.sqlite3
 uploads/
+workspaces/
+backend/workspaces/
 backend/uploads/
 
 # Node / frontend
