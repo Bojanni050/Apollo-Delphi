@@ -50,7 +50,10 @@ class DocumentChunk(Base):
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section: Mapped[str | None] = mapped_column(String(256), nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list[float] | None] = mapped_column(vector_column(64), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(vector_column(None), nullable=True)
+    #: Model and dimension this vector was produced with; search only compares vectors of the active model.
+    embedding_model: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    embedding_dim: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     document: Mapped[Document] = relationship(back_populates="chunks")
 

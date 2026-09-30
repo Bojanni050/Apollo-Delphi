@@ -53,6 +53,8 @@ class IndexingService:
                         section=chunk.section,
                         content=chunk.content,
                         embedding=list(emb),
+                        embedding_model=self.embedding_service.model,
+                        embedding_dim=len(emb),
                     )
                 )
             db.flush()

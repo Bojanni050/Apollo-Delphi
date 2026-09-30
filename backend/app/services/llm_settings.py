@@ -12,6 +12,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.embeddings import set_embedding_provider
 from app.core.llm import PROVIDERS, set_llm_provider
 from app.core.logging import get_logger
 from app.models.app_setting import AppSetting
@@ -30,11 +31,19 @@ FIELDS: dict[str, type] = {
     "background_llm_base_url": str,
     "background_llm_api_key": str,
     "llm_timeout_seconds": float,
+    "embedding_provider": str,
+    "embedding_model": str,
+    "embedding_base_url": str,
+    "embedding_api_key": str,
+    "embedding_batch_size": int,
+    "embedding_runtime": str,
     # Legacy: written by the first settings page; still read as a fallback key.
     "openai_api_key": str,
     "anthropic_api_key": str,
 }
-SECRETS = frozenset({"llm_api_key", "background_llm_api_key", "openai_api_key", "anthropic_api_key"})
+EMBEDDING_PROVIDERS = ("mock", "openai")
+EMBEDDING_RUNTIMES = ("ollama", "llamacpp")
+SECRETS = frozenset({"embedding_api_key", "llm_api_key", "background_llm_api_key", "openai_api_key", "anthropic_api_key"})
 
 
 class SettingsError(ValueError):
@@ -46,6 +55,7 @@ def _apply(values: dict[str, object]) -> None:
     for key, value in values.items():
         setattr(settings, key, value)
     set_llm_provider(None)
+    set_embedding_provider(None)
 
 
 def load_overrides(db: Session) -> None:
@@ -68,7 +78,14 @@ def validate(updates: dict[str, object]) -> None:
     bg = updates.get("background_llm_provider")
     if bg and bg not in PROVIDERS:
         raise SettingsError(f"Background provider must be empty (same as main) or one of: {', '.join(PROVIDERS)}")
-    for key in ("llm_base_url", "background_llm_base_url"):
+    if "embedding_provider" in updates and updates["embedding_provider"] not in EMBEDDING_PROVIDERS:
+        raise SettingsError(f"Embedding provider must be one of: {', '.join(EMBEDDING_PROVIDERS)}")
+    if "embedding_runtime" in updates and updates["embedding_runtime"] not in EMBEDDING_RUNTIMES:
+        raise SettingsError(f"Embedding runtime must be one of: {', '.join(EMBEDDING_RUNTIMES)}")
+    batch = updates.get("embedding_batch_size")
+    if batch is not None and not (1 <= int(batch) <= 512):  # type: ignore[arg-type]
+        raise SettingsError("Embedding batch size must be between 1 and 512")
+    for key in ("llm_base_url", "background_llm_base_url", "embedding_base_url"):
         base_url = updates.get(key)
         if base_url and not str(base_url).startswith(("http://", "https://")):
             raise SettingsError("Base URL must start with http:// or https://")

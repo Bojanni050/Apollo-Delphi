@@ -10,6 +10,7 @@ import {
   type TierUpdate,
 } from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
+import EmbeddingsCard from './EmbeddingsCard'
 
 const PROVIDERS: { id: Provider; label: string; hint: string }[] = [
   { id: 'openai', label: 'OpenAI-compatibel', hint: 'OpenAI, Ollama, EdenAI, Gemini, OpenRouter, …' },
@@ -366,6 +367,8 @@ export default function SettingsPage() {
           onError={setError}
         />
       ))}
+
+      <EmbeddingsCard />
 
       <Card>
         <Field label="Time-out (seconden)" hint="Geldt voor beide modellen.">

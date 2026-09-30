@@ -26,3 +26,5 @@ backend/.env
 .coverage
 .idea/
 .vscode/
+models/
+backend/models/

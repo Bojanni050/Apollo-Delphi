@@ -242,6 +242,90 @@ export interface ModelList {
   error: string | null
 }
 
+export interface EmbeddingSettings {
+  provider: 'mock' | 'openai'
+  model: string
+  base_url: string
+  api_key_set: boolean
+  batch_size: number
+  runtime: 'ollama' | 'llamacpp'
+}
+
+export interface EmbeddingSettingsUpdate {
+  provider?: 'mock' | 'openai'
+  model?: string
+  base_url?: string
+  api_key?: string
+  batch_size?: number
+  runtime?: 'ollama' | 'llamacpp'
+}
+
+export interface IndexStatus {
+  provider: string | null
+  model: string | null
+  dimensions: number | null
+  error: string | null
+  chunks_total: number
+  chunks_current: number
+  documents_indexed: number
+  documents_stale: number
+  by_model: Record<string, number>
+}
+
+export interface EmbeddingTest {
+  ok: boolean
+  model: string | null
+  dimensions: number | null
+  millis: number | null
+  error: string | null
+}
+
+export interface LocalRuntime {
+  id: string
+  label: string
+  available: boolean
+  message: string | null
+  address: string
+  active: boolean
+}
+
+export interface CatalogModel {
+  name: string
+  label: string
+  role: string | null
+  dimension: number | null
+  note: string | null
+  runtime: string
+  identifier: string | null
+  downloadable: boolean
+  installed: boolean
+  in_use: boolean
+  official: boolean | null
+  source: string | null
+}
+
+export interface EmbeddingCatalog {
+  runtime: string
+  runtimes: LocalRuntime[]
+  models: CatalogModel[]
+}
+
+export interface PullStatus {
+  model: string
+  runtime: string
+  status: 'idle' | 'starting' | 'downloading' | 'completed' | 'failed'
+  percent: number | null
+  message: string | null
+  reindex_recommended: boolean
+}
+
+export interface ReindexResult {
+  model: string
+  requested: number
+  reindexed: number
+  failed: { document_id: number; error: string | null }[]
+}
+
 export interface LLMTestResult {
   ok: boolean
   tier: string
@@ -325,5 +409,26 @@ export const api = {
     }),
   llmModels: (tier: LLMTierName, provider: string, baseUrl: string) =>
     request<ModelList>(`/api/llm/models?tier=${tier}&provider=${provider}&base_url=${encodeURIComponent(baseUrl)}`),
+  getEmbeddingSettings: () => request<EmbeddingSettings>('/api/embeddings/settings'),
+  updateEmbeddingSettings: (body: EmbeddingSettingsUpdate) =>
+    request<EmbeddingSettings>('/api/embeddings/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  embeddingStatus: () => request<IndexStatus>('/api/embeddings/status'),
+  embeddingTest: () => request<EmbeddingTest>('/api/embeddings/test', { method: 'POST' }),
+  reindex: (everything = false) =>
+    request<ReindexResult>(`/api/embeddings/reindex${everything ? '?everything=true' : ''}`, { method: 'POST' }),
+  embeddingCatalog: (runtime?: string) =>
+    request<EmbeddingCatalog>(`/api/embeddings/catalog${runtime ? `?runtime=${runtime}` : ''}`),
+  pullStatus: (runtime: string, model: string) =>
+    request<PullStatus>(`/api/embeddings/models/pull?runtime=${runtime}&model=${encodeURIComponent(model)}`),
+  startPull: (runtime: string, model: string) =>
+    request<PullStatus>('/api/embeddings/models/pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ runtime, model }),
+    }),
   llmTest: (tier: LLMTierName) => request<LLMTestResult>(`/api/llm/test?tier=${tier}`, { method: 'POST' }),
 }

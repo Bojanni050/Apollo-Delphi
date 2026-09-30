@@ -14,5 +14,5 @@ class EmbeddingService:
         return await self.provider.embed_query(text)
 
     @property
-    def dimensions(self) -> int:
-        return getattr(self.provider, "dimensions", 0) or len(self.provider.embed_query("dimension probe") or [])
+    def model(self) -> str:
+        return self.provider.model

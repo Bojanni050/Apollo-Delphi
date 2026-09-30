@@ -29,6 +29,16 @@ class Settings(BaseSettings):
     embedding_provider: str = "mock"
     embedding_model: str = "mock-embedder"
     embedding_dimensions: int = 64
+    # Dimensions above are only used by the mock provider; real models report theirs (and are
+    # validated against it), so a model change never mixes incompatible vectors.
+    # OpenAI-compatible /embeddings endpoint (hosted, Ollama, llama-server, Jina, ...). Empty = OpenAI.
+    embedding_base_url: str = ""
+    embedding_api_key: str = ""
+    embedding_batch_size: int = Field(default=32, ge=1, le=512)
+    # Which local runtime manages embedding model downloads: "ollama" or "llamacpp".
+    embedding_runtime: str = Field(default="ollama", pattern="^(ollama|llamacpp)$")
+    # Where llama.cpp GGUF files are downloaded to (default ./models).
+    llamacpp_models_dir: str = ""
 
     openai_api_key: str = ""
     # Base URL of an OpenAI-compatible endpoint; set for local runtimes, e.g. http://localhost:11434/v1 (Ollama).
@@ -62,6 +72,10 @@ class Settings(BaseSettings):
     @property
     def max_upload_size_bytes(self) -> int:
         return self.max_upload_size_mb * 1024 * 1024
+
+    @property
+    def effective_llamacpp_models_dir(self) -> str:
+        return self.llamacpp_models_dir or str(Path("./models").resolve())
 
     def ensure_upload_dir(self) -> Path:
         p = Path(self.upload_dir)

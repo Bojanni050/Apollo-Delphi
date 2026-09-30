@@ -38,10 +38,10 @@ class SearchService:
         qvec = await self.embedding_service.embed_query(query)
 
         if db.get_bind().dialect.name == "postgresql":
-            return self._search_pgvector(db, qvec, k, document_ids)
-        return self._search_fallback(db, qvec, k, document_ids)
+            return self._search_pgvector(db, qvec, k, document_ids, self.embedding_service.model)
+        return self._search_fallback(db, qvec, k, document_ids, self.embedding_service.model)
 
-    def _search_pgvector(self, db: Session, qvec: list[float], k: int, document_ids: list[int] | None) -> list[SearchHit]:
+    def _search_pgvector(self, db: Session, qvec: list[float], k: int, document_ids: list[int] | None, model: str) -> list[SearchHit]:
         vec_literal = "[" + ",".join(f"{float(v):.6f}" for v in qvec) + "]"
         sql = text(
             """
@@ -52,6 +52,8 @@ class SearchService:
             FROM document_chunks c
             JOIN documents d ON d.id = c.document_id
             WHERE c.embedding IS NOT NULL
+              AND c.embedding_model = :model
+              AND c.embedding_dim = :dim
               AND d.indexing_status = 'indexed'
               AND (:has_docs = FALSE OR c.document_id = ANY(:doc_ids))
             ORDER BY c.embedding <=> :vec
@@ -60,7 +62,7 @@ class SearchService:
         )
         rows = db.execute(
             sql,
-            {"vec": vec_literal, "k": k, "has_docs": bool(document_ids), "doc_ids": document_ids or []},
+            {"vec": vec_literal, "model": model, "dim": len(qvec), "k": k, "has_docs": bool(document_ids), "doc_ids": document_ids or []},
         ).fetchall()
         return [
             SearchHit(
@@ -75,13 +77,18 @@ class SearchService:
             for row in rows
         ]
 
-    def _search_fallback(self, db: Session, qvec: list[float], k: int, document_ids: list[int] | None) -> list[SearchHit]:
+    def _search_fallback(self, db: Session, qvec: list[float], k: int, document_ids: list[int] | None, model: str) -> list[SearchHit]:
         from app.models import Document, DocumentChunk
 
         rows = (
             db.query(DocumentChunk, Document)
             .join(Document, Document.id == DocumentChunk.document_id)
-            .filter(DocumentChunk.embedding.isnot(None), Document.indexing_status == "indexed")
+            .filter(
+                DocumentChunk.embedding.isnot(None),
+                DocumentChunk.embedding_model == model,
+                DocumentChunk.embedding_dim == len(qvec),
+                Document.indexing_status == "indexed",
+            )
             .all()
         )
         scored: list[tuple[float, DocumentChunk, Document]] = []

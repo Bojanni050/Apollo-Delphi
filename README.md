@@ -78,7 +78,9 @@ All configuration is environment-driven (see `.env.example`). Keys:
 
 - `APOLLO_DATABASE_URL` — Postgres (primary) or SQLite (dev/tests)
 - `LLM_PROVIDER` / `LLM_MODEL` — `mock` (deterministic, offline) or `openai`
-- `EMBEDDING_PROVIDER` / `EMBEDDING_MODEL` / `EMBEDDING_DIMENSIONS`
+- `EMBEDDING_PROVIDER` (`mock` | `openai`) / `EMBEDDING_MODEL` / `EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` — any
+  OpenAI-compatible `/embeddings` endpoint (OpenAI, Ollama, llama-server, Jina, Gemini, …); all configurable in the app.
+  Every vector records its model and dimension; changing model means re-indexing (see *Embeddings* below).
 - `OPENAI_API_KEY` — only for real providers; **never hard-code keys**
 - `UPLOAD_DIR`, `MAX_UPLOAD_SIZE_MB`, `ALLOWED_EXTENSIONS`
 - `CHUNK_SIZE_CHARS`, `CHUNK_OVERLAP_CHARS`, `SEARCH_TOP_K`
@@ -102,7 +104,13 @@ GET    /api/documents                      list
 GET    /api/documents/{id}
 DELETE /api/documents/{id}
 POST   /api/documents/{id}/index          extraction → chunking → embedding → vectors
-POST   /api/search?q=...                  semantic search (pgvector)
+GET    /api/search?q=...                   semantic search (pgvector; only vectors of the active model)
+GET    /api/embeddings/status              active model, dimension, how much of the index is current
+GET/PUT /api/embeddings/settings           embedding provider, endpoint, key (write-only), model
+POST   /api/embeddings/test                embed a probe text: proves the endpoint answers, reveals the dimension
+POST   /api/embeddings/reindex             re-embed stale documents (?everything=true for all, ?workspace_id=)
+GET    /api/embeddings/catalog             recommended local models per runtime (ollama | llamacpp)
+GET/POST /api/embeddings/models/pull       download a recommended model to a local runtime, with progress
 POST   /api/analysis                       run analysis over the collection
 GET    /api/analysis/{id}
 GET    /api/analysis/{id}/claims
@@ -212,3 +220,18 @@ repository" card, or `POST /api/github/ingest`):
 - No filesystem paths exposed through the API
 - Pydantic validation on all inputs; no ORM objects exposed
 - Secrets only via environment variables
+
+## Embeddings
+
+Semantic search needs an embedding model. `mock` is deterministic and offline but not semantic; for real
+search point `EMBEDDING_PROVIDER=openai` at any OpenAI-compatible endpoint (Instellingen › Embeddingmodel).
+
+- **Hosted**: OpenAI (`text-embedding-3-small`), Jina, Gemini's OpenAI endpoint, …
+- **Local**: a running Ollama or `llama-server`. The app can download the recommended models for you
+  (`BAAI/bge-m3` via an Ollama pull; GGUF files for llama.cpp into `LLAMACPP_MODELS_DIR`). It does not
+  change your configuration by itself: after a download you choose the model, save, and re-index.
+- **Name translation**: the same logical model has different names per runtime (`BAAI/bge-m3` is `bge-m3` on
+  Ollama and `bge-m3-Q8_0.gguf` on llama-server); the app sends the right one for the configured endpoint.
+- **Safety**: each chunk stores `embedding_model` and `embedding_dim`; vectors returned with the wrong size are
+  rejected before storage, and search only compares vectors produced by the active model. Documents embedded
+  with another model show up as *stale* until re-indexed.

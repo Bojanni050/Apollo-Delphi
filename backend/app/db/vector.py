@@ -37,9 +37,10 @@ class JSONEncodedVector(TypeDecorator):
         return json.loads(value)
 
 
-def vector_column(dimensions: int) -> TypeEngine:
+def vector_column(dimensions: int | None = None) -> TypeEngine:
+    """Vector column; ``None`` = any dimension (vectors of different models live side by side)."""
     if Vector is not None:
-        return Vector(dimensions)
+        return Vector(dimensions) if dimensions else Vector()
     return JSONEncodedVector()
 
 
