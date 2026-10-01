@@ -155,6 +155,9 @@ class LocalRuntime(Protocol):
     def address(self) -> str:
         """Where this runtime is, for the UI to show when something fails."""
 
+    def endpoint(self) -> str:
+        """The OpenAI-compatible Base URL to embed with once a model of this runtime is chosen."""
+
     def probe(self) -> tuple[bool, str | None]:
         """(usable, reason-it-is-not). A failed probe is normal, not an error."""
 
@@ -201,6 +204,9 @@ class OllamaRuntime:
         if base and ("11434" in base or "ollama" in base.lower()):
             return base[: -len("/v1")] if base.endswith("/v1") else base
         return DEFAULT_OLLAMA_BASE_URL
+
+    def endpoint(self) -> str:
+        return f"{self.address()}/v1"
 
     def probe(self) -> tuple[bool, str | None]:
         root = self.address()
@@ -321,6 +327,9 @@ class LlamaCppRuntime:
     def address(self) -> str:
         return str(self.models_dir())
 
+    def endpoint(self) -> str:
+        return get_settings().llamacpp_base_url
+
     def probe(self) -> tuple[bool, str | None]:
         """Whether weights can be downloaded here.
 
@@ -437,6 +446,7 @@ def describe_runtimes() -> list[dict[str, Any]]:
             "available": available,
             "message": message,
             "address": runtime.address(),
+            "endpoint": runtime.endpoint(),
             "active": runtime.id == get_settings().embedding_runtime,
         }
 

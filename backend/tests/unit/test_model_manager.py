@@ -415,3 +415,13 @@ class TestCatalogAndPullApi:
         assert body["status"] == "idle"
         # Nothing was downloaded, so nothing needs rebuilding.
         assert body["reindex_recommended"] is False
+
+
+def test_runtimes_report_the_base_url_to_embed_with(monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(model_manager.OllamaRuntime, "address", lambda self: "http://ollama.test:11434")
+    monkeypatch.setattr(get_settings(), "llamacpp_base_url", "http://llama:8080/v1")
+    monkeypatch.setattr(model_manager.OllamaRuntime, "probe", lambda self: (True, None))
+    endpoints = {r["id"]: r["endpoint"] for r in model_manager.describe_runtimes()}
+    assert endpoints == {"ollama": "http://ollama.test:11434/v1", "llamacpp": "http://llama:8080/v1"}

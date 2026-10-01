@@ -343,6 +343,8 @@ export interface LocalRuntime {
   available: boolean
   message: string | null
   address: string
+  /** The Base URL to use for a model served by this runtime. */
+  endpoint: string
   active: boolean
 }
 

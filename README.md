@@ -233,6 +233,11 @@ search point `EMBEDDING_PROVIDER=openai` at any OpenAI-compatible endpoint (Inst
 - **Local**: a running Ollama or `llama-server`. The app can download the recommended models for you
   (`BAAI/bge-m3` via an Ollama pull; GGUF files for llama.cpp into `LLAMACPP_MODELS_DIR`). It does not
   change your configuration by itself: after a download you choose the model, save, and re-index.
+- **llama.cpp in docker-compose**: `docker compose --profile llama up -d llama` (or `COMPOSE_PROFILES=llama` in
+  `.env`) starts a `llama-server` that serves a GGUF from `backend/models`, the folder the app downloads into.
+  Download the model in Instellingen, choose it (Base URL becomes `http://llama:8080/v1`), save, test, re-index.
+  The server loads one model at start: for another one set `LLAMA_MODEL_FILE` (and `LLAMA_POOLING`: `last` for
+  the Jina code model, `cls` for bge-m3) and run `up -d llama` again.
 - **Name translation**: the same logical model has different names per runtime (`BAAI/bge-m3` is `bge-m3` on
   Ollama and `bge-m3-Q8_0.gguf` on llama-server); the app sends the right one for the configured endpoint.
 - **Safety**: each chunk stores `embedding_model` and `embedding_dim`; vectors returned with the wrong size are

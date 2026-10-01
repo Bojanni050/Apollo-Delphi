@@ -70,7 +70,7 @@ EMBEDDING_MODEL_CATALOG: dict[str, dict[str, Any]] = {
     "jina-code-embeddings-1.5b": {
         "label": "Jina Code Embeddings 1.5B",
         "role": "code",
-        "dimension": 768,
+        "dimension": 1536,
         "note": "Source code and natural-language to code retrieval.",
         "identifiers": {"ollama": None, "llamacpp": "jina-code-embeddings-1.5b-Q8_0.gguf"},
         "downloads": {

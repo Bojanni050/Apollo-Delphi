@@ -34,6 +34,8 @@ services:
       EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_RUNTIME: ${EMBEDDING_RUNTIME:-ollama}
+      # Chosen llama.cpp models point here (the llama service below).
+      LLAMACPP_BASE_URL: http://llama:8080/v1
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       UPLOAD_DIR: /data/uploads
@@ -49,6 +51,25 @@ services:
       db:
         condition: service_healthy
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  # Optional local embedding server (llama.cpp, MIT licensed): `docker compose --profile llama up -d` or
+  # COMPOSE_PROFILES=llama in .env. It serves a GGUF the app downloaded into backend/models (Instellingen >
+  # Embeddingmodel > Lokale modellen > llama.cpp > Downloaden), so nothing is installed or downloaded twice.
+  # In the app, choose that model (Base URL becomes http://llama:8080/v1), save, test and re-index.
+  # It loads ONE model at start: after choosing another GGUF set LLAMA_MODEL_FILE (and LLAMA_POOLING:
+  # `last` for the Jina code model, `cls` for bge-m3) and run `up -d llama` again. These GGUFs carry no
+  # pooling type, without --pooling the server refuses to return embeddings.
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    profiles: ["llama"]
+    command: >
+      -m /models/${LLAMA_MODEL_FILE:-jina-code-embeddings-1.5b-Q8_0.gguf}
+      --embeddings --pooling ${LLAMA_POOLING:-last} --host 0.0.0.0 --port 8080
+    volumes:
+      - ./backend/models:/models:ro
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
 
   frontend:
     build:

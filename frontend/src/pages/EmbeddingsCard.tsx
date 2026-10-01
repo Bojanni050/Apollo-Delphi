@@ -19,12 +19,6 @@ const PRESETS = [
   { label: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
 ]
 
-/** The Base URL a local runtime is served on (the same presets as the buttons under the Base URL field). */
-const RUNTIME_URLS: Record<string, string> = {
-  ollama: 'http://localhost:11434/v1',
-  llamacpp: 'http://localhost:8080/v1',
-}
-
 /** Whether ``url`` already points at that runtime (the backend recognises endpoints the same way). */
 function pointsAtRuntime(url: string, runtime: string): boolean {
   const u = url.toLowerCase()
@@ -359,7 +353,7 @@ export default function EmbeddingsCard() {
                             // endpoint stays empty and the model cannot be used.
                             const base_url = pointsAtRuntime(draft.base_url, catalog.runtime)
                               ? draft.base_url
-                              : (RUNTIME_URLS[catalog.runtime] ?? draft.base_url)
+                              : (catalog.runtimes.find((r) => r.id === catalog.runtime)?.endpoint || draft.base_url)
                             setDraft({ ...draft, provider: 'openai', model: m.name, base_url })
                           }}
                         >

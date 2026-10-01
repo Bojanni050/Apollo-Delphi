@@ -116,6 +116,6 @@ def test_provider_selection_and_key_rules(monkeypatch):
 
 def test_catalog_dimensions_and_defaults():
     assert emb.known_dimension("BAAI/bge-m3") == 1024
-    assert emb.known_dimension("jina-code-embeddings-1.5b") == 768
+    assert emb.known_dimension("jina-code-embeddings-1.5b") == 1536
     assert emb.known_dimension("something-else") is None
     assert emb.api_model_name("something-else", "http://localhost:11434/v1") == "something-else"

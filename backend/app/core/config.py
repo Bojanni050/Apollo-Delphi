@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     embedding_runtime: str = Field(default="ollama", pattern="^(ollama|llamacpp)$")
     # Where llama.cpp GGUF files are downloaded to (default ./models).
     llamacpp_models_dir: str = ""
+    # Where a llama-server can be reached from here; what "Kiezen" fills in as Base URL for a llama.cpp model.
+    # In docker-compose that is the llama service, not localhost.
+    llamacpp_base_url: str = "http://localhost:8080/v1"
 
     openai_api_key: str = ""
     # Base URL of an OpenAI-compatible endpoint; set for local runtimes, e.g. http://localhost:11434/v1 (Ollama).
