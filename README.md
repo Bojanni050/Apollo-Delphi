@@ -106,6 +106,8 @@ DELETE /api/documents/{id}
 POST   /api/documents/{id}/index          extraction → chunking → embedding → vectors
 GET    /api/search?q=...&workspace_id=&mode=   hybrid search (default): meaning + exact words, fused with RRF;
                                            mode=semantic|keyword to use one leg; only that werkmap's documents
+POST   /api/ask                              ask a question in a werkmap: cited answer ([n] -> fragments), checked
+GET    /api/ask/history?workspace_id=       earlier questions and answers of a werkmap
 GET    /api/embeddings/status              active model, dimension, how much of the index is current
 GET/PUT /api/embeddings/settings           embedding provider, endpoint, key (write-only), model
 POST   /api/embeddings/test                embed a probe text: proves the endpoint answers, reveals the dimension
@@ -247,3 +249,19 @@ embeddings handle poorly, which is what claims and contradictions are made of. A
 and is labelled `match: both`. Keyword search does not depend on embeddings, so documents embedded with an older
 model stay findable until they are re-indexed. If the embedding endpoint is down, hybrid falls back to keywords.
 Tuning: `SEARCH_RRF_K` (60) and `SEARCH_CANDIDATE_MULTIPLIER` (5).
+
+## Asking questions
+
+`POST /api/ask {question, workspace_id}` answers from the documents of one werkmap only. Retrieval is the hybrid
+search above; the main model gets the fragments as numbered sources, must use *only* those, and marks each
+statement with `[n]`. The answer is then **checked** before you see it:
+
+- a `[n]` that points at a source that was never offered is removed and reported (models invent citations);
+- an answer with no valid citation is marked `grounded: false`;
+- every number in the answer must occur in the sources it cites, otherwise it is reported;
+- when the documents do not contain the answer the model must say so (`NO_ANSWER`) and you are told, instead of
+  receiving a guess. With an empty werkmap no model is called at all.
+
+The cited fragments are returned verbatim, and each question with its answer is stored (`qa_entries`) so it stays
+inspectable. With the offline `mock` model the answer is *extractive* (the best matching sentences, each cited) and
+is labelled as such. The UI page is *Vragen*; `ASK_TOP_K` (8) sets how many fragments the model reads.

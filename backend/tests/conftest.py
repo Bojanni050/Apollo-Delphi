@@ -56,6 +56,7 @@ def _clean_tables(db):
         AppSetting,
         PulseItem,
         PulseRun,
+        QAEntry,
         Resolution,
         VerificationFinding,
         Workspace,
@@ -63,6 +64,7 @@ def _clean_tables(db):
 
     for table in (
         AppSetting,
+        QAEntry,
         PulseItem,
         PulseRun,
         VerificationFinding,

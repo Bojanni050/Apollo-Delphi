@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     # Hybrid search: Reciprocal Rank Fusion constant, and how many candidates each leg fetches per wanted result.
     search_rrf_k: int = Field(default=60, ge=1, le=1000)
     search_candidate_multiplier: int = Field(default=5, ge=1, le=50)
+    # Question answering: how many fragments are offered to the model as numbered sources.
+    ask_top_k: int = Field(default=8, ge=1, le=30)
 
     @field_validator("allowed_extensions", mode="before")
     @classmethod

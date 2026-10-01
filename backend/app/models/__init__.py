@@ -8,6 +8,7 @@ from .issue import Issue, IssueClaim, IssueEvidence
 from .investigation import Investigation
 from .knowledge import KnowledgeItem
 from .pulse import PulseItem, PulseRun
+from .qa import QAEntry
 from .resolution import HumanDecision, Resolution
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "KnowledgeItem",
     "PulseItem",
     "PulseRun",
+    "QAEntry",
     "Resolution",
     "VerificationFinding",
     "Workspace",

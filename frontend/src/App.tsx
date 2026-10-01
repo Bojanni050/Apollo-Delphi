@@ -5,15 +5,17 @@ import IssuesPage from './pages/IssuesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
 import PulsePage from './pages/PulsePage'
+import AskPage from './pages/AskPage'
 import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
 import AppShell from './layout/AppShell'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
+type Page = 'documents' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: 'documents', label: 'Documents', icon: '▦' },
+  { id: 'ask', label: 'Vragen', icon: '?' },
   { id: 'pulse', label: 'Delphi Pulse', icon: '✦' },
   { id: 'analysis', label: 'Analysis', icon: '◔' },
   { id: 'issues', label: 'Issues', icon: '⚠' },
@@ -25,6 +27,7 @@ const NAV: { id: Page; label: string; icon: string }[] = [
 
 const CONTEXT_TITLES: Record<Page, string> = {
   documents: 'Document details',
+  ask: 'Bronnen',
   pulse: 'Voorstel',
   workspace: 'Repository',
   settings: 'Model',
@@ -187,10 +190,11 @@ export default function App() {
     >
       {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
       {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
-      {(page === 'documents' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
+      {(page === 'documents' || page === 'ask' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
             {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} onChanged={() => void loadWorkspaces()} />}
+            {page === 'ask' && <AskPage workspaceId={activeWorkspaceId} />}
             {page === 'pulse' && <PulsePage workspaceId={activeWorkspaceId} />}
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
             {page === 'settings' && <SettingsPage />}
