@@ -34,7 +34,9 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
 
 ## Het leesvenster
 
-Het leesvenster is een eigen kolom, vóór de contextkolom, waarin je een document **in zijn geheel** leest. Het staat
+Het leesvenster is een eigen kolom, vóór de contextkolom (de smalle strook rechts met de naam van de pagina: het
+pijltje daarin opent en sluit het paneel, dat het leesvenster en de pagina opzij schuift), waarin je een document
+**in zijn geheel** leest. Het staat
 standaard open; met **▤ Lezen** rechtsboven sluit of open je het (dat wordt onthouden).
 **Klik op een document in de lijst** op de Documents-pagina om het te lezen; bij een zoekresultaat, een bron bij Vragen
 of bewijs bij een issue staat **Lees in het leesvenster**. Je ziet de tekst met regelnummers (bij een PDF met de pagina-overgangen), de plek waar je voor kwam

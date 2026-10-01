@@ -164,52 +164,44 @@ function Shell({
 
         <div className="flex min-h-0 flex-1">
           {/* Main content (2nd + 3rd columns live inside children via SplitView) */}
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+          <main className="flex min-w-[240px] flex-1 flex-col overflow-hidden">{children}</main>
 
           {/* Reading pane: a document in full, in front of the context column */}
           {reader.isOpen && <ReadingPane />}
 
-          {/* 4th column: right contextual sidebar, collapsed by default. One element that slides between the narrow
-              strip and the panel (the panel keeps its own width inside, so its text does not reflow while it moves). */}
-          <div
-            className={`relative shrink-0 overflow-hidden border-l border-slate-200 bg-white transition-[width] duration-300 ease-out motion-reduce:transition-none ${
-              rightOpen ? 'w-80 xl:w-96' : 'w-8'
-            }`}
-          >
-            {panelMounted && (
-              <aside
-                aria-hidden={!rightOpen}
-                {...(rightOpen ? {} : ({ inert: '' } as object))}
-                className={`absolute inset-y-0 right-0 flex w-80 flex-col bg-white transition-opacity duration-200 motion-reduce:transition-none xl:w-96 ${
-                  panelShown ? 'opacity-100 delay-100' : 'pointer-events-none opacity-0'
-                }`}
-              >
-                <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
-                  <h2 className="truncate text-sm font-semibold">{contextTitle ?? 'Context'}</h2>
-                  <button
-                    onClick={() => setRightOpen(false)}
-                    title="Collapse"
-                    className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto p-4">{contextPane ?? <EmptyContext />}</div>
-              </aside>
-            )}
+          {/* 4th column: right contextual sidebar. The narrow strip with its title is always there (its arrow opens and
+              closes the panel); the panel slides open to the left of it and pushes the reading pane and the page along. */}
+          <div className="flex shrink-0">
             <div
-              title="Open context panel"
-              aria-hidden={rightOpen}
-              onClick={() => setRightOpen(true)}
-              className={`absolute inset-0 flex cursor-pointer flex-col items-center bg-white py-3 text-slate-300 transition-opacity duration-200 hover:bg-slate-50 hover:text-slate-500 motion-reduce:transition-none ${
-                rightOpen ? 'pointer-events-none opacity-0' : 'opacity-100 delay-100'
+              className={`relative shrink-0 overflow-hidden border-l border-slate-200 bg-white transition-[width] duration-300 ease-out motion-reduce:transition-none ${
+                rightOpen ? 'w-80 xl:w-96' : 'w-0 border-l-0'
               }`}
             >
-              <span className="text-sm">‹</span>
-              <span className="mt-2 text-[11px] font-medium [writing-mode:vertical-rl]">
-                {contextTitle ?? 'Context'}
-              </span>
+              {panelMounted && (
+                <aside
+                  aria-hidden={!rightOpen}
+                  {...(rightOpen ? {} : ({ inert: '' } as object))}
+                  className={`absolute inset-y-0 right-0 flex w-80 flex-col bg-white transition-opacity duration-200 motion-reduce:transition-none xl:w-96 ${
+                    panelShown ? 'opacity-100 delay-100' : 'pointer-events-none opacity-0'
+                  }`}
+                >
+                  <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
+                    <h2 className="truncate text-sm font-semibold">{contextTitle ?? 'Context'}</h2>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4">{contextPane ?? <EmptyContext />}</div>
+                </aside>
+              )}
             </div>
+            <button
+              type="button"
+              title={rightOpen ? 'Close context panel' : 'Open context panel'}
+              aria-expanded={rightOpen}
+              onClick={() => setRightOpen((v) => !v)}
+              className="flex w-8 shrink-0 cursor-pointer flex-col items-center border-l border-slate-200 bg-white py-3 text-slate-300 hover:bg-slate-50 hover:text-slate-500"
+            >
+              <span className="text-sm">{rightOpen ? '›' : '‹'}</span>
+              <span className="mt-2 text-[11px] font-medium [writing-mode:vertical-rl]">{contextTitle ?? 'Context'}</span>
+            </button>
           </div>
         </div>
       </div>

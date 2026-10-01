@@ -6,7 +6,7 @@ import { RichHtml, RichMarkdown } from './RichText'
 // v2: the default became 40% of the screen; a width dragged before (or the old fixed default) must not hide that
 const WIDTH_KEY = 'apollo.reader.width.v2'
 /** The page next to the reading pane never gets narrower than this when dragging. */
-const MIN_PAGE_WIDTH = 320
+const MIN_PAGE_WIDTH = 240
 /** The reading pane starts at 40% of the window; dragging the edge changes it and is remembered. */
 const defaultWidth = () => Math.max(MIN_WIDTH, Math.round(window.innerWidth * 0.4))
 const MIN_WIDTH = 288
@@ -200,10 +200,13 @@ export default function ReadingPane() {
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!dragging.current) return
-      const container = body.current?.closest('aside')?.parentElement
-      if (!container) return
-      const right = container.getBoundingClientRect().right
-      setWidth(Math.min(Math.max(right - e.clientX, MIN_WIDTH), container.clientWidth - MIN_PAGE_WIDTH))
+      const pane = body.current?.closest('aside')
+      const container = pane?.parentElement
+      if (!pane || !container) return
+      // the pane's right edge stays where it is (the context column sits to its right), so the width follows the mouse
+      const right = pane.getBoundingClientRect().right
+      const beside = container.getBoundingClientRect().right - right // what the context column takes
+      setWidth(Math.min(Math.max(right - e.clientX, MIN_WIDTH), container.clientWidth - beside - MIN_PAGE_WIDTH))
     }
     const onUp = () => {
       if (!dragging.current) return
@@ -259,8 +262,9 @@ export default function ReadingPane() {
 
   return (
     <aside
-      className="relative flex shrink-0 flex-col border-l border-slate-200 bg-white"
-      style={{ width, maxWidth: `calc(100% - ${MIN_PAGE_WIDTH + 32}px)` }}
+      className="relative flex flex-col border-l border-slate-200 bg-white"
+      // keeps its width; only when the page would get too narrow (the context column opened) does it give way, down to its minimum
+      style={{ width, minWidth: MIN_WIDTH }}
       aria-label="Leesvenster"
     >
       <div
