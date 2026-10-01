@@ -119,6 +119,17 @@ export interface SearchHit {
   page_number: number | null
   section: string | null
   similarity: number
+  score: number
+  match: 'semantic' | 'keyword' | 'both'
+}
+
+export type SearchMode = 'hybrid' | 'semantic' | 'keyword'
+
+export interface SearchResponse {
+  query: string
+  /** The mode that actually ran: hybrid falls back to keyword when the embedding endpoint is down. */
+  mode: SearchMode
+  results: SearchHit[]
 }
 
 export interface VerificationFinding {
@@ -362,9 +373,9 @@ export const api = {
   },
   indexDocument: (id: number) => request<DocumentRecord>(`/api/documents/${id}/index`, { method: 'POST' }),
   deleteDocument: (id: number) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
-  search: (q: string, workspaceId?: number | null) =>
-    request<{ query: string; results: SearchHit[] }>(
-      `/api/search?q=${encodeURIComponent(q)}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
+  search: (q: string, workspaceId?: number | null, mode: SearchMode = 'hybrid') =>
+    request<SearchResponse>(
+      `/api/search?q=${encodeURIComponent(q)}&mode=${mode}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
     ),
   runAnalysis: (workspaceId?: number | null) =>
     request<AnalysisRun>(`/api/analysis${workspaceId ? `?workspace_id=${workspaceId}` : ''}`, { method: 'POST' }),

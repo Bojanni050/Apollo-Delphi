@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, type DocumentRecord, type SearchHit } from '../api'
-import { Button, Card, ErrorText, StatusBadge } from '../components'
+import { api, type DocumentRecord, type SearchHit, type SearchMode } from '../api'
+import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
 import UnassignedBanner from './UnassignedBanner'
 
 function formatSize(bytes: number): string {
@@ -23,6 +23,8 @@ export default function DocumentsPage({
   const [busy, setBusy] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchHit[] | null>(null)
+  const [searchMode, setSearchMode] = useState<SearchMode>('hybrid')
+  const [searchNote, setSearchNote] = useState<string | null>(null)
   const [repoUrl, setRepoUrl] = useState('')
   const [repoBusy, setRepoBusy] = useState(false)
   const [repoMessage, setRepoMessage] = useState<string | null>(null)
@@ -38,6 +40,7 @@ export default function DocumentsPage({
 
   useEffect(() => {
     setSearchResults(null)
+    setSearchNote(null)
     void refresh()
   }, [workspaceId])
 
@@ -88,8 +91,11 @@ export default function DocumentsPage({
     if (!searchQuery.trim()) return
     setError(null)
     try {
-      const res = await api.search(searchQuery, workspaceId)
+      const res = await api.search(searchQuery, workspaceId, searchMode)
       setSearchResults(res.results)
+      setSearchNote(
+        res.mode !== searchMode ? 'Het embeddingmodel is niet bereikbaar: er is alleen op trefwoorden gezocht.' : null,
+      )
     } catch (e) {
       setError((e as Error).message)
     }
@@ -213,7 +219,7 @@ export default function DocumentsPage({
       </Card>
 
       <Card>
-        <h2 className="text-lg font-semibold mb-3">Semantic search</h2>
+        <h2 className="text-lg font-semibold mb-3">Search</h2>
         <div className="flex gap-2">
           <input
             value={searchQuery}
@@ -222,16 +228,31 @@ export default function DocumentsPage({
             placeholder="Search indexed documents…"
             className="flex-1 border rounded px-3 py-1.5 text-sm"
           />
+          <select
+            value={searchMode}
+            onChange={(e) => setSearchMode(e.target.value as SearchMode)}
+            className="border rounded px-2 py-1.5 text-sm"
+            title="Hybride combineert betekenis en exacte woorden (bedragen, namen, id's)"
+          >
+            <option value="hybrid">Hybride</option>
+            <option value="semantic">Betekenis</option>
+            <option value="keyword">Trefwoorden</option>
+          </select>
           <Button onClick={() => void runSearch()}>Search</Button>
         </div>
+        {searchNote && <p className="mt-2 text-xs text-amber-700">{searchNote}</p>}
         {searchResults && (
           <ul className="mt-4 space-y-3">
             {searchResults.map((r) => (
               <li key={r.chunk_id} className="border rounded p-3 text-sm">
                 <div className="flex justify-between text-xs text-slate-500 mb-1">
                   <span className="font-medium text-slate-700">{r.document_filename}</span>
-                  <span>
-                    {r.page_number ? `page ${r.page_number}` : ''} · similarity {r.similarity.toFixed(3)}
+                  <span className="flex items-center gap-2">
+                    {r.page_number ? `page ${r.page_number}` : ''}
+                    <Badge kind={r.match === 'both' ? 'ok' : 'neutral'}>
+                      {r.match === 'both' ? 'betekenis + woorden' : r.match === 'keyword' ? 'woorden' : 'betekenis'}
+                    </Badge>
+                    {r.similarity > 0 && <span>similarity {r.similarity.toFixed(3)}</span>}
                   </span>
                 </div>
                 <p className="line-clamp-3 text-slate-600">{r.excerpt}</p>

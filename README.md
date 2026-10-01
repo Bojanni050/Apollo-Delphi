@@ -104,7 +104,8 @@ GET    /api/documents                      list
 GET    /api/documents/{id}
 DELETE /api/documents/{id}
 POST   /api/documents/{id}/index          extraction → chunking → embedding → vectors
-GET    /api/search?q=...                   semantic search (pgvector; only vectors of the active model)
+GET    /api/search?q=...&workspace_id=&mode=   hybrid search (default): meaning + exact words, fused with RRF;
+                                           mode=semantic|keyword to use one leg; only that werkmap's documents
 GET    /api/embeddings/status              active model, dimension, how much of the index is current
 GET/PUT /api/embeddings/settings           embedding provider, endpoint, key (write-only), model
 POST   /api/embeddings/test                embed a probe text: proves the endpoint answers, reveals the dimension
@@ -235,3 +236,14 @@ search point `EMBEDDING_PROVIDER=openai` at any OpenAI-compatible endpoint (Inst
 - **Safety**: each chunk stores `embedding_model` and `embedding_dim`; vectors returned with the wrong size are
   rejected before storage, and search only compares vectors produced by the active model. Documents embedded
   with another model show up as *stale* until re-indexed.
+
+## Search
+
+`GET /api/search` is hybrid by default: a **semantic** leg (vectors, only those of the active embedding model)
+and a **keyword** leg (PostgreSQL full-text with the language-neutral `'simple'` configuration and a GIN index;
+an in-memory BM25 on SQLite) are merged with Reciprocal Rank Fusion (`1/(60+rank)` per leg). Embeddings find
+paraphrases; the keyword leg finds exact amounts, names and identifiers (`250000`, `Maria Chen`, `ADR-0042`) that
+embeddings handle poorly, which is what claims and contradictions are made of. A hit found by both legs ranks first
+and is labelled `match: both`. Keyword search does not depend on embeddings, so documents embedded with an older
+model stay findable until they are re-indexed. If the embedding endpoint is down, hybrid falls back to keywords.
+Tuning: `SEARCH_RRF_K` (60) and `SEARCH_CANDIDATE_MULTIPLIER` (5).

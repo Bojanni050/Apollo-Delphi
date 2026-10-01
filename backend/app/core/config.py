@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     chunk_size_chars: int = 1200
     chunk_overlap_chars: int = 150
     search_top_k: int = 8
+    # Hybrid search: Reciprocal Rank Fusion constant, and how many candidates each leg fetches per wanted result.
+    search_rrf_k: int = Field(default=60, ge=1, le=1000)
+    search_candidate_multiplier: int = Field(default=5, ge=1, le=50)
 
     @field_validator("allowed_extensions", mode="before")
     @classmethod

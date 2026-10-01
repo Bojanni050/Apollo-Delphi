@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -43,6 +43,16 @@ class Document(Base):
 
 class DocumentChunk(Base):
     __tablename__ = "document_chunks"
+
+    __table_args__ = (
+        # Keyword leg of hybrid search (see services/search/service.py). PostgreSQL only: SQLite has no
+        # to_tsvector, so the index is not emitted there (and keyword search uses an in-memory BM25).
+        Index(
+            "ix_document_chunks_content_fts",
+            text("to_tsvector('simple', content)"),
+            postgresql_using="gin",
+        ).ddl_if(dialect="postgresql"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)

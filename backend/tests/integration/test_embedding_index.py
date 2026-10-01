@@ -63,7 +63,11 @@ def test_switching_model_hides_old_vectors_from_search_until_reindexed(client, d
     st = client.get("/api/embeddings/status").json()
     assert st["model"] == "other-model" and st["dimensions"] == 32
     assert st["documents_stale"] == 1 and st["chunks_current"] == 0 and st["by_model"] == {"mock-embedder": 1}
-    assert client.get("/api/search", params={"q": "harbour budget", "workspace_id": ws}).json()["results"] == [], "never compare across models"
+    semantic = client.get("/api/search", params={"q": "harbour budget", "workspace_id": ws, "mode": "semantic"}).json()
+    assert semantic["results"] == [], "the semantic leg never compares vectors across models"
+    # keyword search does not depend on embeddings, so the stale document is still findable by its words
+    keyword = client.get("/api/search", params={"q": "harbour budget", "workspace_id": ws}).json()
+    assert [r["match"] for r in keyword["results"]] == ["keyword"]
 
     result = client.post("/api/embeddings/reindex").json()
     assert result["model"] == "other-model" and result["requested"] == 1 and result["reindexed"] == 1 and not result["failed"]

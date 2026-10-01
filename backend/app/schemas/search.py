@@ -11,8 +11,12 @@ class SearchHitOut(BaseModel):
     page_number: int | None
     section: str | None
     similarity: float
+    score: float = 0.0
+    match: str = "semantic"  # semantic | keyword | both
 
 
 class SearchResponse(BaseModel):
     query: str
+    #: The mode that actually ran: hybrid falls back to keyword when the embedding endpoint is down.
+    mode: str = "hybrid"
     results: list[SearchHitOut]
