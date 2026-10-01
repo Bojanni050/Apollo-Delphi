@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     embedding_runtime: str = Field(default="ollama", pattern="^(ollama|llamacpp)$")
     # Where llama.cpp GGUF files are downloaded to (default ./models).
     llamacpp_models_dir: str = ""
+    # Lets the setup wizard's folder picker list the server's folders (names only). Switch off on a shared host.
+    folder_browse_enabled: bool = True
     # Where a llama-server can be reached from here; what "Kiezen" fills in as Base URL for a llama.cpp model.
     # In docker-compose that is the llama service, not localhost.
     llamacpp_base_url: str = "http://localhost:8080/v1"

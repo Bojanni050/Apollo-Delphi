@@ -192,6 +192,16 @@ export interface GeneratedDocument {
   created_at: string
 }
 
+export interface FolderBrowse {
+  current_path: string
+  /** null at the top (a drive root or "/"). */
+  parent_path: string | null
+  folders: { name: string; path: string }[]
+  truncated: boolean
+  drives: string[]
+  quick_access: { name: string; path: string }[]
+}
+
 export interface Workspace {
   id: number
   name: string
@@ -475,6 +485,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, working_dir: workingDir || null }),
     }),
+  browseFolders: (path?: string) =>
+    request<FolderBrowse>(`/api/system/folders${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   unassigned: () => request<Unassigned>('/api/workspaces/unassigned'),
   adoptUnassigned: (workspaceId: number) =>
     request<AdoptResult>(`/api/workspaces/${workspaceId}/adopt-unassigned`, { method: 'POST' }),
