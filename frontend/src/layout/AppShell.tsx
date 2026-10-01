@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import ThemeToggle from '../components/ThemeToggle'
 import { BUILD_TIME, BUILD_VERSION } from '../version'
 
 export type NavItem = { id: string; label: string; icon?: ReactNode }
@@ -108,6 +109,7 @@ export default function AppShell({
           </button>
           <div className="min-w-0 flex-1 truncate text-sm text-slate-500">{breadcrumb}</div>
           {topActions && <div className="flex shrink-0 items-center gap-2">{topActions}</div>}
+          <ThemeToggle />
           <button
             onClick={() => setRightOpen((v) => !v)}
             title={rightOpen ? 'Collapse context panel' : 'Open context panel'}

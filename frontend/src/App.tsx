@@ -11,6 +11,7 @@ import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
 import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
+import { useTheme } from './theme'
 import { api, type Workspace } from './api'
 
 type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
@@ -42,6 +43,7 @@ const CONTEXT_TITLES: Record<Page, string> = {
 }
 
 export default function App() {
+  useTheme() // applies the chosen theme (also on the setup wizard, which has no top bar)
   const [page, setPage] = useState<Page>('documents')
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   // true once the list has been fetched: an empty list before that must not show the setup wizard

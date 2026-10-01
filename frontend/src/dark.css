@@ -1,0 +1,180 @@
+/*
+ * Ambient (dark) theme, in the palette of intro.higaia.nl: a warm "smoke" grey and the "sage" green.
+ *
+ *   smoke  #0D0C0A  #1A1916 (Dark Smoke)  #2E2C26 (Dark Graphite)  #46433A  #5B574A  #8E8978  #B3AEA0  #D3D0C5  #E9E7E0  #F6F5F2
+ *   sage   #C7D7CA (Luminous Forest)  #A3BBA8  #7C9A82 (Muted Mint)  #5D7D64 (Subtle Mint)  #48644F  #3A503F (Dark Mint)  #304034  #28342B  #131C15
+ *
+ * It is switched on by <html data-theme="dark"> (see theme.ts). The components are written with Tailwind's light
+ * classes, so this file gives those same classes their dark meaning instead of repeating `dark:` on every element; the
+ * light theme is untouched. "Ambient" is the soft green glow that drifts slowly behind the page (still when the system
+ * asks for reduced motion).
+ */
+
+/* the native controls (inputs, scrollbars, date pickers) follow the chosen theme, not the operating system */
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark; /* native scrollbars, form controls, date pickers */
+  --smoke-950: #0d0c0a;
+  --smoke-900: #1a1916;
+  --smoke-800: #2e2c26;
+  --smoke-700: #46433a;
+  --smoke-600: #5b574a;
+  --smoke-500: #8e8978;
+  --smoke-400: #b3aea0;
+  --smoke-300: #d3d0c5;
+  --smoke-200: #e9e7e0;
+  --smoke-100: #f6f5f2;
+  --sage-200: #c7d7ca;
+  --sage-300: #a3bba8;
+  --sage-400: #7c9a82;
+  --sage-500: #5d7d64;
+  --sage-600: #48644f;
+  --sage-700: #3a503f;
+  --sage-800: #304034;
+  --sage-900: #28342b;
+  --sage-950: #131c15;
+}
+
+/* ---- the ambient background ------------------------------------------------------------------------------------ */
+html[data-theme='dark'] body {
+  background-color: var(--smoke-950);
+  color: var(--smoke-200);
+}
+html[data-theme='dark'] body::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(58, 80, 63, 0.7), transparent 70%),
+    radial-gradient(50% 45% at 95% 100%, rgba(48, 64, 52, 0.7), transparent 70%),
+    radial-gradient(40% 40% at 0% 90%, rgba(72, 100, 79, 0.3), transparent 70%);
+  animation: ambient-drift 32s ease-in-out infinite alternate;
+}
+@keyframes ambient-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2.5%, -2%, 0) scale(1.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='dark'] body::before {
+    animation: none;
+  }
+}
+
+/* ---- surfaces -------------------------------------------------------------------------------------------------- */
+/* the page itself (the app shell and the setup wizard): let the ambient glow through; other bg-slate-100 (chips, code) stay a surface */
+[data-theme='dark'] .bg-slate-100 { background-color: rgba(46, 44, 38, 0.7); }
+[data-theme='dark'] .h-screen.bg-slate-100,
+[data-theme='dark'] .min-h-screen.bg-slate-100 { background-color: transparent; }
+[data-theme='dark'] .bg-white { background-color: var(--smoke-900); }
+/*
+ * A Card (bg-white rounded-lg shadow): a little see-through, so the glow is felt behind it.
+ * No backdrop-filter / filter / transform here on purpose: any of them makes the card the reference for every
+ * `position: fixed` element inside it, and the dialogs (Modal, the folder picker, the model details) are rendered
+ * inside cards, so they would end up inside the card instead of in the middle of the screen.
+ */
+[data-theme='dark'] .bg-white.rounded-lg.shadow {
+  background-color: rgba(26, 25, 22, 0.8);
+  box-shadow: 0 0 0 1px rgba(124, 154, 130, 0.14), 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+[data-theme='dark'] aside.bg-white {
+  background-color: rgba(13, 12, 10, 0.6);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+[data-theme='dark'] .bg-slate-50 { background-color: rgba(46, 44, 38, 0.5); }
+[data-theme='dark'] .bg-slate-200 { background-color: rgba(124, 154, 130, 0.2); }
+[data-theme='dark'] .bg-slate-300 { background-color: var(--smoke-700); }
+[data-theme='dark'] .hover\:bg-slate-50:hover,
+[data-theme='dark'] .focus\:bg-slate-50:focus { background-color: rgba(58, 80, 63, 0.3); }
+[data-theme='dark'] .hover\:bg-slate-100:hover { background-color: rgba(58, 80, 63, 0.4); }
+[data-theme='dark'] .hover\:bg-slate-200:hover { background-color: rgba(72, 100, 79, 0.45); }
+[data-theme='dark'] .hover\:bg-slate-300:hover { background-color: rgba(72, 100, 79, 0.55); }
+[data-theme='dark'] .disabled\:bg-slate-100:disabled { background-color: rgba(46, 44, 38, 0.6); }
+
+/* primary buttons and the logo: Dark Mint with Luminous Forest text, as on the site */
+[data-theme='dark'] .bg-slate-900 { background-color: var(--sage-700); color: var(--sage-200); }
+[data-theme='dark'] .hover\:bg-slate-700:hover,
+[data-theme='dark'] .hover\:bg-slate-900:hover { background-color: var(--sage-600); }
+[data-theme='dark'] .text-white,
+[data-theme='dark'] .hover\:text-white:hover { color: var(--smoke-100); }
+[data-theme='dark'] .bg-slate-900\/40 { background-color: rgba(0, 0, 0, 0.62); } /* behind a dialog */
+
+/* ---- borders --------------------------------------------------------------------------------------------------- */
+[data-theme='dark'] .border-slate-100 { border-color: rgba(124, 154, 130, 0.1); }
+[data-theme='dark'] .border-slate-200 { border-color: rgba(124, 154, 130, 0.18); }
+[data-theme='dark'] .border-slate-300 { border-color: rgba(124, 154, 130, 0.3); }
+[data-theme='dark'] .border-slate-900 { border-color: var(--sage-400); } /* the chosen one */
+[data-theme='dark'] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(124, 154, 130, 0.1); }
+
+/* ---- text ------------------------------------------------------------------------------------------------------ */
+[data-theme='dark'] .text-slate-900 { color: var(--smoke-100); }
+[data-theme='dark'] .text-slate-800 { color: var(--smoke-200); }
+[data-theme='dark'] .text-slate-700,
+[data-theme='dark'] .hover\:text-slate-800:hover { color: var(--smoke-300); }
+[data-theme='dark'] .text-slate-600 { color: var(--smoke-400); }
+[data-theme='dark'] .text-slate-500,
+[data-theme='dark'] .hover\:text-slate-500:hover { color: #a39e8c; }
+[data-theme='dark'] .text-slate-400 { color: var(--smoke-500); }
+[data-theme='dark'] .text-slate-300 { color: var(--smoke-600); }
+[data-theme='dark'] .hover\:text-slate-700:hover { color: var(--sage-200); }
+[data-theme='dark'] h1,
+[data-theme='dark'] h2,
+[data-theme='dark'] h3 { letter-spacing: 0.005em; }
+
+/* ---- form controls (most inputs have no background class of their own) ----------------------------------------- */
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: rgba(13, 12, 10, 0.55);
+  color: var(--smoke-200);
+}
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder { color: #6f6b5c; }
+[data-theme='dark'] input:focus,
+[data-theme='dark'] select:focus,
+[data-theme='dark'] textarea:focus {
+  outline: none;
+  border-color: var(--sage-400);
+  box-shadow: 0 0 0 2px rgba(124, 154, 130, 0.25);
+}
+[data-theme='dark'] input[type='checkbox'],
+[data-theme='dark'] input[type='radio'] { accent-color: var(--sage-500); }
+[data-theme='dark'] option { background-color: var(--smoke-900); color: var(--smoke-200); }
+[data-theme='dark'] ::selection { background: var(--sage-700); color: var(--smoke-100); }
+[data-theme='dark'] mark { background-color: rgba(200, 160, 70, 0.28); color: var(--smoke-100); }
+[data-theme='dark'] * { scrollbar-color: var(--smoke-700) transparent; }
+
+/* ---- status colours: a tinted glass instead of a pastel paper -------------------------------------------------- */
+[data-theme='dark'] .bg-amber-50 { background-color: rgba(200, 160, 70, 0.12); }
+[data-theme='dark'] .bg-amber-100 { background-color: rgba(200, 160, 70, 0.22); }
+[data-theme='dark'] .border-amber-200 { border-color: rgba(200, 160, 70, 0.32); }
+[data-theme='dark'] .text-amber-900 { color: #ecd28f; }
+[data-theme='dark'] .text-amber-800 { color: #e6c97a; }
+[data-theme='dark'] .text-amber-700 { color: #dcb865; }
+
+[data-theme='dark'] .bg-emerald-50 { background-color: rgba(93, 125, 100, 0.2); }
+[data-theme='dark'] .bg-emerald-100 { background-color: rgba(93, 125, 100, 0.3); }
+[data-theme='dark'] .bg-emerald-600 { background-color: var(--sage-500); }
+[data-theme='dark'] .border-emerald-200 { border-color: rgba(124, 154, 130, 0.38); }
+[data-theme='dark'] .text-emerald-900 { color: var(--sage-200); }
+[data-theme='dark'] .text-emerald-800 { color: #b8cdbc; }
+[data-theme='dark'] .text-emerald-700 { color: var(--sage-300); }
+[data-theme='dark'] .text-emerald-600 { color: #8fb399; }
+
+[data-theme='dark'] .bg-red-100 { background-color: rgba(214, 90, 90, 0.2); }
+[data-theme='dark'] .bg-red-600 { background-color: #a94444; }
+[data-theme='dark'] .hover\:bg-red-500:hover { background-color: #bb5252; }
+[data-theme='dark'] .border-red-400 { border-color: #c96464; }
+[data-theme='dark'] .text-red-800 { color: #f0a3a3; }
+[data-theme='dark'] .text-red-600 { color: #ee8e8e; }
+
+[data-theme='dark'] .bg-sky-50 { background-color: rgba(110, 150, 190, 0.14); }
