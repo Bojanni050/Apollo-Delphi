@@ -163,6 +163,8 @@ DELETE /api/documents/{id}
 POST   /api/documents/{id}/index          extraction → chunking → embedding → vectors
 GET    /api/documents/{id}/text            the extracted text of a document with its pages and the lines of its
                                            fragments, for the reading pane
+GET    /api/documents/{id}/file            the original file, inline (a PDF is shown in the viewer of the browser)
+GET    /api/documents/{id}/html            a Word document converted to HTML (mammoth), for the formatted view
 POST   /api/documents/index-queue          index documents in the background and return at once: first every
                                            document is READ (extract, cut into fragments: status `parsed`, readable and
                                            searchable by words within seconds), then they are EMBEDDED one at a time

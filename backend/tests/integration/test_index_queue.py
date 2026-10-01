@@ -122,9 +122,8 @@ def test_when_the_embedding_model_is_down_the_documents_are_still_read_and_found
         emb.set_embedding_provider(None)
 
     # the model is back: the same button finishes what is left
-    ws2 = client.get("/api/workspaces").json()[0]["id"]
-    added = client.post("/api/documents/index-queue", json={"workspace_id": ws2}).json()["added"]
+    added = client.post("/api/documents/index-queue", json={"workspace_id": ws}).json()["added"]
     assert added == 3, "parsed documents wait for their vectors, they are queued again"
     status = _wait(client)
     assert (status["done"], status["failed"]) == (3, 0)
-    assert {d["indexing_status"] for d in client.get("/api/documents", params={"workspace_id": ws2}).json()} == {"indexed"}
+    assert {d["indexing_status"] for d in client.get("/api/documents", params={"workspace_id": ws}).json()} == {"indexed"}

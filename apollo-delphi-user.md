@@ -34,12 +34,17 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
 
 ## Het leesvenster
 
-Rechtsboven staat **▤ Lezen**: een eigen kolom, vóór de contextkolom, waarin je een document **in zijn geheel** leest.
-Open het met **Lees** bij een document, **Lees in het leesvenster** bij een zoekresultaat, een bron bij Vragen of bewijs
-bij een issue. Je ziet de tekst met regelnummers (bij een PDF met de pagina-overgangen), de plek waar je voor kwam
+Het leesvenster is een eigen kolom, vóór de contextkolom, waarin je een document **in zijn geheel** leest. Het staat
+standaard open; met **▤ Lezen** rechtsboven sluit of open je het (dat wordt onthouden).
+**Klik op een document in de lijst** op de Documents-pagina om het te lezen; bij een zoekresultaat, een bron bij Vragen
+of bewijs bij een issue staat **Lees in het leesvenster**. Je ziet de tekst met regelnummers (bij een PDF met de pagina-overgangen), de plek waar je voor kwam
 gemarkeerd en in beeld gebracht (bij een bron het hele fragment) en je zoekwoorden gemarkeerd. Bovenin kun je in het
-document zoeken (Enter of ▲▼ naar de volgende treffer). Sleep de linkerrand om de breedte te veranderen; die wordt
-onthouden. Het venster toont de tekst zoals Apollo die las; de regelnummers zijn die van die tekst.
+document zoeken (Enter of ▲▼ naar de volgende treffer). Sleep de linkerrand (het streepje) om de pagina en het leesvenster
+breder of smaller te maken; de breedte wordt onthouden. Bij Markdown, Word en PDF kies je bovenin **Opgemaakt** (zoals het bedoeld is: koppen, lijsten,
+tabellen, of het originele PDF-bestand in de PDF-viewer) of **Tekst** (met regelnummers, markering en zoeken). Open je een
+document zonder specifieke plek, dan zie je het opgemaakt; kom je via een zoekresultaat, bron of bewijs, dan zie je de
+tekst met de plek gemarkeerd (een PDF opent op de juiste pagina). Een tekstbestand toont altijd de tekst. Scripts en
+externe afbeeldingen in een document worden nooit geladen. Het venster toont de tekst zoals Apollo die las; de regelnummers zijn die van die tekst.
 
 ## Zoeken
 

@@ -1,8 +1,11 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, type DocumentText } from '../api'
 import { useReader, type ReaderTarget } from '../reader'
+import { RichHtml, RichMarkdown } from './RichText'
 
 const WIDTH_KEY = 'apollo.reader.width'
+/** The page next to the reading pane never gets narrower than this when dragging. */
+const MIN_PAGE_WIDTH = 320
 const DEFAULT_WIDTH = 480
 const MIN_WIDTH = 288
 
@@ -93,6 +96,10 @@ export default function ReadingPane() {
   const [loading, setLoading] = useState(false)
   const [find, setFind] = useState('')
   const [matchIndex, setMatchIndex] = useState(0)
+  // null = choose by itself: formatted when you just open a document, the plain text when a place has to be marked
+  const [chosenView, setChosenView] = useState<'formatted' | 'text' | null>(null)
+  const [wordHtml, setWordHtml] = useState<{ id: number; html: string } | null>(null)
+  const [wordError, setWordError] = useState<string | null>(null)
   const [width, setWidth] = useState(() => {
     try {
       return Number(localStorage.getItem(WIDTH_KEY)) || DEFAULT_WIDTH
@@ -144,20 +151,46 @@ export default function ReadingPane() {
   }, [lines, find])
   const current = matches.length > 0 ? matches[matchIndex % matches.length] : null
 
+  // Markdown, Word and PDF can be shown as they are meant to look; a text file only as text
+  const canFormat = doc != null && ['md', 'docx', 'pdf'].includes(doc.file_type)
+  const pdfPage = useMemo(() => {
+    if (!doc || !target) return null
+    const chunk = target.chunkId != null ? doc.chunks.find((c) => c.id === target.chunkId) : undefined
+    return target.page ?? chunk?.page_number ?? null
+  }, [doc, target])
+  const autoView = doc?.file_type === 'pdf' || range == null ? 'formatted' : 'text'
+  const view = !canFormat ? 'text' : (chosenView ?? autoView)
+  useEffect(() => setChosenView(null), [target?.nonce])
+
+  // the Word document as HTML, when its formatted view is shown
+  useEffect(() => {
+    if (view !== 'formatted' || doc?.file_type !== 'docx' || wordHtml?.id === doc.id) return
+    let cancelled = false
+    setWordError(null)
+    api
+      .documentHtml(doc.id)
+      .then((r) => !cancelled && setWordHtml({ id: doc.id, html: r.html }))
+      .catch((e: Error) => !cancelled && setWordError(e.message))
+    return () => {
+      cancelled = true
+    }
+  }, [view, doc, wordHtml])
+
   const scrollToLine = useCallback((line: number) => {
     body.current?.querySelector(`[data-line="${line}"]`)?.scrollIntoView({ block: 'center' })
   }, [])
 
   // go to the place that was asked for, every time it is asked for
   useEffect(() => {
+    if (view !== 'text') return
     if (doc && range) scrollToLine(range.start)
     else if (doc) body.current?.scrollTo({ top: 0 })
-  }, [doc, range, target?.nonce, scrollToLine])
+  }, [doc, range, target?.nonce, scrollToLine, view])
 
   useEffect(() => setMatchIndex(0), [find])
   useEffect(() => {
-    if (current) scrollToLine(current[0])
-  }, [current, scrollToLine])
+    if (current && view === 'text') scrollToLine(current[0])
+  }, [current, scrollToLine, view])
 
   // drag the left edge to resize; remembered
   useEffect(() => {
@@ -166,7 +199,7 @@ export default function ReadingPane() {
       const container = body.current?.closest('aside')?.parentElement
       if (!container) return
       const right = container.getBoundingClientRect().right
-      setWidth(Math.min(Math.max(right - e.clientX, MIN_WIDTH), Math.floor(container.clientWidth * 0.7)))
+      setWidth(Math.min(Math.max(right - e.clientX, MIN_WIDTH), container.clientWidth - MIN_PAGE_WIDTH))
     }
     const onUp = () => {
       if (!dragging.current) return
@@ -229,8 +262,10 @@ export default function ReadingPane() {
           dragging.current = true
           document.body.style.userSelect = 'none'
         }}
-        className="absolute inset-y-0 -left-1 z-10 w-2 cursor-col-resize hover:bg-slate-300/40"
-      />
+        className="group absolute inset-y-0 -left-1.5 z-10 flex w-3 cursor-col-resize items-center justify-center hover:bg-slate-300/40"
+      >
+        <span className="h-10 w-1 rounded bg-slate-300 group-hover:bg-slate-500" />
+      </div>
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold" title={doc?.filename}>
           {doc ? (doc.title || doc.filename) : 'Leesvenster'}
@@ -247,6 +282,28 @@ export default function ReadingPane() {
             {doc.pages.length > 0 && ` · ${doc.pages.length} pagina’s`}
             {doc.truncated && ' · ingekort'}
           </p>
+          {canFormat && (
+            <div className="flex items-center gap-1" role="group" aria-label="Weergave">
+              {(['formatted', 'text'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setChosenView(v)}
+                  aria-pressed={view === v}
+                  className={`rounded border px-2 py-0.5 text-xs ${
+                    view === v ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {v === 'formatted' ? 'Opgemaakt' : 'Tekst'}
+                </button>
+              ))}
+              {view === 'formatted' && (
+                <span className="ml-1 text-[11px] text-slate-400">
+                  {doc.file_type === 'pdf' ? 'Het originele PDF-bestand.' : 'Zoeken en markeren: in de tekstweergave.'}
+                </span>
+              )}
+            </div>
+          )}
+          {view === 'text' && (
           <div className="flex items-center gap-1.5">
             <input
               value={find}
@@ -278,12 +335,13 @@ export default function ReadingPane() {
               ▼
             </button>
           </div>
-          {!range && target && (target.chunkId != null || target.excerpt || target.lineStart != null) && (
+          )}
+          {view === 'text' && !range && target && (target.chunkId != null || target.excerpt || target.lineStart != null) && (
             <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
               De plek waar je voor kwam is in de tekst niet terug te vinden (het document is mogelijk gewijzigd). Het hele document staat hier.
             </p>
           )}
-          {range && (
+          {view === 'text' && range && (
             <button onClick={() => scrollToLine(range.start)} className="text-xs text-slate-500 underline hover:text-slate-800">
               Naar de markering (regel {range.start}
               {range.end > range.start ? `–${range.end}` : ''})
@@ -292,16 +350,32 @@ export default function ReadingPane() {
         </div>
       )}
 
-      <div ref={body} className="min-h-0 flex-1 overflow-y-auto py-2">
+      <div ref={body} className={`relative min-h-0 flex-1 overflow-y-auto ${view === 'formatted' && doc?.file_type === 'pdf' ? '' : 'py-2'}`}>
         {!target && !loading && (
           <p className="px-4 py-3 text-sm text-slate-400">
-            Kies een document, zoekresultaat, bron of bewijs met “Lees” om het hier in zijn geheel te lezen, met de plek die telt gemarkeerd.
+            Klik op een document in de lijst, of op een zoekresultaat, bron of bewijs, om het hier in zijn geheel te lezen, met de plek die telt gemarkeerd. Sleep de rand links van dit venster om de breedte te veranderen.
           </p>
         )}
         {loading && <p className="px-4 py-3 text-sm text-slate-400">Laden…</p>}
         {error && <p className="px-4 py-3 text-sm text-red-600">Dit document kan niet worden gelezen: {error}</p>}
-        {doc && !loading && !error && lines.length > 0 && blocks}
-        {doc && !loading && !error && lines.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">Dit document bevat geen tekst.</p>}
+        {doc && !loading && !error && view === 'formatted' && doc.file_type === 'md' && <RichMarkdown text={doc.text} />}
+        {doc && !loading && !error && view === 'formatted' && doc.file_type === 'docx' && (
+          <>
+            {wordError && <p className="px-4 py-3 text-sm text-red-600">Opgemaakt tonen lukt niet: {wordError}</p>}
+            {!wordError && wordHtml?.id !== doc.id && <p className="px-4 py-3 text-sm text-slate-400">Laden…</p>}
+            {!wordError && wordHtml?.id === doc.id && <RichHtml html={wordHtml.html} />}
+          </>
+        )}
+        {doc && !loading && !error && view === 'formatted' && doc.file_type === 'pdf' && (
+          <iframe
+            key={`${doc.id}-${pdfPage ?? 0}-${target?.nonce}`}
+            title={doc.filename}
+            src={`${api.documentFileUrl(doc.id)}${pdfPage != null ? `#page=${pdfPage}` : ''}`}
+            className="absolute inset-0 h-full w-full border-0 bg-white"
+          />
+        )}
+        {doc && !loading && !error && view === 'text' && lines.length > 0 && blocks}
+        {doc && !loading && !error && view === 'text' && lines.length === 0 && <p className="px-4 py-3 text-sm text-slate-400">Dit document bevat geen tekst.</p>}
       </div>
     </aside>
   )

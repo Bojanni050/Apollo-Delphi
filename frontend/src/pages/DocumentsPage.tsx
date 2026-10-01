@@ -179,7 +179,14 @@ export default function DocumentsPage({
           </thead>
           <tbody>
             {documents.map((d) => (
-              <tr key={d.id} className="border-b last:border-0">
+              <tr
+                key={d.id}
+                onClick={() => reader.open({ documentId: d.id })}
+                title="Klik om dit document te lezen"
+                className={`cursor-pointer border-b last:border-0 hover:bg-slate-50 ${
+                  reader.isOpen && reader.target?.documentId === d.id ? 'bg-slate-100' : ''
+                }`}
+              >
                 <td className="py-2 font-medium">{d.source_type === 'github' && <span className="mr-1 text-slate-400" title={d.source_url ?? ''}>⌥</span>}
                   {d.filename}
                   {d.error_message && (
@@ -192,10 +199,7 @@ export default function DocumentsPage({
                 <td>{formatSize(d.file_size)}</td>
                 <td><StatusBadge status={d.indexing_status} /></td>
                 <td className="text-slate-500">{new Date(d.created_at).toLocaleString()}</td>
-                <td className="text-right space-x-2 whitespace-nowrap">
-                  <Button variant="secondary" onClick={() => reader.open({ documentId: d.id })}>
-                    Lees
-                  </Button>
+                <td className="text-right space-x-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                   <Button variant="secondary" onClick={() => void indexDoc(d.id)} disabled={busy}>
                     Index
                   </Button>

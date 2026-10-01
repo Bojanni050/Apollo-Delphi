@@ -560,6 +560,9 @@ export const api = {
       body: JSON.stringify({ name, working_dir: workingDir || null }),
     }),
   documentText: (id: number) => request<DocumentText>(`/api/documents/${id}/text`),
+  documentHtml: (id: number) => request<{ html: string; warnings: number }>(`/api/documents/${id}/html`),
+  /** The original file, to show inline (a PDF in the viewer of the browser). */
+  documentFileUrl: (id: number) => `${API_BASE}/api/documents/${id}/file`,
   scanFolder: (path: string) =>
     request<FolderScan>('/api/documents/folder/scan', {
       method: 'POST',

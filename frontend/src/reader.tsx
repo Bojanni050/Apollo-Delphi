@@ -29,17 +29,45 @@ type ReaderState = {
 
 const ReaderContext = createContext<ReaderState | null>(null)
 
+const OPEN_KEY = 'apollo.reader.open'
+
+/** Open by default; closing it is remembered. */
+function savedOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+function rememberOpen(open: boolean) {
+  try {
+    localStorage.setItem(OPEN_KEY, open ? '1' : '0')
+  } catch {
+    /* not remembered */
+  }
+}
+
 export function ReaderProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<ReaderTarget | null>(null)
-  const [isOpen, setOpen] = useState(false)
+  const [isOpen, setOpen] = useState(savedOpen)
   const nonce = useRef(0)
 
   const open = useCallback((next: Omit<ReaderTarget, 'nonce'>) => {
     setTarget({ ...next, nonce: ++nonce.current })
     setOpen(true)
+    rememberOpen(true)
   }, [])
-  const close = useCallback(() => setOpen(false), [])
-  const toggle = useCallback(() => setOpen((o) => !o), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    rememberOpen(false)
+  }, [])
+  const toggle = useCallback(() => {
+    setOpen((o) => {
+      rememberOpen(!o)
+      return !o
+    })
+  }, [])
 
   const value = useMemo(() => ({ target, isOpen, open, close, toggle }), [target, isOpen, open, close, toggle])
   return <ReaderContext.Provider value={value}>{children}</ReaderContext.Provider>

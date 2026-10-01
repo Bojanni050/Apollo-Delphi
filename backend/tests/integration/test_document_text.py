@@ -97,3 +97,52 @@ def test_extraction_is_remembered_per_document_and_content(client, monkeypatch):
     for _ in range(3):
         assert client.get(f"/api/documents/{doc['id']}/text").status_code == 200
     assert len(calls) == 1, "the second and third reading come from memory"
+
+
+def _docx_bytes():
+    from docx import Document as Word
+
+    word = Word()
+    word.add_heading("Harbour plan", level=1)
+    para = word.add_paragraph("The budget is ")
+    para.add_run("250000 EUR").bold = True
+    word.add_paragraph("Quay repairs", style="List Bullet")
+    table = word.add_table(rows=1, cols=2)
+    table.rows[0].cells[0].text = "Item"
+    table.rows[0].cells[1].text = "Cost"
+    buf = io.BytesIO()
+    word.save(buf)
+    return buf.getvalue()
+
+
+def _upload_bytes(client, name, data):
+    ws = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    return client.post("/api/documents", params={"workspace_id": ws}, files={"file": (name, io.BytesIO(data), "application/octet-stream")}).json()
+
+
+def test_the_original_file_is_served_inline_with_its_own_type(client):
+    _, doc = _upload(client)
+    resp = client.get(f"/api/documents/{doc['id']}/file")
+    assert resp.status_code == 200 and resp.content == MD.encode()
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert resp.headers["content-disposition"].startswith("inline") and resp.headers["x-content-type-options"] == "nosniff"
+    assert client.get("/api/documents/99999/file").status_code == 404
+
+
+def test_a_pdf_is_served_as_application_pdf(client):
+    doc = _upload_bytes(client, "paper.pdf", b"%PDF-1.4 minimal")
+    resp = client.get(f"/api/documents/{doc['id']}/file")
+    assert resp.status_code == 200 and resp.headers["content-type"] == "application/pdf" and resp.content.startswith(b"%PDF")
+
+
+def test_a_word_document_is_converted_to_html_with_its_structure(client):
+    doc = _upload_bytes(client, "plan.docx", _docx_bytes())
+    body = client.get(f"/api/documents/{doc['id']}/html").json()
+    html = body["html"]
+    assert "<h1>Harbour plan</h1>" in html and "<strong>250000 EUR</strong>" in html
+    assert "<li>Quay repairs</li>" in html and "<table>" in html
+
+
+def test_only_word_documents_are_converted_to_html(client):
+    _, doc = _upload(client)
+    assert client.get(f"/api/documents/{doc['id']}/html").status_code == 415

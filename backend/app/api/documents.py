@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from urllib.parse import quote
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
 from app.core.config import get_settings
 from app.models import Document, DocumentChunk
 from app.schemas.documents import (
-    DocumentOut, DocumentTextOut, FolderFileRequest, FolderScanOut, FolderScanRequest, IndexQueueOut, IndexQueueRequest,
+    DocumentHtmlOut, DocumentOut, DocumentTextOut, FolderFileRequest, FolderScanOut, FolderScanRequest, IndexQueueOut, IndexQueueRequest,
 )
 from app.services.documents.index_queue import index_queue
 from app.services.documents.reading import cached_text
@@ -151,6 +153,55 @@ def get_document_text(document_id: int, db: Session = Depends(get_session)):
         ],
         truncated=readable.truncated,
     )
+
+
+_MEDIA_TYPES = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "md": "text/markdown; charset=utf-8",
+    "txt": "text/plain; charset=utf-8",
+}
+
+
+def _document_bytes(db: Session, document_id: int):
+    doc = document_service.get_document(db, document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    try:
+        return doc, document_service.read_file(doc)
+    except (FileNotFoundError, DocumentValidationError):
+        raise HTTPException(status_code=404, detail="The stored file of this document is gone")
+
+
+@router.get("/{document_id}/file")
+def get_document_file(document_id: int, db: Session = Depends(get_session)):
+    """The original file, shown inline (the reading pane shows a PDF in the viewer of the browser)."""
+    doc, data = _document_bytes(db, document_id)
+    return Response(
+        content=data,
+        media_type=_MEDIA_TYPES.get(doc.file_type, "application/octet-stream"),
+        headers={
+            "Content-Disposition": "inline; filename*=UTF-8''" + quote(doc.filename.rsplit("/", 1)[-1]),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get("/{document_id}/html", response_model=DocumentHtmlOut)
+def get_document_html(document_id: int, db: Session = Depends(get_session)):
+    """A Word document as HTML (headings, lists, tables, bold and italic), for the formatted view of the reading pane."""
+    import io
+
+    import mammoth
+
+    doc, data = _document_bytes(db, document_id)
+    if doc.file_type != "docx":
+        raise HTTPException(status_code=415, detail="Only Word documents are converted to HTML")
+    try:
+        result = mammoth.convert_to_html(io.BytesIO(data))
+    except Exception as exc:  # a broken or password protected file
+        raise HTTPException(status_code=422, detail=f"The Word file cannot be converted: {exc}")
+    return DocumentHtmlOut(html=result.value, warnings=len(result.messages))
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -106,6 +106,13 @@ class ReadingPageOut(BaseModel):
     line: int
 
 
+class DocumentHtmlOut(BaseModel):
+    """A Word document converted to HTML for the reading pane (the browser sanitizes it before showing)."""
+
+    html: str
+    warnings: int = 0
+
+
 class DocumentTextOut(BaseModel):
     """What the reading pane shows: the extracted text of a document, its pages and where its indexed fragments lie."""
 
