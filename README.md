@@ -47,6 +47,10 @@ DOCUMENTS → INGESTION → EVIDENCE → CLAIMS → ISSUES
 
 ## Quick start (Docker)
 
+Docker is optional: the desktop app below (`start.cmd`) runs everything without it, and it is the faster
+setup (the embedding server on the GPU). The Compose file stays for servers and for people who prefer containers;
+the backend there restarts itself when its code changes (`--reload`).
+
 ```bash
 cp .env.example .env
 docker compose up --build
@@ -86,6 +90,19 @@ npm run desktop                                                      # builds th
 
 Needs Python 3.11+, Node.js, git, Rust (rustup) with the MSVC build tools; WebView2 ships with Windows 10/11.
 The first start compiles the Rust shell and takes a few minutes.
+
+**Without Docker, step by step** (what Compose did, and what replaces it):
+
+| Docker Compose | Without Docker |
+|---|---|
+| `backend` + `frontend` | `start.cmd` (the app itself) |
+| `db` (PostgreSQL + pgvector) | SQLite by default, or a local PostgreSQL via `DATABASE_URL` in `backend/.env` (`scripts\install-pgvector-windows.ps1`) |
+| `llama` (CPU) | `scripts\llama-vulkan.ps1` on the GPU: `start.cmd` starts it for you (skip with `set APOLLO_LLAMA=0`) |
+
+`start.cmd` runs `llama-vulkan.ps1 -Optional`: it only starts the server when the model is there (in `backend\models`
+or in the app's own `models` folder) and never stops the app from opening. In the app set the Base URL to
+`http://localhost:8082/v1` once. The data in the Docker volumes is not moved along: the desktop app starts empty and
+folders are added again in seconds (documents are read first, then embedded in the background).
 
 - **How it works.** `src-tauri/` is only a window and a process supervisor: it starts `backend/.venv`'s Python
   (`python -m app.serve`) on a free port, waits until the API answers, and points the window at it. The page and

@@ -24,7 +24,9 @@ param(
     [string]$Pooling = 'last',
     # A pinned llama.cpp release. Newer ones work too; the flags below were tested with this one.
     [string]$Tag = 'b11320',
-    [switch]$Stop
+    [switch]$Stop,
+    # For start.cmd: when something is missing (no model yet, no network) say so and carry on instead of failing.
+    [switch]$Optional
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -40,8 +42,17 @@ if ($Stop) {
     return
 }
 
-if (-not $Model) { $Model = Join-Path $root 'backend\models\jina-code-embeddings-1.5b-Q8_0.gguf' }
-if (-not (Test-Path $Model)) { throw "Model not found: $Model. Download it in the app first (Instellingen > Embeddingmodel > Downloaden), or pass -Model." }
+# The Jina file the app downloaded: into backend\models (dev setup) or into the data folder of the desktop app.
+if (-not $Model) {
+    $name = 'jina-code-embeddings-1.5b-Q8_0.gguf'
+    $Model = @((Join-Path $root "backend\models\$name"), (Join-Path $env:LOCALAPPDATA "Apollo-Delphi\models\$name")) |
+        Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+if (-not $Model -or -not (Test-Path $Model)) {
+    $msg = 'No embedding model (GGUF) found. Download it in the app first (Instellingen > Embeddingmodel > Downloaden), or pass -Model.'
+    if ($Optional) { Write-Host "llama-server not started: $msg" -ForegroundColor Yellow; return }
+    throw $msg
+}
 
 # Already running on that port?
 try {
@@ -51,6 +62,7 @@ try {
     }
 } catch { }
 
+try {
 if (-not (Test-Path $exe)) {
     New-Item -ItemType Directory -Force $dir | Out-Null
     $name = "llama-$Tag-bin-win-vulkan-x64.zip"
@@ -84,3 +96,6 @@ while ((Get-Date) -lt $deadline -and -not $ok) {
 }
 if (-not $ok) { throw "llama-server did not become ready in 3 minutes. See $log.err" }
 Write-Host "llama-server runs on the GPU. Base URL: http://localhost:$Port/v1   (stop it with -Stop)" -ForegroundColor Green
+} catch {
+    if ($Optional) { Write-Host "llama-server not started: $($_.Exception.Message)" -ForegroundColor Yellow } else { throw }
+}

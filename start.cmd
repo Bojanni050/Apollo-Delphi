@@ -14,6 +14,9 @@ rem  minuten. Daarna gaat het snel. Sluit je het venster, dan stopt ook de backe
 rem
 rem  Nodig: Python 3.11+, Node.js, git, Rust (rustup) met de MSVC build tools.
 rem
+rem  Embeddings: bij het starten draait scripts\llama-vulkan.ps1 de embedding-server op de GPU
+rem  (poort 8082; zie de README). Zet in de app de Base URL op http://localhost:8082/v1.
+rem
 rem  Database: standaard SQLite in %LOCALAPPDATA%\Apollo-Delphi. Voor een lokale
 rem  PostgreSQL zet je in backend\.env:
 rem     DATABASE_URL=postgresql+psycopg2://gebruiker:wachtwoord@localhost:5432/apollo_desktop
@@ -42,6 +45,14 @@ if /i "%~1"=="setup" (
 )
 
 :run
+rem De embedding-server op de GPU (Vulkan). Draait hij al, dan kost dit niets; ontbreekt het model of lukt het niet,
+rem dan start de app gewoon. Overslaan: zet APOLLO_LLAMA=0. Stoppen: scripts\llama-vulkan.ps1 -Stop
+if not "%APOLLO_LLAMA%"=="0" (
+    echo.
+    echo == Embedding-server controleren ==
+    powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\llama-vulkan.ps1" -Optional
+)
+
 echo.
 echo == Apollo wordt gestart ==
 call npm run desktop
