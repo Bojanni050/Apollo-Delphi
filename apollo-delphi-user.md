@@ -29,6 +29,13 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
   een herstart), dan staat er "Nu indexeren".
 - Een GitHub-repository toevoegen kan ook (de inhoud wordt als één document geïndexeerd).
 
+## Zoeken
+
+**Zoeken** (eigen pagina, tussen Documents en Vragen) zoekt in de geïndexeerde documenten van de werkmap. Kies een
+methode: **Hybride** (betekenis en exacte woorden samen, goed voor bedragen, namen en id's), **Betekenis** of
+**Trefwoorden**. Elk resultaat toont het bestand, de sectie, de pagina of regels, waarom het past (betekenis, woorden of
+beide) en een fragment met je zoekwoorden gemarkeerd. Documenten die nog niet zijn geïndexeerd worden niet doorzocht.
+
 ## Vragen stellen
 
 **Vragen**: stel een vraag over de documenten van de werkmap. Het antwoord noemt de fragmenten waarop het steunt

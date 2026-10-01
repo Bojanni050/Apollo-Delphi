@@ -6,16 +6,18 @@ import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
 import PulsePage from './pages/PulsePage'
 import AskPage from './pages/AskPage'
+import SearchPage from './pages/SearchPage'
 import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
 import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
+type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
 const NAV: { id: Page; label: string; icon: string }[] = [
   { id: 'documents', label: 'Documents', icon: '▦' },
+  { id: 'search', label: 'Zoeken', icon: '⌕' },
   { id: 'ask', label: 'Vragen', icon: '?' },
   { id: 'pulse', label: 'Delphi Pulse', icon: '✦' },
   { id: 'analysis', label: 'Analysis', icon: '◔' },
@@ -28,6 +30,7 @@ const NAV: { id: Page; label: string; icon: string }[] = [
 
 const CONTEXT_TITLES: Record<Page, string> = {
   documents: 'Document details',
+  search: 'Fragment',
   ask: 'Bronnen',
   pulse: 'Voorstel',
   workspace: 'Repository',
@@ -205,10 +208,11 @@ export default function App() {
     >
       {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
       {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
-      {(page === 'documents' || page === 'ask' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
+      {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
             {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} onChanged={() => void loadWorkspaces()} />}
+            {page === 'search' && <SearchPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} />}
             {page === 'ask' && <AskPage workspaceId={activeWorkspaceId} />}
             {page === 'pulse' && <PulsePage workspaceId={activeWorkspaceId} />}
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
