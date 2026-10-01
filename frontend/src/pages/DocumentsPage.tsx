@@ -154,7 +154,7 @@ export default function DocumentsPage({
             onChange={(e) => setRepoUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void ingestRepo()}
             placeholder="https://github.com/owner/repo"
-            className="flex-1 border rounded px-3 py-1.5 text-sm"
+            className="flex-1 border rounded-lg px-3 py-1.5 text-sm"
             disabled={repoBusy}
           />
           <Button onClick={() => void ingestRepo()} disabled={repoBusy || !repoUrl.trim()}>

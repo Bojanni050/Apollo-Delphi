@@ -48,14 +48,14 @@ export default function FolderPickerModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const chip = 'rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200'
+  const chip = 'rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200'
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div role="dialog" aria-label={title} className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl">
+      <div role="dialog" aria-label={title} className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl">
         <div className="border-b border-slate-200 p-4">
           <h2 className="font-semibold text-slate-900">{title}</h2>
           <form
@@ -70,7 +70,7 @@ export default function FolderPickerModal({
               onChange={(e) => setTyped(e.target.value)}
               spellCheck={false}
               aria-label="Pad"
-              className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1.5 font-mono text-xs"
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1.5 font-mono text-xs"
             />
             <Button variant="secondary" onClick={() => void open(typed)} disabled={loading}>
               Ga
@@ -97,7 +97,7 @@ export default function FolderPickerModal({
             <button
               type="button"
               onClick={() => void open(data.parent_path ?? undefined)}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-600 hover:bg-slate-50"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-slate-600 hover:bg-slate-50"
             >
               <span aria-hidden>↑</span> Een map omhoog
             </button>
@@ -107,7 +107,7 @@ export default function FolderPickerModal({
               key={f.path}
               type="button"
               onClick={() => void open(f.path)}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-50"
             >
               <span aria-hidden className="text-slate-400">
                 📁

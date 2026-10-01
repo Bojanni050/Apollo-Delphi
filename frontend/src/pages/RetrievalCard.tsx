@@ -48,7 +48,7 @@ const GROUPS: { title: string; blurb: string; fields: { key: Key; label: string;
   },
 ]
 
-const inputCls = 'w-24 rounded border border-slate-300 px-2 py-1.5 text-sm'
+const inputCls = 'w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm'
 
 export default function RetrievalCard() {
   const [saved, setSaved] = useState<RetrievalSettings | null>(null)

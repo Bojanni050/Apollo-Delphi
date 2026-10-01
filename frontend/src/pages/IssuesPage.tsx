@@ -73,7 +73,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
               <li key={i.id}>
                 <button
                   onClick={() => void select(i.id)}
-                  className={`w-full text-left p-2 rounded border ${
+                  className={`w-full text-left p-2 rounded-lg border ${
                     selected?.id === i.id ? 'border-slate-900 bg-slate-50' : 'hover:bg-slate-50'
                   }`}
                 >
@@ -129,7 +129,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                 <h3 className="font-semibold mb-2">Evidence</h3>
                 <ul className="space-y-2 text-sm">
                   {selected.evidence.map((e) => (
-                    <li key={e.id} className="border rounded p-2">
+                    <li key={e.id} className="border rounded-lg p-2">
                       <div className="text-xs text-slate-400 mb-1">
                         document #{e.document_id} {e.page_number ? `· page ${e.page_number}` : ''} {e.section ? `· ${e.section}` : ''} {e.line_start != null ? `· ${formatLines(e.line_start, e.line_end)}` : ''} · {e.evidence_type}
                       </div>
@@ -177,7 +177,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
                       placeholder="Optional note / additional information"
-                      className="w-full border rounded px-2 py-1.5 text-sm"
+                      className="w-full border rounded-lg px-2 py-1.5 text-sm"
                       rows={2}
                     />
                     <div className="flex gap-2">

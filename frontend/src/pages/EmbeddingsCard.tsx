@@ -26,7 +26,7 @@ function pointsAtRuntime(url: string, runtime: string): boolean {
   return runtime === 'ollama' ? ollama : !ollama && (u.includes('llama') || u.includes(':8080'))
 }
 
-const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm'
+const inputCls = 'w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm'
 
 /** "mock-embedder" is what is left over after leaving the mock provider: not a model of a real one. */
 const realModel = (provider: string, model: string) => (provider !== 'mock' && model === 'mock-embedder' ? '' : model)
@@ -142,7 +142,7 @@ export default function EmbeddingsCard() {
           <button
             key={p.id}
             onClick={() => setDraft({ ...draft, provider: p.id })}
-            className={`rounded border px-3 py-2 text-left text-sm ${
+            className={`rounded-lg border px-3 py-2 text-left text-sm ${
               draft.provider === p.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -167,7 +167,7 @@ export default function EmbeddingsCard() {
                   key={p.label}
                   type="button"
                   onClick={() => setDraft({ ...draft, base_url: p.url })}
-                  className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+                  className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
                 >
                   {p.label}
                 </button>
@@ -203,7 +203,7 @@ export default function EmbeddingsCard() {
           </Field>
 
           {!draft.base_url.trim() && !saved.api_key_set && !apiKey && (
-            <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
               Zonder Base URL en zonder API-sleutel is er geen endpoint om te gebruiken. Vul de Base URL van je lokale
               runtime in (zie de knoppen hierboven) of een sleutel voor OpenAI.
             </p>
@@ -249,7 +249,7 @@ export default function EmbeddingsCard() {
       <ErrorText message={error} />
 
       {status && (
-        <div className="mt-6 rounded border border-slate-200 p-3 text-sm">
+        <div className="mt-6 rounded-lg border border-slate-200 p-3 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <span className="font-medium">Index</span>{' '}
@@ -317,7 +317,7 @@ export default function EmbeddingsCard() {
                     await api.updateEmbeddingSettings({ runtime: r.id as 'ollama' | 'llamacpp' })
                     await refresh(r.id)
                   })}
-                  className={`rounded border px-2 py-1 text-xs ${
+                  className={`rounded-lg border px-2 py-1 text-xs ${
                     catalog.runtime === r.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >

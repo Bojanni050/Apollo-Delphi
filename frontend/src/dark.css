@@ -76,12 +76,12 @@ html[data-theme='dark'] body::before {
 [data-theme='dark'] .min-h-screen.bg-slate-100 { background-color: transparent; }
 [data-theme='dark'] .bg-white { background-color: var(--smoke-900); }
 /*
- * A Card (bg-white rounded-lg shadow): a little see-through, so the glow is felt behind it.
+ * A Card (.card): a little see-through, so the glow is felt behind it.
  * No backdrop-filter / filter / transform here on purpose: any of them makes the card the reference for every
  * `position: fixed` element inside it, and the dialogs (Modal, the folder picker, the model details) are rendered
  * inside cards, so they would end up inside the card instead of in the middle of the screen.
  */
-[data-theme='dark'] .bg-white.rounded-lg.shadow {
+[data-theme='dark'] .card {
   background-color: rgba(26, 25, 22, 0.8);
   box-shadow: 0 0 0 1px rgba(124, 154, 130, 0.14), 0 6px 24px rgba(0, 0, 0, 0.35);
 }

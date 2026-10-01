@@ -71,19 +71,19 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
         </div>
         {run && run.stats && (
           <div className="grid grid-cols-4 gap-3 text-center">
-            <div className="bg-slate-50 rounded p-3">
+            <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-2xl font-semibold">{run.stats.documents_analyzed}</div>
               <div className="text-xs text-slate-500">documents</div>
             </div>
-            <div className="bg-slate-50 rounded p-3">
+            <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-2xl font-semibold">{run.stats.claims}</div>
               <div className="text-xs text-slate-500">claims</div>
             </div>
-            <div className="bg-slate-50 rounded p-3">
+            <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-2xl font-semibold">{run.stats.open_questions}</div>
               <div className="text-xs text-slate-500">open questions</div>
             </div>
-            <div className="bg-slate-50 rounded p-3">
+            <div className="bg-slate-50 rounded-lg p-3">
               <div className="text-2xl font-semibold">{run.stats.contradictions}</div>
               <div className="text-xs text-slate-500">contradictions</div>
             </div>
@@ -112,10 +112,10 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
         <Card>
           <h3 className="font-semibold mb-2">Issues</h3>
           <div className="grid grid-cols-2 gap-3 text-center text-sm mb-4">
-            <div className="bg-amber-50 rounded p-2">{contradictions.length} contradictions</div>
-            <div className="bg-sky-50 rounded p-2">{openQuestions.length} open questions</div>
-            <div className="bg-emerald-50 rounded p-2">{resolved.length} resolved</div>
-            <div className="bg-slate-50 rounded p-2">{unresolved.length} unresolved</div>
+            <div className="bg-amber-50 rounded-lg p-2">{contradictions.length} contradictions</div>
+            <div className="bg-sky-50 rounded-lg p-2">{openQuestions.length} open questions</div>
+            <div className="bg-emerald-50 rounded-lg p-2">{resolved.length} resolved</div>
+            <div className="bg-slate-50 rounded-lg p-2">{unresolved.length} unresolved</div>
           </div>
           <ul className="space-y-2 text-sm max-h-72 overflow-auto">
             {issues.map((i) => (

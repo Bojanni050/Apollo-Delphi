@@ -82,7 +82,7 @@ export default function IndexProgress({
             {progress.total}
             {progress.failed > 0 && <span className="text-red-600"> ({progress.failed} mislukt)</span>}
           </p>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-slate-200" title="Geëmbed">
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-lg bg-slate-200" title="Geëmbed">
             <div className="h-full bg-slate-900 transition-all" style={{ width: `${((progress.done + progress.failed) / Math.max(1, progress.total)) * 100}%` }} />
           </div>
           <p className="mt-1 truncate text-xs text-slate-500">

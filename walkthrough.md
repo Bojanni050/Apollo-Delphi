@@ -154,3 +154,15 @@ achteraf ingevuld voor het werk van 2026-10-01 (commits tussen haakjes).
 - Findings: Een Pulse-run kan even duren, en wie naar een andere pagina ging zag niets meer van de lopende run; de knop op de Pulse-pagina bleef na terugkomen ook gewoon klikbaar.
 - Conclusions: De status "Pulse draait" hoort bij de hele app, niet bij de pagina die de run startte: een klein gedeeld object (`useSyncExternalStore`) dat de run bijhoudt zolang het verzoek loopt. Zacht pulseren (dekking 1 naar 0,4 in 1,8 s) in plaats van een spinner, en niet bij "verminderde beweging".
 - Actions: `frontend/src/pulseActivity.ts` (nieuw: `trackPulse`, `usePulseRunning`), `pages/PulsePage.tsx` (gebruikt de gedeelde status, ook voor de uitgeschakelde knoppen), `layout/AppShell.tsx` (`NavItem.busy`), `App.tsx`, `index.css` (`.nav-busy`); validated met `npm run build` en in de browser met een kunstmatig vertraagd run-verzoek (icoon en tekst pulseren, ook op een andere pagina, en stoppen na afloop).
+
+## 2026-10-02 (Leesvenster: slepen over een PDF liep vast)
+
+- Findings: Bij een PDF in het leesvenster ging het verbreden of versmallen door te slepen mis: zodra de muis boven de PDF-viewer kwam, ving die (een iframe, een eigen document) de muisgebeurtenissen op. De pagina kreeg geen `mousemove` meer en ook geen `mouseup`, dus het slepen bleef hangen.
+- Conclusions: De iframe moet tijdens het slepen niet voor de muis bestaan; een eigen toestand `dragActive` is genoeg en houdt de rest van de sleeplogica ongewijzigd.
+- Actions: `frontend/src/components/ReadingPane.tsx` (`dragActive`: tijdens het slepen krijgt de iframe `pointer-events: none`); validated in de browser: de rand over de PDF heen slepen verkleinde het venster tot het minimum en het slepen eindigde netjes.
+
+## 2026-10-02 (Vormgeving: zachtere, afgeronde look)
+
+- Findings: De app had scherpe, platte vlakken: vierkante-ish kaarten (`rounded-lg` met alleen een schaduw), een zijbalk met harde scheidingslijnen en een content-gebied dat tegen de rand van het venster plakte. Gevraagd: meer afgeronde hoeken in de stijl van een voorbeeldafbeelding, alleen het uiterlijk.
+- Conclusions: Eén wijziging in de bouwstenen in plaats van per pagina. De zijbalk staat zonder kader op de paginakleur, het hele werkgebied (kop, pagina, leesvenster, context) is één afgeronde witte plaat met een dunne rand en lichte schaduw, kaarten krijgen `rounded-2xl` met een rand, knoppen en velden `rounded-lg`, badges zijn pillen. De actieve menu-item is een witte, afgeronde pil. In het donkere thema bleef de afspraak: geen `backdrop-filter` op kaarten of op de plaat (dat breekt de `position: fixed`-dialogen); de kaartregel in `dark.css` wijst nu naar een eigen klasse `.card` in plaats van naar de losse Tailwind-klassen.
+- Actions: `frontend/src/components.tsx` (Card met klasse `card`, Badge, Button; de secundaire knop is wit met rand), `layout/AppShell.tsx` (zijbalk, plaat, menu-items), `dark.css` (`.card`), en `rounded` naar `rounded-lg` en `rounded-lg` naar `rounded-2xl` in alle schermen en dialogen; validated met `npm run build` en in de browser in het lichte en donkere thema (documenten, instellingen, mapkiezer).

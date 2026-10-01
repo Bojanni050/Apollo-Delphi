@@ -13,7 +13,7 @@ export default function ThemeToggle() {
       onClick={() => choose(next)}
       title={`Weergave: ${THEME_LABELS[preference]}. Klik voor: ${THEME_LABELS[next]}`}
       aria-label={`Weergave: ${THEME_LABELS[preference]}. Klik voor ${THEME_LABELS[next]}`}
-      className="rounded border border-slate-200 px-2 py-1 text-sm text-slate-600 hover:bg-slate-50"
+      className="rounded-lg border border-slate-200 px-2 py-1 text-sm text-slate-600 hover:bg-slate-50"
     >
       {ICON[preference]}
     </button>

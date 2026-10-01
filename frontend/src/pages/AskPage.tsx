@@ -15,7 +15,7 @@ function AnswerText({ text, onCite }: { text: string; onCite: (n: number) => voi
           <button
             key={i}
             onClick={() => onCite(n)}
-            className="mx-0.5 rounded bg-slate-200 px-1 align-super text-[10px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white"
+            className="mx-0.5 rounded-lg bg-slate-200 px-1 align-super text-[10px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white"
             title={`Naar bron ${n}`}
           >
             {n}
@@ -85,7 +85,7 @@ function AnswerCard({ answer }: { answer: Answer }) {
       </div>
 
       {answer.warnings.length > 0 && (
-        <ul className="mt-3 space-y-1 rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+        <ul className="mt-3 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
           {answer.warnings.map((w) => (
             <li key={w}>⚠ {w}</li>
           ))}
@@ -104,11 +104,11 @@ function AnswerCard({ answer }: { answer: Answer }) {
                 ref={(el) => {
                   sourceRefs.current[c.n] = el
                 }}
-                className={`rounded border p-3 text-sm ${active === c.n ? 'border-slate-900 bg-slate-50' : 'border-slate-200'}`}
+                className={`rounded-lg border p-3 text-sm ${active === c.n ? 'border-slate-900 bg-slate-50' : 'border-slate-200'}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                   <span>
-                    <span className="mr-1 rounded bg-slate-200 px-1 font-semibold text-slate-700">{c.n}</span>
+                    <span className="mr-1 rounded-lg bg-slate-200 px-1 font-semibold text-slate-700">{c.n}</span>
                     <span className="font-medium text-slate-700">{c.document_filename}</span>
                     {c.page_number ? ` · pagina ${c.page_number}` : ''}
                     {c.section ? ` · ${c.section}` : ''}
@@ -210,7 +210,7 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !busy && void ask()}
             placeholder={following ? 'Bijvoorbeeld: en wanneer moet dat klaar zijn?' : 'Bijvoorbeeld: wat is het goedgekeurde budget?'}
-            className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
           <Button onClick={() => void ask()} disabled={busy || !question.trim()}>
             {busy ? 'Zoeken…' : following ? 'Vervolgvraag' : 'Vraag stellen'}
@@ -231,7 +231,7 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
               <li key={h.id}>
                 <button
                   onClick={() => setThread(threadOf(history, h.id))}
-                  className="w-full rounded border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50"
                 >
                   <span className="font-medium text-slate-800">{h.question}</span>
                   <span className="ml-2 text-xs text-slate-400">{new Date(h.created_at).toLocaleString('nl-NL')}</span>

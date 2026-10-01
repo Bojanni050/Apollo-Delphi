@@ -74,7 +74,7 @@ export default function GeneratedPage({ workspaceId }: { workspaceId?: number | 
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border rounded px-2 py-1.5 text-sm mb-2"
+              className="w-full border rounded-lg px-2 py-1.5 text-sm mb-2"
               placeholder="Report title"
             />
             <Button onClick={() => void generate()} disabled={busy}>
@@ -88,7 +88,7 @@ export default function GeneratedPage({ workspaceId }: { workspaceId?: number | 
               <li key={d.id}>
                 <button
                   onClick={() => void select(d.id)}
-                  className={`w-full text-left p-2 rounded border ${
+                  className={`w-full text-left p-2 rounded-lg border ${
                     selected?.id === d.id ? 'border-slate-900 bg-slate-50' : 'hover:bg-slate-50'
                   }`}
                 >
@@ -125,7 +125,7 @@ export default function GeneratedPage({ workspaceId }: { workspaceId?: number | 
                 <h3 className="font-semibold mb-2">Verification findings ({findings.length})</h3>
                 <ul className="space-y-2 text-sm">
                   {findings.map((f) => (
-                    <li key={f.id} className="border rounded p-2">
+                    <li key={f.id} className="border rounded-lg p-2">
                       <div className="flex justify-between">
                         <span className="font-medium">{f.finding_type}</span>
                         <StatusBadge status={f.severity} />

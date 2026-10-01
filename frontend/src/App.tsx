@@ -122,7 +122,7 @@ export default function App() {
       <div className="flex items-center gap-1">
         <button
           onClick={() => setMenuOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded border border-slate-200 px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 px-2 py-1.5 text-left text-sm hover:bg-slate-50"
           title="Werkmap wisselen"
         >
           <span className="text-slate-400">📁</span>
@@ -133,7 +133,7 @@ export default function App() {
         </button>
       </div>
       {menuOpen && (
-        <div ref={menuRef} className="absolute left-0 right-0 top-full z-20 mt-1 rounded border border-slate-200 bg-white p-1 shadow-lg">
+        <div ref={menuRef} className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
           {workspaces.map((w) => (
             <button
               key={w.id}
@@ -141,7 +141,7 @@ export default function App() {
                 setActiveWorkspaceId(w.id)
                 setMenuOpen(false)
               }}
-              className={`flex w-full items-center rounded px-2 py-1.5 text-left text-sm ${
+              className={`flex w-full items-center rounded-lg px-2 py-1.5 text-left text-sm ${
                 w.id === activeWorkspaceId ? 'bg-slate-100 font-medium' : 'hover:bg-slate-50'
               }`}
             >
@@ -163,17 +163,17 @@ export default function App() {
                     if (e.key === 'Escape') setCreating(false)
                   }}
                   placeholder="Naam nieuwe werkmap…"
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
                 />
                 <input
                   value={newDir}
                   onChange={(e) => setNewDir(e.target.value)}
                   placeholder="Map (optioneel, absoluut pad)"
-                  className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
                 />
                 <button
                   onClick={() => void createWorkspace()}
-                  className="mt-1 w-full rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700"
+                  className="mt-1 w-full rounded-lg bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-700"
                 >
                   Aanmaken
                 </button>
@@ -181,7 +181,7 @@ export default function App() {
             ) : (
               <button
                 onClick={() => setCreating(true)}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-slate-600 hover:bg-slate-50"
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-slate-600 hover:bg-slate-50"
               >
                 <span className="text-slate-400">＋</span> Nieuwe werkmap…
               </button>

@@ -119,7 +119,7 @@ export default function ModelPicker({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 rounded border border-slate-300 bg-white px-2 py-1.5 text-left text-sm"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-left text-sm"
       >
         <span className={`truncate ${value ? '' : 'text-slate-400'}`}>
           {value || emptyLabel}
@@ -143,7 +143,7 @@ export default function ModelPicker({
       )}
 
       {open && (
-        <div className="absolute left-0 right-0 z-30 mt-1 rounded border border-slate-200 bg-white shadow-lg">
+        <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg">
           <input
             autoFocus
             value={filter}

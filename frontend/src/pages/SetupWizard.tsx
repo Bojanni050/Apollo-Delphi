@@ -19,7 +19,7 @@ type Step = 'name' | 'folder' | 'documents'
 
 export type AfterSetup = 'documents' | 'settings'
 
-const inputCls = 'w-full rounded border border-slate-300 px-3 py-2 text-sm'
+const inputCls = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm'
 
 const STEPS: { id: Step; label: string }[] = [
   { id: 'name', label: 'Naam' },
@@ -135,7 +135,7 @@ export default function SetupWizard({
       </div>
       <div className="w-full max-w-xl">
         <div className="mb-5 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-900 text-sm font-bold text-white">A</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">A</div>
           <span className="font-semibold text-slate-800">Welkom bij Apollo</span>
         </div>
         <Card>
@@ -233,7 +233,7 @@ export default function SetupWizard({
           {step === 'documents' && created && (
             <div>
               <h2 className="text-lg font-semibold">“{created.name}” staat klaar</h2>
-              <p className="mt-1 break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-xs text-slate-700">
+              <p className="mt-1 break-all rounded-lg bg-slate-100 px-2 py-1.5 font-mono text-xs text-slate-700">
                 {created.working_dir}
               </p>
 
@@ -273,7 +273,7 @@ export default function SetupWizard({
               )}
 
               {offlineModels.length > 0 && (
-                <p className="mt-5 rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                <p className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                   Het {offlineModels.join(' en het ')} {offlineModels.length > 1 ? 'draaien' : 'draait'} nog offline (mock):
                   antwoorden zijn dan eenvoudige fragmenten en zoeken is niet echt semantisch. Stel een echt model in bij
                   Instellingen.

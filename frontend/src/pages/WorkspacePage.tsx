@@ -23,7 +23,7 @@ export default function WorkspacePage({ workspace }: { workspace: Workspace | nu
       <Card>
         <h2 className="text-lg font-semibold">{workspace.name}</h2>
         <p className="mt-1 text-sm text-slate-500">Deze werkmap is een git-repository op schijf.</p>
-        <p className="mt-3 break-all rounded bg-slate-100 px-2 py-1.5 font-mono text-xs text-slate-700">
+        <p className="mt-3 break-all rounded-lg bg-slate-100 px-2 py-1.5 font-mono text-xs text-slate-700">
           {workspace.working_dir ?? 'Nog geen map — wordt aangemaakt bij de eerste upload.'}
         </p>
         <ErrorText message={error} />

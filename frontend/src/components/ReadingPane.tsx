@@ -74,7 +74,7 @@ function Marked({ text, words, find, current }: { text: string; words: string[];
         if (isFind) nth++
         const isCurrent = isFind && nth === current
         return (
-          <mark key={i} className={`rounded px-0.5 ${isCurrent ? 'bg-emerald-100 text-slate-900 ring-1 ring-emerald-200' : isFind ? 'bg-amber-100 text-slate-900' : 'bg-amber-50 text-slate-900'}`}>
+          <mark key={i} className={`rounded-lg px-0.5 ${isCurrent ? 'bg-emerald-100 text-slate-900 ring-1 ring-emerald-200' : isFind ? 'bg-amber-100 text-slate-900' : 'bg-amber-50 text-slate-900'}`}>
             {part}
           </mark>
         )
@@ -109,6 +109,8 @@ export default function ReadingPane() {
   })
   const body = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
+  // while the edge is dragged the PDF viewer (an iframe) must not catch the mouse, or the page never sees it move or let go
+  const [dragActive, setDragActive] = useState(false)
 
   // load the document when another one is asked for (the same document again does not reload)
   const documentId = target?.documentId
@@ -204,6 +206,7 @@ export default function ReadingPane() {
     const onUp = () => {
       if (!dragging.current) return
       dragging.current = false
+      setDragActive(false)
       document.body.style.userSelect = ''
       try {
         localStorage.setItem(WIDTH_KEY, String(width))
@@ -260,17 +263,18 @@ export default function ReadingPane() {
         title="Sleep om de breedte te veranderen"
         onMouseDown={() => {
           dragging.current = true
+          setDragActive(true)
           document.body.style.userSelect = 'none'
         }}
         className="group absolute inset-y-0 -left-1.5 z-10 flex w-3 cursor-col-resize items-center justify-center hover:bg-slate-300/40"
       >
-        <span className="h-10 w-1 rounded bg-slate-300 group-hover:bg-slate-500" />
+        <span className="h-10 w-1 rounded-lg bg-slate-300 group-hover:bg-slate-500" />
       </div>
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold" title={doc?.filename}>
           {doc ? (doc.title || doc.filename) : 'Leesvenster'}
         </h2>
-        <button onClick={close} title="Leesvenster sluiten" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+        <button onClick={close} title="Leesvenster sluiten" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
           ✕
         </button>
       </div>
@@ -289,7 +293,7 @@ export default function ReadingPane() {
                   key={v}
                   onClick={() => setChosenView(v)}
                   aria-pressed={view === v}
-                  className={`rounded border px-2 py-0.5 text-xs ${
+                  className={`rounded-lg border px-2 py-0.5 text-xs ${
                     view === v ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -313,7 +317,7 @@ export default function ReadingPane() {
               }}
               placeholder="Zoek in dit document…"
               aria-label="Zoek in dit document"
-              className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs"
             />
             {find.trim() && (
               <span className="shrink-0 text-xs text-slate-500">{matches.length === 0 ? '0' : `${(matchIndex % matches.length) + 1}/${matches.length}`}</span>
@@ -322,7 +326,7 @@ export default function ReadingPane() {
               onClick={() => setMatchIndex((i) => (i + matches.length - 1) % Math.max(1, matches.length))}
               disabled={matches.length < 2}
               title="Vorige"
-              className="rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+              className="rounded-lg border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
             >
               ▲
             </button>
@@ -330,14 +334,14 @@ export default function ReadingPane() {
               onClick={() => setMatchIndex((i) => (i + 1) % Math.max(1, matches.length))}
               disabled={matches.length < 2}
               title="Volgende"
-              className="rounded border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+              className="rounded-lg border border-slate-200 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40"
             >
               ▼
             </button>
           </div>
           )}
           {view === 'text' && !range && target && (target.chunkId != null || target.excerpt || target.lineStart != null) && (
-            <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
               De plek waar je voor kwam is in de tekst niet terug te vinden (het document is mogelijk gewijzigd). Het hele document staat hier.
             </p>
           )}
@@ -372,6 +376,7 @@ export default function ReadingPane() {
             title={doc.filename}
             src={`${api.documentFileUrl(doc.id)}${pdfPage != null ? `#page=${pdfPage}` : ''}`}
             className="absolute inset-0 h-full w-full border-0 bg-white"
+            style={{ pointerEvents: dragActive ? 'none' : 'auto' }}
           />
         )}
         {doc && !loading && !error && view === 'text' && lines.length > 0 && blocks}

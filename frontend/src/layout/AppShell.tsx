@@ -48,12 +48,12 @@ function Shell({
     <div className="flex h-screen overflow-hidden bg-slate-100 text-slate-800">
       {/* 1st column: left sidebar, collapsible, expanded by default */}
       <aside
-        className={`flex shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 ${
+        className={`flex shrink-0 flex-col transition-[width] duration-200 ${
           leftCollapsed ? 'w-14' : 'w-60'
         }`}
       >
-        <div className="flex h-14 items-center gap-2 border-b border-slate-200 px-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-900 text-sm font-bold text-white">
+        <div className="flex h-14 items-center gap-2 px-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">
             A
           </div>
           {!leftCollapsed && (
@@ -67,7 +67,7 @@ function Shell({
               <button
                 onClick={() => setLeftCollapsed(true)}
                 title="Collapse sidebar"
-                className="ml-auto rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 ⇤
               </button>
@@ -77,7 +77,7 @@ function Shell({
             <button
               onClick={() => setLeftCollapsed(false)}
               title="Expand sidebar"
-              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             >
               ⇥
             </button>
@@ -86,7 +86,7 @@ function Shell({
 
         {/* Workspace bar: current werkmap name + create new */}
         {workspaceBar && !leftCollapsed && (
-          <div className="border-b border-slate-200 px-3 py-2">{workspaceBar}</div>
+          <div className="px-3 pb-2">{workspaceBar}</div>
         )}
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
@@ -97,10 +97,10 @@ function Shell({
                 <button
                   onClick={() => onNavigate(n.id)}
                   title={leftCollapsed ? n.label : undefined}
-                  className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm ${
+                  className={`flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-sm transition-colors ${
                     active === n.id
-                      ? 'bg-slate-100 font-medium text-slate-900'
-                      : 'text-slate-600 hover:bg-slate-50'
+                      ? 'border-slate-200 bg-white font-medium text-slate-900 shadow-sm'
+                      : 'border-transparent text-slate-600 hover:bg-slate-200'
                   } ${leftCollapsed ? 'justify-center' : ''}`}
                 >
                   <span className={`flex w-5 shrink-0 items-center justify-center text-center text-slate-400 ${n.busy ? 'nav-busy' : ''}`}>{n.icon ?? '•'}</span>
@@ -113,12 +113,12 @@ function Shell({
       </aside>
 
       {/* Center: topbar + content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <header className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4">
           <button
             onClick={() => setLeftCollapsed((v) => !v)}
             title="Toggle left sidebar"
-            className="rounded border border-slate-200 px-2 py-1 text-sm text-slate-500 hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 px-2 py-1 text-sm text-slate-500 hover:bg-slate-50"
           >
             {leftCollapsed ? '»' : '«'}
           </button>
@@ -129,7 +129,7 @@ function Shell({
             onClick={reader.toggle}
             title={reader.isOpen ? 'Leesvenster sluiten' : 'Leesvenster openen'}
             aria-pressed={reader.isOpen}
-            className={`shrink-0 rounded border px-2 py-1 text-sm ${
+            className={`shrink-0 rounded-lg border px-2 py-1 text-sm ${
               reader.isOpen ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
             }`}
           >
@@ -138,7 +138,7 @@ function Shell({
           <button
             onClick={() => setRightOpen((v) => !v)}
             title={rightOpen ? 'Collapse context panel' : 'Open context panel'}
-            className={`shrink-0 rounded border px-2 py-1 text-sm ${
+            className={`shrink-0 rounded-lg border px-2 py-1 text-sm ${
               rightOpen
                 ? 'border-slate-900 bg-slate-900 text-white'
                 : 'border-slate-200 text-slate-500 hover:bg-slate-50'
@@ -163,7 +163,7 @@ function Shell({
                 <button
                   onClick={() => setRightOpen(false)}
                   title="Collapse"
-                  className="ml-auto rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 >
                   ✕
                 </button>
@@ -293,7 +293,7 @@ export function SplitView({
           <div className="border-b border-slate-200 bg-white px-3 py-1">
             <button
               onClick={() => setListCollapsed(false)}
-              className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-slate-500 hover:bg-slate-50"
             >
               » Show list
             </button>

@@ -63,7 +63,7 @@ export default function ModelDetails({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div role="dialog" aria-label={`Modelinformatie ${model.id}`} className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
+      <div role="dialog" aria-label={`Modelinformatie ${model.id}`} className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl">
         <div className="overflow-y-auto p-5">
           <h2 className="break-all text-lg font-semibold text-slate-900">{model.id}</h2>
           {model.name && <p className="text-sm text-slate-500">{model.name}</p>}
@@ -129,14 +129,14 @@ export default function ModelDetails({
         </div>
 
         <div className="flex justify-end gap-2 border-t border-slate-200 p-4">
-          <button type="button" onClick={onClose} className="rounded bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-300">
+          <button type="button" onClick={onClose} className="rounded-lg bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-300">
             Sluiten
           </button>
           <button
             type="button"
             onClick={onPick}
             disabled={selected}
-            className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {selected ? 'Dit model is gekozen' : 'Dit model kiezen'}
           </button>

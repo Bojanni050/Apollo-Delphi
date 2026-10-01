@@ -20,7 +20,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
     <>
       {text.split(pattern).map((part, i) =>
         i % 2 === 1 ? (
-          <mark key={i} className="rounded bg-amber-100 px-0.5 text-slate-900">
+          <mark key={i} className="rounded-lg bg-amber-100 px-0.5 text-slate-900">
             {part}
           </mark>
         ) : (
@@ -82,14 +82,14 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
             placeholder="Bijvoorbeeld: goedgekeurd budget havenrenovatie"
             aria-label="Zoekopdracht"
             autoFocus
-            className="min-w-[14rem] flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
+            className="min-w-[14rem] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as SearchMode)}
             aria-label="Zoekmethode"
             title={MODES.find((m) => m.id === mode)?.hint}
-            className="rounded border border-slate-300 px-2 py-2 text-sm"
+            className="rounded-lg border border-slate-300 px-2 py-2 text-sm"
           >
             {MODES.map((m) => (
               <option key={m.id} value={m.id}>
@@ -118,7 +118,7 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
           )}
           <ul className="mt-3 space-y-3">
             {results.hits.map((r) => (
-              <li key={r.chunk_id} className="rounded border border-slate-200 p-3 text-sm">
+              <li key={r.chunk_id} className="rounded-lg border border-slate-200 p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                   <span className="break-all font-medium text-slate-700">{r.document_filename}</span>
                   <span className="flex flex-wrap items-center gap-2">

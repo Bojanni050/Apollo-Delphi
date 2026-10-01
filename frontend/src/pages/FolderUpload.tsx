@@ -248,7 +248,7 @@ export default function FolderUpload({ workspaceId, onChanged }: { workspaceId: 
             <p className="text-slate-800">
               {progress.done} van {plan.items.length} bestanden
             </p>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-slate-200">
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-lg bg-slate-200">
               <div className="h-full bg-slate-900 transition-all" style={{ width: `${(progress.done / Math.max(1, plan.items.length)) * 100}%` }} />
             </div>
             <p className="mt-1 truncate text-xs text-slate-500">{progress.current}</p>

@@ -107,7 +107,7 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
           </div>
         </div>
         {unread > 0 && (
-          <p role="status" className="mt-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+          <p role="status" className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
             {unread} {unread === 1 ? 'document is' : 'documenten zijn'} nog niet gelezen en {unread === 1 ? 'doet' : 'doen'} niet mee. Wacht tot ze
             klaar zijn en draai Delphi Pulse dan opnieuw; wat al is geanalyseerd wordt overgeslagen.
           </p>

@@ -37,7 +37,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-[85vh] w-full ${width} flex-col rounded-lg bg-white shadow-xl`}
+        className={`flex max-h-[85vh] w-full ${width} flex-col rounded-2xl bg-white shadow-xl`}
       >
         <div className="overflow-y-auto p-5">
           <h2 id={titleId} className="text-lg font-semibold text-slate-900">

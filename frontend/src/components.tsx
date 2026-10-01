@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-white rounded-lg shadow p-5 ${className}`}>{children}</div>
+  return <div className={`card bg-white rounded-2xl border border-slate-200 shadow-sm p-5 ${className}`}>{children}</div>
 }
 
 export function Badge({ kind, children }: { kind: 'ok' | 'warn' | 'err' | 'neutral'; children: ReactNode }) {
@@ -11,7 +11,7 @@ export function Badge({ kind, children }: { kind: 'ok' | 'warn' | 'err' | 'neutr
     err: 'bg-red-100 text-red-800',
     neutral: 'bg-slate-200 text-slate-700',
   } as const
-  return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${styles[kind]}`}>{children}</span>
+  return <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[kind]}`}>{children}</span>
 }
 
 export function StatusBadge({ status }: { status: string }) {
@@ -41,14 +41,14 @@ export function Button({
 }) {
   const styles = {
     primary: 'bg-slate-900 text-white hover:bg-slate-700',
-    secondary: 'bg-slate-200 text-slate-800 hover:bg-slate-300',
+    secondary: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50',
     danger: 'bg-red-600 text-white hover:bg-red-500',
   } as const
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`px-3 py-1.5 rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]}`}
+      className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${styles[variant]}`}
     >
       {children}
     </button>

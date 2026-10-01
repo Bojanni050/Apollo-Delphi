@@ -28,7 +28,7 @@ export default function AppearanceCard() {
             role="radio"
             aria-checked={preference === o.id}
             onClick={() => choose(o.id)}
-            className={`rounded border px-3 py-2 text-left text-sm ${
+            className={`rounded-lg border px-3 py-2 text-left text-sm ${
               preference === o.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
             }`}
           >

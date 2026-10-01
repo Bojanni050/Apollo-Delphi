@@ -53,7 +53,7 @@ const TIER_INFO: Record<LLMTierName, { title: string; blurb: string }> = {
   },
 }
 
-const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100'
+const inputCls = 'w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -339,7 +339,7 @@ function TierCard({
           <ErrorText message={status.error} />
         ) : (
           // Nothing is wrong yet: the endpoint is saved, a model is just not chosen. No red error for that.
-          <p className="mt-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
             Nog geen model gekozen. Klik op “Modellen ophalen”, kies er een en sla op.
           </p>
         ))}
