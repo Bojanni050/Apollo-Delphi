@@ -63,7 +63,8 @@ Stel daarna een **vervolgvraag**; "Nieuw gesprek" begint opnieuw. Een getal dat 
 
 **Delphi Pulse** (onder de streep in het menu) doet voorstellen voor thema's en verbanden tussen de documenten. Het leest
 de tekst zelf, dus het werkt ook terwijl het embedden nog loopt. Documenten die nog niet zijn gelezen doen niet mee: daarvoor
-toont de pagina een waarschuwing; draai Pulse dan opnieuw als ze klaar zijn (wat al is geanalyseerd wordt overgeslagen).
+toont de pagina een waarschuwing; terwijl Pulse draait pulseren het icoon en de naam in het menu zacht, ook als je naar een andere
+pagina gaat; draai Pulse dan opnieuw als ze klaar zijn (wat al is geanalyseerd wordt overgeslagen).
 
 **Analysis** leest claims uit de documenten; **Issues** toont tegenstrijdigheden en open vragen met het bewijs
 (bestand, pagina, regels); een onderzoek kan ze oplossen, waarna jij accepteert of afwijst. **Knowledge** toont wat

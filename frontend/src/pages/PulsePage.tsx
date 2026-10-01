@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, type PulseItem, type PulseRun } from '../api'
 import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
+import { trackPulse, usePulseRunning } from '../pulseActivity'
 
 const RELATION_LABELS: Record<string, string> = {
   'relates-to': 'hangt samen met',
@@ -12,7 +13,7 @@ const RELATION_LABELS: Record<string, string> = {
 export default function PulsePage({ workspaceId }: { workspaceId: number | null }) {
   const [run, setRun] = useState<PulseRun | null>(null)
   const [items, setItems] = useState<PulseItem[]>([])
-  const [busy, setBusy] = useState(false)
+  const busy = usePulseRunning()
   const [error, setError] = useState<string | null>(null)
   // documents that are not through indexing yet: unread ones do not take part, the ones still being embedded do
   const [unread, setUnread] = useState(0)
@@ -64,15 +65,12 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
 
   const runPulse = async (force: boolean) => {
     if (workspaceId === null) return
-    setBusy(true)
     setError(null)
     try {
-      await api.runPulse(workspaceId, force)
+      await trackPulse(() => api.runPulse(workspaceId, force))
       await load()
     } catch (e) {
       setError((e as Error).message)
-    } finally {
-      setBusy(false)
     }
   }
 

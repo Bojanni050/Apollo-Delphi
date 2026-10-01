@@ -26,3 +26,8 @@ body {
 .reader-prose th { font-weight: 600; background: rgba(128, 128, 128, 0.12); }
 .reader-prose hr { border-color: rgba(128, 128, 128, 0.4); margin: 1em 0; }
 .reader-prose img { max-width: 100%; height: auto; }
+
+/* A menu item that is busy (Delphi Pulse running) breathes softly: icon and words together. */
+@keyframes nav-busy { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.nav-busy { animation: nav-busy 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .nav-busy { animation: none; } }

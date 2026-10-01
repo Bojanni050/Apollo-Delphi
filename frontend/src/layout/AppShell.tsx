@@ -5,7 +5,7 @@ import { ReaderProvider, useReader } from '../reader'
 import { BUILD_TIME, BUILD_VERSION } from '../version'
 
 /** `below`: shown under the divider at the end of the menu. */
-export type NavItem = { id: string; label: string; icon?: ReactNode; below?: boolean }
+export type NavItem = { id: string; label: string; icon?: ReactNode; below?: boolean; busy?: boolean }
 
 type AppShellProps = {
   nav: NavItem[]
@@ -103,8 +103,8 @@ function Shell({
                       : 'text-slate-600 hover:bg-slate-50'
                   } ${leftCollapsed ? 'justify-center' : ''}`}
                 >
-                  <span className="flex w-5 shrink-0 items-center justify-center text-center text-slate-400">{n.icon ?? '•'}</span>
-                  {!leftCollapsed && <span className="truncate">{n.label}</span>}
+                  <span className={`flex w-5 shrink-0 items-center justify-center text-center text-slate-400 ${n.busy ? 'nav-busy' : ''}`}>{n.icon ?? '•'}</span>
+                  {!leftCollapsed && <span className={`truncate ${n.busy ? 'nav-busy' : ''}`}>{n.label}</span>}
                 </button>
               </div>
             ))}

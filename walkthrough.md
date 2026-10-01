@@ -148,3 +148,9 @@ achteraf ingevuld voor het werk van 2026-10-01 (commits tussen haakjes).
 - Findings: Pulse draaien terwijl er nog geïndexeerd wordt kan: het leest de tekst zelf en gebruikt geen embeddings, en neemt gelezen (`parsed`) en geïndexeerde documenten mee. Documenten die nog `pending` zijn doen niet mee, en dat was nergens te zien: een te vroege run gaf stilzwijgend een onvolledig voorstel.
 - Conclusions: Waarschuwen in plaats van blokkeren: de run is niet schadelijk (een volgende run slaat ongewijzigde documenten over via de hash). Bij documenten die alleen nog embedden juist een korte geruststelling, omdat dat Pulse niet raakt.
 - Actions: `frontend/src/pages/PulsePage.tsx` (kijkt elke 3 s, bij niets wachtends elke 15 s, naar de documentstatussen: amberkleurige waarschuwing voor ongelezen, grijze toelichting voor wat nog embedt), `apollo-delphi-user.md`; validated met `npm run build` en in de browser met 4 ongelezen documenten.
+
+## 2026-10-02 (Delphi Pulse pulseert in het menu terwijl het draait)
+
+- Findings: Een Pulse-run kan even duren, en wie naar een andere pagina ging zag niets meer van de lopende run; de knop op de Pulse-pagina bleef na terugkomen ook gewoon klikbaar.
+- Conclusions: De status "Pulse draait" hoort bij de hele app, niet bij de pagina die de run startte: een klein gedeeld object (`useSyncExternalStore`) dat de run bijhoudt zolang het verzoek loopt. Zacht pulseren (dekking 1 naar 0,4 in 1,8 s) in plaats van een spinner, en niet bij "verminderde beweging".
+- Actions: `frontend/src/pulseActivity.ts` (nieuw: `trackPulse`, `usePulseRunning`), `pages/PulsePage.tsx` (gebruikt de gedeelde status, ook voor de uitgeschakelde knoppen), `layout/AppShell.tsx` (`NavItem.busy`), `App.tsx`, `index.css` (`.nav-busy`); validated met `npm run build` en in de browser met een kunstmatig vertraagd run-verzoek (icoon en tekst pulseren, ook op een andere pagina, en stoppen na afloop).

@@ -13,6 +13,7 @@ import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
 import delphiIcon from './icons/delphi.png'
 import { useTheme } from './theme'
+import { usePulseRunning } from './pulseActivity'
 import { api, type Workspace } from './api'
 
 type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
@@ -46,6 +47,7 @@ const CONTEXT_TITLES: Record<Page, string> = {
 export default function App() {
   useTheme() // applies the chosen theme (also on the setup wizard, which has no top bar)
   const [page, setPage] = useState<Page>('documents')
+  const pulseRunning = usePulseRunning()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   // true once the list has been fetched: an empty list before that must not show the setup wizard
   const [workspacesLoaded, setWorkspacesLoaded] = useState(false)
@@ -197,7 +199,7 @@ export default function App() {
 
   return (
     <AppShell
-      nav={NAV}
+      nav={NAV.map((n) => (n.id === 'pulse' ? { ...n, busy: pulseRunning } : n))}
       active={page}
       onNavigate={(id) => setPage(id as Page)}
       breadcrumb={
