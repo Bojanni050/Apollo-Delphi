@@ -3,10 +3,12 @@ import { api, type DocumentText } from '../api'
 import { useReader, type ReaderTarget } from '../reader'
 import { RichHtml, RichMarkdown } from './RichText'
 
-const WIDTH_KEY = 'apollo.reader.width'
+// v2: the default became 40% of the screen; a width dragged before (or the old fixed default) must not hide that
+const WIDTH_KEY = 'apollo.reader.width.v2'
 /** The page next to the reading pane never gets narrower than this when dragging. */
 const MIN_PAGE_WIDTH = 320
-const DEFAULT_WIDTH = 480
+/** The reading pane starts at 40% of the window; dragging the edge changes it and is remembered. */
+const defaultWidth = () => Math.max(MIN_WIDTH, Math.round(window.innerWidth * 0.4))
 const MIN_WIDTH = 288
 
 type Range = { start: number; end: number }
@@ -102,9 +104,9 @@ export default function ReadingPane() {
   const [wordError, setWordError] = useState<string | null>(null)
   const [width, setWidth] = useState(() => {
     try {
-      return Number(localStorage.getItem(WIDTH_KEY)) || DEFAULT_WIDTH
+      return Number(localStorage.getItem(WIDTH_KEY)) || defaultWidth()
     } catch {
-      return DEFAULT_WIDTH
+      return defaultWidth()
     }
   })
   const body = useRef<HTMLDivElement>(null)
@@ -256,7 +258,11 @@ export default function ReadingPane() {
   }
 
   return (
-    <aside className="relative flex shrink-0 flex-col border-l border-slate-200 bg-white" style={{ width }} aria-label="Leesvenster">
+    <aside
+      className="relative flex shrink-0 flex-col border-l border-slate-200 bg-white"
+      style={{ width, maxWidth: `calc(100% - ${MIN_PAGE_WIDTH + 32}px)` }}
+      aria-label="Leesvenster"
+    >
       <div
         role="separator"
         aria-orientation="vertical"

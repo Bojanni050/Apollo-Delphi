@@ -42,6 +42,20 @@ function Shell({
   // Left expanded by default, right collapsed by default (contextual)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
+  // The panel is put in the page first and faded in a moment later (so there is something to fade from), and stays in the
+  // page while it slides shut: `panelMounted` is whether it is there, `panelShown` whether it is visible.
+  const [panelMounted, setPanelMounted] = useState(false)
+  const [panelShown, setPanelShown] = useState(false)
+  useEffect(() => {
+    if (rightOpen) {
+      setPanelMounted(true)
+      const timer = window.setTimeout(() => setPanelShown(true), 20)
+      return () => window.clearTimeout(timer)
+    }
+    setPanelShown(false)
+    const timer = window.setTimeout(() => setPanelMounted(false), 350)
+    return () => window.clearTimeout(timer)
+  }, [rightOpen])
   const reader = useReader()
 
   return (
@@ -155,33 +169,48 @@ function Shell({
           {/* Reading pane: a document in full, in front of the context column */}
           {reader.isOpen && <ReadingPane />}
 
-          {/* 4th column: right contextual sidebar, collapsed by default */}
-          {rightOpen ? (
-            <aside className="flex w-80 shrink-0 flex-col border-l border-slate-200 bg-white xl:w-96">
-              <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
-                <h2 className="truncate text-sm font-semibold">{contextTitle ?? 'Context'}</h2>
-                <button
-                  onClick={() => setRightOpen(false)}
-                  title="Collapse"
-                  className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4">{contextPane ?? <EmptyContext />}</div>
-            </aside>
-          ) : (
+          {/* 4th column: right contextual sidebar, collapsed by default. One element that slides between the narrow
+              strip and the panel (the panel keeps its own width inside, so its text does not reflow while it moves). */}
+          <div
+            className={`relative shrink-0 overflow-hidden border-l border-slate-200 bg-white transition-[width] duration-300 ease-out motion-reduce:transition-none ${
+              rightOpen ? 'w-80 xl:w-96' : 'w-8'
+            }`}
+          >
+            {panelMounted && (
+              <aside
+                aria-hidden={!rightOpen}
+                {...(rightOpen ? {} : ({ inert: '' } as object))}
+                className={`absolute inset-y-0 right-0 flex w-80 flex-col bg-white transition-opacity duration-200 motion-reduce:transition-none xl:w-96 ${
+                  panelShown ? 'opacity-100 delay-100' : 'pointer-events-none opacity-0'
+                }`}
+              >
+                <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 px-4">
+                  <h2 className="truncate text-sm font-semibold">{contextTitle ?? 'Context'}</h2>
+                  <button
+                    onClick={() => setRightOpen(false)}
+                    title="Collapse"
+                    className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto p-4">{contextPane ?? <EmptyContext />}</div>
+              </aside>
+            )}
             <div
               title="Open context panel"
+              aria-hidden={rightOpen}
               onClick={() => setRightOpen(true)}
-              className="flex w-8 shrink-0 cursor-pointer flex-col items-center border-l border-slate-200 bg-white py-3 text-slate-300 hover:bg-slate-50 hover:text-slate-500"
+              className={`absolute inset-0 flex cursor-pointer flex-col items-center bg-white py-3 text-slate-300 transition-opacity duration-200 hover:bg-slate-50 hover:text-slate-500 motion-reduce:transition-none ${
+                rightOpen ? 'pointer-events-none opacity-0' : 'opacity-100 delay-100'
+              }`}
             >
               <span className="text-sm">‹</span>
               <span className="mt-2 text-[11px] font-medium [writing-mode:vertical-rl]">
                 {contextTitle ?? 'Context'}
               </span>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
