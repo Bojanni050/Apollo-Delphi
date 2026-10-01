@@ -72,6 +72,33 @@ export APOLLO_DATABASE_URL=postgresql+psycopg2://apollo:apollo@localhost:5432/ap
 alembic upgrade head
 ```
 
+## Desktop app
+
+Apollo also runs as a normal Windows application (Tauri 2): its own window, no browser, no Docker, no PostgreSQL.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup-desktop.ps1   # once: .venv, packages, frontend build
+npm run desktop                                                      # builds the frontend and opens the app
+```
+
+Needs Python 3.11+, Node.js, git, Rust (rustup) with the MSVC build tools; WebView2 ships with Windows 10/11.
+The first start compiles the Rust shell and takes a few minutes.
+
+- **How it works.** `src-tauri/` is only a window and a process supervisor: it starts `backend/.venv`'s Python
+  (`python -m app.serve`) on a free port, waits until the API answers, and points the window at it. The page and
+  the API share one origin, so there is no CORS to configure. Closing the window stops the API (a Windows Job
+  Object reaps the process tree even if the app is killed).
+- **Own data folder.** Everything lives in `%LOCALAPPDATA%\Apollo-Delphi`: `apollo.db` (SQLite), `uploads`,
+  `workspaces` (the werkmap repositories) and `models` (downloaded GGUF files). Back that folder up to back up
+  the app. The database is built and upgraded by Alembic at every start. Search runs over the stored vectors in
+  Python and keyword search in memory, which is fine for one person's documents; Docker Compose with
+  PostgreSQL/pgvector remains the setup for larger collections. The two do not share data.
+- **Folder picker.** In the desktop app the setup wizard browses your real folders.
+- **Not an installer yet.** The shell runs from this repository: it starts the repository's `.venv`, so moving the
+  folder means running the setup again. A self-contained installer would have to bundle Python as well.
+- **API log.** If the app does not start, the window shows the last lines of
+  `%TEMP%\apollo-delphi-backend.log`.
+
 ## Configuration
 
 All configuration is environment-driven (see `.env.example`). Keys:

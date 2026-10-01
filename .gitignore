@@ -28,3 +28,8 @@ backend/.env
 .vscode/
 /models/
 backend/models/
+
+# Desktop shell
+.venv/
+src-tauri/target/
+src-tauri/gen/

@@ -1,0 +1,14 @@
+{
+  "name": "apollo-delphi-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tauri 2 desktop shell for Apollo Delphi",
+  "scripts": {
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "desktop:release": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.5"
+  }
+}
