@@ -252,7 +252,7 @@ Tuning: `SEARCH_RRF_K` (60) and `SEARCH_CANDIDATE_MULTIPLIER` (5).
 
 ## Asking questions
 
-`POST /api/ask {question, workspace_id}` answers from the documents of one werkmap only. Retrieval is the hybrid
+`POST /api/ask {question, workspace_id, follow_up_of?}` answers from the documents of one werkmap only. Retrieval is the hybrid
 search above; the main model gets the fragments as numbered sources, must use *only* those, and marks each
 statement with `[n]`. The answer is then **checked** before you see it:
 
@@ -265,3 +265,10 @@ statement with `[n]`. The answer is then **checked** before you see it:
 The cited fragments are returned verbatim, and each question with its answer is stored (`qa_entries`) so it stays
 inspectable. With the offline `mock` model the answer is *extractive* (the best matching sentences, each cited) and
 is labelled as such. The UI page is *Vragen*; `ASK_TOP_K` (8) sets how many fragments the model reads.
+
+**Follow-up questions.** Pass `follow_up_of` (the id of an earlier answer in the same werkmap) to continue a
+conversation. The follow-up is first rewritten into a question that stands on its own ("En wanneer?" → "Wanneer is
+het havenbudget klaar?"), by the model, or offline by putting the previous question's topic in front of it. That
+rewrite (`standalone_question`) is what retrieval searches for and is shown in the UI. The last `ASK_HISTORY_TURNS`
+(3) turns are given to the model as context, explicitly *not* as a source: every statement still needs a freshly
+retrieved fragment and goes through the same checks, so a number that only the conversation mentions is flagged.

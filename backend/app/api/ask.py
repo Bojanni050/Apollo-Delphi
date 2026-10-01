@@ -20,7 +20,9 @@ def _out(entry: QAEntry, sources_considered: int = 0) -> AnswerOut:
     return AnswerOut(
         id=entry.id,
         workspace_id=entry.workspace_id,
+        parent_id=entry.parent_id,
         question=entry.question,
+        standalone_question=entry.standalone_question,
         answer=entry.answer,
         answered=entry.answered,
         grounded=entry.grounded,
@@ -39,8 +41,15 @@ async def ask(body: AskRequest, db: Session = Depends(get_session)):
     """Answer a question from the documents of one werkmap, citing the fragments used as [n]."""
     if body.workspace_id is not None and db.get(Workspace, body.workspace_id) is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
+    parent = None
+    if body.follow_up_of is not None:
+        parent = db.get(QAEntry, body.follow_up_of)
+        if parent is None:
+            raise HTTPException(status_code=404, detail="The question to follow up on was not found")
+        if parent.workspace_id != body.workspace_id:
+            raise HTTPException(status_code=400, detail="A follow-up must be asked in the werkmap of the question it follows")
     try:
-        result = await AskService().ask(db, body.question, body.workspace_id)
+        result = await AskService().ask(db, body.question, body.workspace_id, parent=parent)
     except (LLMError, EmbeddingError) as exc:  # EmbeddingError is an LLMError; both mean "the model is not usable"
         raise HTTPException(status_code=503, detail=str(exc))
     return _out(result.entry, result.sources_considered)

@@ -150,7 +150,11 @@ export interface Citation {
 export interface Answer {
   id: number
   workspace_id: number | null
+  /** The answer this question follows up on; null for a first question. */
+  parent_id: number | null
   question: string
+  /** What retrieval searched for when this was a follow-up (the question rewritten to stand on its own). */
+  standalone_question: string | null
   answer: string
   answered: boolean
   grounded: boolean
@@ -408,11 +412,11 @@ export const api = {
     request<SearchResponse>(
       `/api/search?q=${encodeURIComponent(q)}&mode=${mode}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
     ),
-  ask: (question: string, workspaceId?: number | null) =>
+  ask: (question: string, workspaceId?: number | null, followUpOf?: number | null) =>
     request<Answer>('/api/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, workspace_id: workspaceId ?? null }),
+      body: JSON.stringify({ question, workspace_id: workspaceId ?? null, follow_up_of: followUpOf ?? null }),
     }),
   askHistory: (workspaceId?: number | null) =>
     request<Answer[]>(`/api/ask/history${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),

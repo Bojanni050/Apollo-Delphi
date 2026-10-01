@@ -25,6 +25,29 @@ function AnswerText({ text, onCite }: { text: string; onCite: (n: number) => voi
   )
 }
 
+/** The conversation an answer belongs to: its ancestors, itself and the newest follow-up at every step after it. */
+function threadOf(history: Answer[], id: number): Answer[] {
+  const byId = new Map(history.map((h) => [h.id, h]))
+  const newestChild = new Map<number, Answer>()
+  for (const h of history) {
+    if (h.parent_id == null) continue
+    const best = newestChild.get(h.parent_id)
+    if (!best || h.id > best.id) newestChild.set(h.parent_id, h)
+  }
+  const thread: Answer[] = []
+  let up = byId.get(id)
+  while (up && !thread.includes(up)) {
+    thread.unshift(up)
+    up = up.parent_id == null ? undefined : byId.get(up.parent_id)
+  }
+  let down = newestChild.get(id)
+  while (down && !thread.includes(down)) {
+    thread.push(down)
+    down = newestChild.get(down.id)
+  }
+  return thread
+}
+
 function AnswerCard({ answer }: { answer: Answer }) {
   const [active, setActive] = useState<number | null>(null)
   const sourceRefs = useRef<Record<number, HTMLLIElement | null>>({})
@@ -39,7 +62,14 @@ function AnswerCard({ answer }: { answer: Answer }) {
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h3 className="font-semibold text-slate-900">{answer.question}</h3>
+        <div>
+          <h3 className="font-semibold text-slate-900">{answer.question}</h3>
+          {answer.standalone_question && (
+            <p className="mt-0.5 text-xs text-slate-400" title="Hiermee is in de documenten gezocht">
+              Gezocht als: {answer.standalone_question}
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {!answer.answered && <Badge kind="warn">niet beantwoord</Badge>}
           {answer.answered && answer.grounded && <Badge kind="ok">bronnen gecontroleerd</Badge>}
@@ -98,7 +128,7 @@ function AnswerCard({ answer }: { answer: Answer }) {
 
 export default function AskPage({ workspaceId }: { workspaceId: number | null }) {
   const [question, setQuestion] = useState('')
-  const [current, setCurrent] = useState<Answer | null>(null)
+  const [thread, setThread] = useState<Answer[]>([])
   const [history, setHistory] = useState<Answer[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,7 +143,7 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
   }, [workspaceId])
 
   useEffect(() => {
-    setCurrent(null)
+    setThread([])
     setHistory([])
     setError(null)
     void loadHistory()
@@ -127,8 +157,9 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
     setBusy(true)
     setError(null)
     try {
-      const a = await api.ask(q, workspaceId)
-      setCurrent(a)
+      const last = thread[thread.length - 1]
+      const a = await api.ask(q, workspaceId, last?.id)
+      setThread((t) => [...t, a])
       setQuestion('')
       await loadHistory()
     } catch (e) {
@@ -138,12 +169,29 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
     }
   }
 
-  const earlier = history.filter((h) => h.id !== current?.id)
+  const inThread = new Set(thread.map((a) => a.id))
+  // one entry per conversation: its first question
+  const earlier = history.filter((h) => h.parent_id == null && !inThread.has(h.id))
+  const following = thread.length > 0
 
   return (
     <div className="space-y-6">
       <Card>
-        <h2 className="text-lg font-semibold">Vraag stellen</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">{following ? 'Vervolgvraag stellen' : 'Vraag stellen'}</h2>
+          {following && (
+            <Button
+              onClick={() => {
+                setThread([])
+                setQuestion('')
+                setError(null)
+              }}
+              disabled={busy}
+            >
+              Nieuw gesprek
+            </Button>
+          )}
+        </div>
         <p className="mt-1 text-sm text-slate-500">
           Het antwoord komt uitsluitend uit de documenten van deze werkmap en noemt de fragmenten waarop het steunt.
           Staat het er niet in, dan zegt Apollo dat in plaats van te gokken.
@@ -153,17 +201,19 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !busy && void ask()}
-            placeholder="Bijvoorbeeld: wat is het goedgekeurde budget?"
+            placeholder={following ? 'Bijvoorbeeld: en wanneer moet dat klaar zijn?' : 'Bijvoorbeeld: wat is het goedgekeurde budget?'}
             className="flex-1 rounded border border-slate-300 px-3 py-2 text-sm"
           />
           <Button onClick={() => void ask()} disabled={busy || !question.trim()}>
-            {busy ? 'Zoeken…' : 'Vraag stellen'}
+            {busy ? 'Zoeken…' : following ? 'Vervolgvraag' : 'Vraag stellen'}
           </Button>
         </div>
         <ErrorText message={error} />
       </Card>
 
-      {current && <AnswerCard key={current.id} answer={current} />}
+      {thread.map((a) => (
+        <AnswerCard key={a.id} answer={a} />
+      ))}
 
       {earlier.length > 0 && (
         <div>
@@ -172,12 +222,17 @@ export default function AskPage({ workspaceId }: { workspaceId: number | null })
             {earlier.map((h) => (
               <li key={h.id}>
                 <button
-                  onClick={() => setCurrent(h)}
+                  onClick={() => setThread(threadOf(history, h.id))}
                   className="w-full rounded border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50"
                 >
                   <span className="font-medium text-slate-800">{h.question}</span>
                   <span className="ml-2 text-xs text-slate-400">{new Date(h.created_at).toLocaleString('nl-NL')}</span>
                   {!h.answered && <span className="ml-2 text-xs text-amber-700">niet beantwoord</span>}
+                  {threadOf(history, h.id).length > 1 && (
+                    <span className="ml-2 text-xs text-slate-500">
+                      + {threadOf(history, h.id).length - 1} vervolg
+                    </span>
+                  )}
                 </button>
               </li>
             ))}

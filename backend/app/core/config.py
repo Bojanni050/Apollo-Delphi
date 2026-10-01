@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     search_candidate_multiplier: int = Field(default=5, ge=1, le=50)
     # Question answering: how many fragments are offered to the model as numbered sources.
     ask_top_k: int = Field(default=8, ge=1, le=30)
+    # Follow-up questions: how many earlier question/answer pairs of the conversation are given as context.
+    ask_history_turns: int = Field(default=3, ge=1, le=10)
 
     @field_validator("allowed_extensions", mode="before")
     @classmethod

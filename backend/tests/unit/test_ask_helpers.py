@@ -65,3 +65,34 @@ def test_build_prompt_numbers_sources_and_names_their_files():
     prompt = build_prompt("What?", [_src(1, "Alpha.", "a.txt", page=3), _src(2, "Beta.", "b.txt")])
     assert "[1] (file: a.txt, page 3)\nAlpha." in prompt and "[2] (file: b.txt)\nBeta." in prompt
     assert prompt.rstrip().endswith("Question: What?")
+
+
+from app.services.ask.service import Turn, build_prompt, build_rewrite_prompt, fallback_standalone, strip_citations
+
+
+def test_strip_citations_removes_markers_and_the_gap_they_leave():
+    assert strip_citations("The budget is 250000 EUR [1][2]. Repairs are included [2].") == "The budget is 250000 EUR. Repairs are included."
+
+
+def test_fallback_standalone_puts_the_previous_topic_in_front():
+    assert fallback_standalone([], "Who is the sponsor?") == "Who is the sponsor?"
+    turns = [Turn("What is the harbour budget?", "250000 EUR [1]")]
+    assert fallback_standalone(turns, "And when is it due?") == "What is the harbour budget? And when is it due?"
+
+
+def test_fallback_standalone_builds_on_an_earlier_rewrite():
+    turns = [Turn("And when is it due?", "In May.", standalone="What is the harbour budget? And when is it due?")]
+    assert fallback_standalone(turns, "Who approved it?").startswith("What is the harbour budget? And when is it due?")
+
+
+def test_prompt_marks_the_conversation_as_context_and_drops_old_citation_numbers():
+    turns = [Turn("What is the budget?", "It is 250000 EUR [1].")]
+    prompt = build_prompt("And when?", [], turns, standalone="When is the budget due?")
+    assert "NOT a source" in prompt and "A: It is 250000 EUR." in prompt and "[1]" not in prompt
+    assert "Question: And when?" in prompt and "When is the budget due?" in prompt
+    assert "Conversation" not in build_prompt("Q?", [])
+
+
+def test_rewrite_prompt_contains_the_turns_and_the_last_question():
+    prompt = build_rewrite_prompt([Turn("What is the budget?", "250000 EUR [1]")], "And when?")
+    assert "Q: What is the budget?" in prompt and "A: 250000 EUR" in prompt and prompt.endswith("Last question: And when?")

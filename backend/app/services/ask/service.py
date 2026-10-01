@@ -14,6 +14,12 @@ those sources and marks every statement with ``[n]`` -> the answer is *checked* 
 Nothing is hidden: the cited fragments are returned verbatim next to the answer, and every question with
 its answer is stored (``qa_entries``) so it can be inspected later.
 
+A question can follow up on an earlier answer. The earlier turns of the conversation are then used for two
+things only: the follow-up is rewritten into a question that stands on its own (so "And when is it due?" can
+retrieve the right fragments), and the model sees the turns as context for what is being asked. They are never a
+source: every statement must still be backed by a freshly retrieved, numbered fragment, and the checks above
+apply unchanged.
+
 With the mock provider (offline, no language model) the answer is *extractive*: the best matching sentences
 of the retrieved sources, each cited. It is labelled as such by ``model_provider = "mock"``.
 """
@@ -26,7 +32,7 @@ from dataclasses import asdict, dataclass
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.llm import LLMProvider, get_llm_provider, tier_config
+from app.core.llm import LLMError, LLMProvider, get_llm_provider, tier_config
 from app.core.logging import get_logger
 from app.models import Document
 from app.models.qa import QAEntry
@@ -41,6 +47,7 @@ MAX_SOURCE_CHARS = 1500
 _CITATION_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _NUMBER_RE = re.compile(r"\d[\d.,]*\d|\d")
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+|\n+")
+MAX_STANDALONE_CHARS = 500
 
 SYSTEM_PROMPT = (
     "You answer questions about a collection of documents. Use ONLY the numbered sources you are given; "
@@ -49,6 +56,23 @@ SYSTEM_PROMPT = (
     "and cite each side. If the sources do not contain the answer, reply with exactly NO_ANSWER and nothing "
     "else. Answer in the language of the question. Be concise."
 )
+
+REWRITE_SYSTEM_PROMPT = (
+    "You rewrite the last question of a conversation so that it can be understood without the conversation: "
+    "replace pronouns and references like 'it', 'that', 'and then' by what they refer to. Keep the language "
+    "of the question. Do not answer it and do not add anything that was not asked. Reply with the rewritten "
+    "question only."
+)
+
+
+@dataclass
+class Turn:
+    """One earlier question of the conversation and the answer it received."""
+
+    question: str
+    answer: str
+    #: What retrieval searched for, when that question was itself a follow-up.
+    standalone: str | None = None
 
 
 @dataclass
@@ -142,13 +166,48 @@ def extractive_answer(question: str, sources: list[Source], max_sentences: int =
     return " ".join(text for _, text in parts[:max_sentences])
 
 
-def build_prompt(question: str, sources: list[Source]) -> str:
+def strip_citations(text: str) -> str:
+    """The text without [n] markers: the numbers of an earlier answer mean nothing in a new set of sources."""
+    return re.sub(r"[ \t]+([.,;:!?])", r"\1", _CITATION_RE.sub("", text)).strip()
+
+
+def fallback_standalone(turns: list[Turn], question: str) -> str:
+    """Offline rewrite: the previous question's topic in front of the follow-up, so retrieval still finds it."""
+    if not turns:
+        return question
+    last = turns[-1]
+    return f"{last.standalone or last.question} {question}"[:MAX_STANDALONE_CHARS]
+
+
+def _conversation_lines(turns: list[Turn]) -> list[str]:
+    lines = []
+    for t in turns:
+        lines.append(f"Q: {t.question}")
+        lines.append(f"A: {strip_citations(t.answer)}")
+    return lines
+
+
+def build_rewrite_prompt(turns: list[Turn], question: str) -> str:
+    return "\n".join(["Conversation:", *_conversation_lines(turns), "", f"Last question: {question}"])
+
+
+def build_prompt(question: str, sources: list[Source], turns: list[Turn] | None = None, standalone: str | None = None) -> str:
+    parts = []
+    if turns:
+        parts.append(
+            "Conversation so far (context for the question only; it is NOT a source and must not be cited):\n"
+            + "\n".join(_conversation_lines(turns))
+        )
     lines = ["Sources:"]
     for s in sources:
         where = f"file: {s.document_filename}" + (f", page {s.page_number}" if s.page_number else "")
         lines.append(f"[{s.n}] ({where})\n{s.excerpt}")
-    lines.append(f"\nQuestion: {question}")
-    return "\n\n".join(lines)
+    parts.append("\n\n".join(lines))
+    asked = f"Question: {question}"
+    if standalone and standalone != question:
+        asked += f"\n(The question on its own: {standalone})"
+    parts.append(asked)
+    return "\n\n".join(parts)
 
 
 # -- service -----------------------------------------------------------------------------------------
@@ -165,11 +224,40 @@ class AskService:
             self._llm = get_llm_provider("main")
         return self._llm
 
-    async def ask(self, db: Session, question: str, workspace_id: int | None = None) -> AnswerResult:
+    def _turns(self, db: Session, parent: QAEntry | None) -> list[Turn]:
+        """The conversation leading up to ``parent`` (inclusive), oldest first, at most ``ask_history_turns``."""
+        turns: list[Turn] = []
+        seen: set[int] = set()
+        entry = parent
+        while entry is not None and len(turns) < get_settings().ask_history_turns and entry.id not in seen:
+            seen.add(entry.id)
+            turns.append(Turn(entry.question, entry.answer, entry.standalone_question))
+            entry = db.get(QAEntry, entry.parent_id) if entry.parent_id else None
+        return list(reversed(turns))
+
+    async def _standalone(self, turns: list[Turn], question: str) -> str:
+        """Rewrite a follow-up into a question that stands on its own; falls back to a keyword-style join."""
+        if self.llm.name != "mock":
+            try:
+                rewritten = (await self.llm.complete(REWRITE_SYSTEM_PROMPT, build_rewrite_prompt(turns, question))).strip()
+            except LLMError as exc:
+                log.warning("Could not rewrite follow-up question (%s); using the fallback", exc)
+            else:
+                rewritten = rewritten.splitlines()[0].strip() if rewritten else ""
+                if rewritten and len(rewritten) <= MAX_STANDALONE_CHARS:
+                    return rewritten
+        return fallback_standalone(turns, question)
+
+    async def ask(
+        self, db: Session, question: str, workspace_id: int | None = None, parent: QAEntry | None = None
+    ) -> AnswerResult:
         question = question.strip()
         settings = get_settings()
+        turns = self._turns(db, parent)
+        standalone = await self._standalone(turns, question) if turns else None
+        search_query = standalone or question
         scope = [r[0] for r in db.query(Document.id).filter(Document.workspace_id == workspace_id)]
-        hits = await self.search.search(db, question, top_k=settings.ask_top_k, document_ids=scope) if scope else []
+        hits = await self.search.search(db, search_query, top_k=settings.ask_top_k, document_ids=scope) if scope else []
         sources = [
             Source(
                 n=i,
@@ -197,13 +285,13 @@ class AskService:
         if not sources:
             answer, answered = NO_ANSWER_TEXT, False
         elif llm.name == "mock":
-            text = extractive_answer(question, sources)
+            text = extractive_answer(search_query, sources)
             if text is None:
                 answer, answered = NO_ANSWER_TEXT, False
             else:
                 answer, cited_numbers, _ = parse_citations(text, len(sources))
         else:
-            raw = (await llm.complete(SYSTEM_PROMPT, build_prompt(question, sources))).strip()
+            raw = (await llm.complete(SYSTEM_PROMPT, build_prompt(question, sources, turns, standalone))).strip()
             if raw.upper().startswith(NO_ANSWER_MARKER):
                 answer, answered = NO_ANSWER_TEXT, False
             else:
@@ -225,7 +313,9 @@ class AskService:
 
         entry = QAEntry(
             workspace_id=workspace_id,
+            parent_id=parent.id if parent else None,
             question=question,
+            standalone_question=standalone,
             answer=answer,
             answered=answered,
             grounded=grounded,

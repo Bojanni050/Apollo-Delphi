@@ -163,3 +163,111 @@ def test_validation_and_failures(client, model):
     r = client.post("/api/ask", json={"question": "What is the budget?", "workspace_id": ws})
     assert r.status_code == 503 and "model endpoint is down" in r.json()["detail"]
     assert client.get("/api/ask/history", params={"workspace_id": ws}).json() == [], "a failed answer is not stored"
+
+
+# -- follow-up questions -------------------------------------------------------------------------------
+
+
+def _follow(client, ws, question, parent):
+    r = client.post("/api/ask", json={"question": question, "workspace_id": ws, "follow_up_of": parent})
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def test_a_follow_up_is_retrieved_with_its_topic_and_linked_to_its_parent(client):
+    ws = _corpus(client)
+    first = _ask(client, ws, "What is the harbour renovation budget?")
+    assert first["parent_id"] is None and first["standalone_question"] is None
+    # on its own "And what does it include?" matches nothing; with the topic of the first question it does
+    assert _ask(client, ws, "And what does it include?")["answered"] is False
+    second = _follow(client, ws, "And what does it include?", first["id"])
+    assert second["parent_id"] == first["id"]
+    assert second["question"] == "And what does it include?"
+    assert second["standalone_question"].startswith("What is the harbour renovation budget?")
+    assert second["answered"] and [c["document_filename"] for c in second["citations"]] == ["budget.txt"]
+
+
+def test_a_follow_up_to_a_follow_up_keeps_the_original_topic(client):
+    ws = _corpus(client)
+    first = _ask(client, ws, "What is the harbour renovation budget?")
+    second = _follow(client, ws, "And what does it include?", first["id"])
+    third = _follow(client, ws, "Are quay repairs part of it?", second["id"])
+    assert third["standalone_question"].startswith("What is the harbour renovation budget?")
+    assert third["parent_id"] == second["id"]
+
+
+def test_the_model_rewrites_the_follow_up_and_sees_the_conversation_as_context(client, model):
+    ws = _corpus(client)
+
+    def reply(user):
+        if user.startswith("Conversation:"):  # the rewrite call
+            return "When is the harbour renovation budget due?"
+        return "It is due in May [1]."
+
+    provider = model(reply)
+    first = _ask(client, ws, "What is the harbour renovation budget?")
+    provider.calls.clear()
+    second = _follow(client, ws, "And when is it due?", first["id"])
+
+    rewrite, answer = provider.calls
+    assert "Last question: And when is it due?" in rewrite[1] and "What is the harbour renovation budget?" in rewrite[1]
+    assert second["standalone_question"] == "When is the harbour renovation budget due?"
+    assert "NOT a source" in answer[1] and "Q: What is the harbour renovation budget?" in answer[1]
+    assert "Question: And when is it due?" in answer[1]
+    assert second["question"] == "And when is it due?"
+
+
+def test_a_failing_rewrite_falls_back_to_the_previous_topic(client, model):
+    ws = _corpus(client)
+
+    def reply(user):
+        if user.startswith("Conversation:"):
+            raise LLMError("rewrite failed")
+        return "The budget is 250000 EUR [1]."
+
+    model(reply)
+    first = _ask(client, ws, "What is the harbour renovation budget?")
+    second = _follow(client, ws, "And what does it include?", first["id"])
+    assert second["standalone_question"].startswith("What is the harbour renovation budget?")
+    assert second["answered"]
+
+
+def test_a_follow_up_still_has_to_be_backed_by_sources_of_its_own(client, model):
+    """The earlier answer is context, not evidence: a number that only the conversation knows is flagged."""
+    ws = _corpus(client)
+    model(lambda user: "The deadline is 99999 days away [1]." if not user.startswith("Conversation:") else "Budget deadline?")
+    first = _ask(client, ws, "What is the harbour renovation budget?")
+    second = _follow(client, ws, "And the deadline?", first["id"])
+    assert second["grounded"] is False and any("99999" in w for w in second["warnings"])
+
+
+def test_only_the_most_recent_turns_are_given_as_context(client, model):
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    saved, settings.ask_history_turns = settings.ask_history_turns, 2
+    try:
+        ws = _corpus(client)
+        provider = model(lambda user: "Budget topic" if user.startswith("Conversation:") else "250000 EUR [1]")
+        a = _ask(client, ws, "What is the harbour renovation budget?")
+        b = _follow(client, ws, "Second question about the budget?", a["id"])
+        c = _follow(client, ws, "Third question about the budget?", b["id"])
+        provider.calls.clear()
+        _follow(client, ws, "Fourth question about the budget?", c["id"])
+        rewrite_prompt = provider.calls[0][1]
+        assert "Third question" in rewrite_prompt and "Second question" in rewrite_prompt
+        assert "What is the harbour renovation budget?" not in rewrite_prompt
+    finally:
+        settings.ask_history_turns = saved
+
+
+def test_follow_up_validation(client):
+    ws = _corpus(client)
+    other = _ws(client, "other")
+    first = _ask(client, ws, "What is the harbour renovation budget?")
+    missing = client.post("/api/ask", json={"question": "And?", "workspace_id": ws, "follow_up_of": 99999})
+    assert missing.status_code == 404
+    cross = client.post("/api/ask", json={"question": "And?", "workspace_id": other, "follow_up_of": first["id"]})
+    assert cross.status_code == 400
+    history = client.get("/api/ask/history", params={"workspace_id": ws}).json()
+    assert history[0]["parent_id"] is None

@@ -9,6 +9,8 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     #: Ask in this werkmap; omitted = documents that belong to no werkmap.
     workspace_id: int | None = None
+    #: Id of the answer this question follows up on; the earlier turns of that conversation are used as context.
+    follow_up_of: int | None = None
 
 
 class CitationOut(BaseModel):
@@ -29,7 +31,11 @@ class CitationOut(BaseModel):
 class AnswerOut(BaseModel):
     id: int
     workspace_id: int | None
+    #: The earlier answer this one follows up on (None for a first question).
+    parent_id: int | None = None
     question: str
+    #: What retrieval actually searched for when the question was a follow-up.
+    standalone_question: str | None = None
     answer: str
     #: False when the documents do not answer the question.
     answered: bool
