@@ -59,6 +59,13 @@ def startup() -> None:
     if engine.dialect.name != "postgresql":  # PostgreSQL is built by Alembic (docker-compose, app.serve)
         init_db()
     _load_runtime_settings()
+    try:
+        from app.services.documents.index_queue import recover_interrupted_indexing
+
+        if recover_interrupted_indexing():
+            log.info("Documents left half-indexed by a stopped app are pending again")
+    except Exception as exc:  # the table may not exist yet (before migrations)
+        log.warning("Could not recover interrupted indexing: %s", exc)
     log.info("Apollo started (environment=%s, llm=%s/%s, embeddings=%s/%s)", settings.environment, settings.llm_provider, settings.llm_model, settings.embedding_provider, settings.embedding_model)
 
 

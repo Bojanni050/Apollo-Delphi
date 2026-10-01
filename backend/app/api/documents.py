@@ -4,7 +4,13 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
-from app.schemas.documents import DocumentOut
+from app.core.config import get_settings
+from app.models import Document
+from app.schemas.documents import (
+    DocumentOut, FolderFileRequest, FolderScanOut, FolderScanRequest, IndexQueueOut, IndexQueueRequest,
+)
+from app.services.documents.index_queue import index_queue
+from app.services.documents import folder_import
 from app.schemas.generated import GeneratedDocumentOut
 from app.services.documents.indexer import IndexingError, IndexingService
 from app.services.documents.service import DocumentValidationError, document_service
@@ -32,6 +38,70 @@ async def upload_document(
     except DocumentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return doc
+
+
+def _queue_out(added: int = 0) -> IndexQueueOut:
+    return IndexQueueOut(**vars(index_queue.status()), added=added)
+
+
+@router.post("/index-queue", response_model=IndexQueueOut)
+async def queue_indexing(body: IndexQueueRequest, db: Session = Depends(get_session)):
+    """Index documents in the background, one after the other, and return at once.
+
+    Storing a file takes a fraction of a second, indexing it seconds to minutes (every fragment is embedded), so a page
+    that adds many files stores them first and queues them here. Progress: GET /documents/index-queue.
+    """
+    query = db.query(Document.id)
+    if body.document_ids is not None:
+        query = query.filter(Document.id.in_(body.document_ids))
+    else:
+        query = query.filter(Document.workspace_id == body.workspace_id, Document.indexing_status == "pending")
+    ids = [row[0] for row in query.order_by(Document.id)]
+    return _queue_out(added=index_queue.enqueue(ids))
+
+
+@router.get("/index-queue", response_model=IndexQueueOut)
+def indexing_progress():
+    return _queue_out()
+
+
+def _folder_import_allowed() -> None:
+    if not get_settings().folder_browse_enabled:
+        raise HTTPException(status_code=403, detail="Importing folders from disk is switched off (FOLDER_BROWSE_ENABLED=false)")
+
+
+@router.post("/folder/scan", response_model=FolderScanOut)
+def scan_folder(body: FolderScanRequest):
+    """List a folder of this machine, recursively: what would be imported (with hashes) and what is skipped, and why."""
+    _folder_import_allowed()
+    try:
+        root = folder_import.resolve_root(body.path)
+        scan = folder_import.scan_folder(root)
+    except folder_import.FolderImportError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return FolderScanOut(
+        root=str(root),
+        name=root.name or str(root),
+        files=[{"path": f.path, "size": f.size, "content_hash": f.content_hash} for f in scan.files],
+        skipped=[{"path": path, "reason": reason} for path, reason in scan.skipped],
+        truncated=scan.truncated,
+    )
+
+
+@router.post("/folder/file", response_model=DocumentOut, status_code=status.HTTP_201_CREATED)
+def import_folder_file(body: FolderFileRequest, db: Session = Depends(get_session)):
+    """Import one file of a scanned folder, named by its path in it ("<folder name>/docs/a.md")."""
+    _folder_import_allowed()
+    try:
+        root = folder_import.resolve_root(body.root)
+        data = folder_import.read_file(root, body.path)
+        inside = body.path.replace("\\", "/").strip("/")
+        return document_service.create_document(
+            db, inside.rsplit("/", 1)[-1], data, workspace_id=body.workspace_id,
+            relative_path=f"{root.name or 'map'}/{inside}",
+        )
+    except (folder_import.FolderImportError, DocumentValidationError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("", response_model=list[DocumentOut])

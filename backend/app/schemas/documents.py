@@ -24,3 +24,63 @@ class DocumentOut(BaseModel):
     created_at: dt.datetime
     indexed_at: dt.datetime | None
     document_date: dt.date | None
+
+
+class FolderScanRequest(BaseModel):
+    #: Full path of a folder on the machine the backend runs on.
+    path: str
+
+
+class FolderScanFileOut(BaseModel):
+    path: str
+    size: int
+    content_hash: str
+
+
+class FolderSkippedOut(BaseModel):
+    path: str
+    reason: str
+
+
+class FolderScanOut(BaseModel):
+    root: str
+    #: The folder's own name: the first part of every imported file's name ("name/docs/a.md").
+    name: str
+    files: list[FolderScanFileOut]
+    skipped: list[FolderSkippedOut]
+    #: True when the folder holds more importable files than are listed.
+    truncated: bool = False
+
+
+class FolderFileRequest(BaseModel):
+    root: str
+    #: Path of the file below ``root``, as listed by the scan.
+    path: str
+    workspace_id: int | None = None
+
+
+class IndexQueueRequest(BaseModel):
+    #: Which documents to index. Omitted = every ``pending`` document of ``workspace_id``.
+    document_ids: list[int] | None = None
+    workspace_id: int | None = None
+
+
+class IndexErrorOut(BaseModel):
+    document_id: int
+    filename: str
+    error: str | None = None
+
+
+class IndexQueueOut(BaseModel):
+    """Progress of the background indexing batch."""
+
+    active: bool
+    total: int
+    done: int
+    failed: int
+    current: str | None = None
+    #: Seconds per document so far in this batch; None before the first one is finished.
+    seconds_per_document: float | None = None
+    errors: list[IndexErrorOut] = []
+    #: How many documents this request added to the queue.
+    added: int = 0

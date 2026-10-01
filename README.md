@@ -144,6 +144,11 @@ GET    /api/documents                      list
 GET    /api/documents/{id}
 DELETE /api/documents/{id}
 POST   /api/documents/{id}/index          extraction → chunking → embedding → vectors
+POST   /api/documents/index-queue          index documents in the background (one at a time) and return at once;
+GET    /api/documents/index-queue          progress: total, done, failed, current, seconds per document
+POST   /api/documents/folder/scan          read a folder of this machine recursively: what would be imported (with
+                                           hashes) and what is skipped, and why
+POST   /api/documents/folder/file          import one scanned file, named by its path ("folder/docs/a.md")
 GET    /api/search?q=...&workspace_id=&mode=   hybrid search (default): meaning + exact words, fused with RRF;
                                            mode=semantic|keyword to use one leg; only that werkmap's documents
 POST   /api/ask                              ask a question in a werkmap: cited answer ([n] -> fragments), checked
