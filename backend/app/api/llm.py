@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_session
 from app.core.config import get_settings
 from app.core.llm import TIERS, LLMError, get_llm_provider, tier_config
-from app.core.llm_models import list_models
+from app.core.llm_models import list_model_infos
 from app.services import llm_settings
 
 router = APIRouter(prefix="/llm", tags=["llm"])
@@ -65,9 +65,26 @@ class LLMSettingsUpdate(BaseModel):
     timeout_seconds: float | None = None
 
 
+class ModelInfoOut(BaseModel):
+    id: str
+    name: str | None = None
+    provider: str | None = None
+    description: str | None = None
+    context_length: int | None = None
+    #: USD per 1M tokens; None = not stated, 0 = free.
+    input_per_million: float | None = None
+    output_per_million: float | None = None
+
+
 class ModelList(BaseModel):
     models: list[str]
+    #: The same models with what the endpoint says about them (price, context, description) when it does.
+    items: list[ModelInfoOut] = []
     error: str | None = None
+
+
+def _model_list(infos) -> ModelList:
+    return ModelList(models=[m.id for m in infos], items=[ModelInfoOut(**vars(m)) for m in infos])
 
 
 _TIER_FIELDS = {
@@ -129,7 +146,7 @@ async def available_models(tier: str = "main", provider: str | None = None, base
         tier = "main"
     cfg = tier_config(tier)
     try:
-        models = await list_models(
+        infos = await list_model_infos(
             provider or cfg.provider,
             cfg.base_url if base_url is None else base_url,
             cfg.api_key,
@@ -137,7 +154,7 @@ async def available_models(tier: str = "main", provider: str | None = None, base
         )
     except LLMError as exc:
         return ModelList(models=[], error=str(exc))
-    return ModelList(models=models)
+    return _model_list(infos)
 
 
 class ModelsRequest(BaseModel):
@@ -166,10 +183,10 @@ async def models_for_draft(body: ModelsRequest):
     else:
         key = cfg.api_key if (provider, base_url) == (cfg.provider, cfg.base_url) else ""
     try:
-        models = await list_models(provider, base_url, key, timeout=min(get_settings().llm_timeout_seconds, 15.0))
+        infos = await list_model_infos(provider, base_url, key, timeout=min(get_settings().llm_timeout_seconds, 15.0))
     except LLMError as exc:
         return ModelList(models=[], error=str(exc))
-    return ModelList(models=models)
+    return _model_list(infos)
 
 
 @router.get("/status", response_model=LLMStatus)

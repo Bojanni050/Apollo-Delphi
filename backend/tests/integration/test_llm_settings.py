@@ -158,7 +158,8 @@ def fake_http(monkeypatch):
 
 def test_model_picker_lists_local_runtime_without_key(client, fake_http):
     body = client.get("/api/llm/models", params={"provider": "openai", "base_url": "http://localhost:11434/v1"}).json()
-    assert body == {"models": ["llama3", "mistral"], "error": None}
+    assert body["models"] == ["llama3", "mistral"] and body["error"] is None
+    assert [i["id"] for i in body["items"]] == ["llama3", "mistral"]
     assert "authorization" not in fake_http[0].headers
 
 
@@ -182,7 +183,7 @@ def _post_models(client, **body):
 
 def test_models_can_be_listed_with_a_key_that_is_not_saved_yet(client, fake_http):
     body = _post_models(client, tier="main", provider="openai", base_url=EDEN, api_key="typed-not-saved")
-    assert body == {"models": ["llama3", "mistral"], "error": None}
+    assert body["models"] == ["llama3", "mistral"] and body["error"] is None
     assert str(fake_http[0].url).startswith(EDEN) and fake_http[0].headers["authorization"] == "Bearer typed-not-saved"
     assert client.get("/api/llm/settings").json()["main"]["api_key_set"] is False, "nothing was saved"
 
@@ -201,3 +202,22 @@ def test_posted_models_report_problems_and_keep_the_key_out_of_the_error(client,
     assert missing["models"] == [] and "API key" in missing["error"]
     ok = _post_models(client, provider="anthropic", api_key="sk-secret")
     assert ok["models"] == ["claude-a", "claude-b"] and "sk-secret" not in str(ok)
+
+
+def test_posted_models_carry_price_context_and_description(client, monkeypatch):
+    payload = {"data": [
+        {"id": "b/free-model", "name": "B: Free", "description": "Cheap.", "context_length": 8192, "pricing": {"prompt": "0", "completion": "0"}},
+        {"id": "a/paid", "context_length": 128000, "pricing": {"prompt": "0.0000003", "completion": "0.0000012"}},
+        {"id": "plain"},
+    ]}
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient",
+        lambda **kw: real(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload)), **{k: v for k, v in kw.items() if k != "verify"}),
+    )
+    body = _post_models(client, provider="openai", base_url="https://openrouter.ai/api/v1", api_key="k")
+    assert body["models"] == ["a/paid", "b/free-model", "plain"], "sorted, and still the plain list for older callers"
+    paid, free, plain = body["items"]
+    assert (paid["input_per_million"], paid["output_per_million"], paid["context_length"]) == (0.3, 1.2, 128000)
+    assert (free["input_per_million"], free["description"], free["name"], free["provider"]) == (0.0, "Cheap.", "B: Free", "b")
+    assert plain["input_per_million"] is None and plain["description"] is None
