@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { BUILD_TIME, BUILD_VERSION } from '../version'
 
 export type NavItem = { id: string; label: string; icon?: ReactNode }
 
@@ -43,7 +44,12 @@ export default function AppShell({
           </div>
           {!leftCollapsed && (
             <>
-              <span className="truncate text-sm font-semibold">Apollo</span>
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-sm font-semibold">Apollo</div>
+                <div className="truncate text-[10px] text-slate-400" title={`Build ${BUILD_VERSION}, ${BUILD_TIME}`}>
+                  build {BUILD_VERSION} · {BUILD_TIME}
+                </div>
+              </div>
               <button
                 onClick={() => setLeftCollapsed(true)}
                 title="Collapse sidebar"
