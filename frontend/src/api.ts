@@ -296,8 +296,21 @@ export interface LLMSettingsUpdate {
   timeout_seconds?: number
 }
 
+/** What an endpoint says about a model; OpenRouter and EdenAI say a lot, most only give the id. */
+export interface ModelInfo {
+  id: string
+  name: string | null
+  provider: string | null
+  description: string | null
+  context_length: number | null
+  /** USD per 1M tokens; null = not stated, 0 = free. */
+  input_per_million: number | null
+  output_per_million: number | null
+}
+
 export interface ModelList {
   models: string[]
+  items: ModelInfo[]
   error: string | null
 }
 

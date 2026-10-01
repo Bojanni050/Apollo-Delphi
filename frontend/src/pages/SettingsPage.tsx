@@ -1,31 +1,45 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   api,
   type LLMSettings,
   type LLMStatus,
   type LLMTestResult,
   type LLMTierName,
+  type ModelInfo,
   type Provider,
   type TierSettings,
   type TierUpdate,
 } from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
 import EmbeddingsCard from './EmbeddingsCard'
+import ModelPicker from './ModelPicker'
 import RetrievalCard from './RetrievalCard'
 
-const PROVIDERS: { id: Provider; label: string; hint: string }[] = [
-  { id: 'openai', label: 'OpenAI-compatibel', hint: 'OpenAI, Ollama, EdenAI, Gemini, OpenRouter, …' },
-  { id: 'anthropic', label: 'Anthropic', hint: 'Claude via de Messages API' },
-  { id: 'mock', label: 'Mock (offline)', hint: 'Deterministisch, geen echt model' },
+/**
+ * What the provider dropdown offers. ``provider`` is what the backend knows (an OpenAI-compatible endpoint, Anthropic
+ * or the offline mock); a preset only fills in the Base URL that goes with it. ``url: null`` = keep what is typed.
+ */
+const PROVIDER_PRESETS: { id: string; label: string; provider: Provider; url: string | null }[] = [
+  { id: 'openai', label: 'OpenAI', provider: 'openai', url: '' },
+  { id: 'anthropic', label: 'Anthropic (Claude)', provider: 'anthropic', url: '' },
+  { id: 'google', label: 'Google (Gemini)', provider: 'openai', url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
+  { id: 'openrouter', label: 'OpenRouter', provider: 'openai', url: 'https://openrouter.ai/api/v1' },
+  { id: 'edenai', label: 'EdenAI', provider: 'openai', url: 'https://api.edenai.run/v3' },
+  { id: 'ollama', label: 'Ollama (lokaal)', provider: 'openai', url: 'http://localhost:11434/v1' },
+  { id: 'lmstudio', label: 'LM Studio (lokaal)', provider: 'openai', url: 'http://localhost:1234/v1' },
+  { id: 'custom', label: 'Andere OpenAI-compatibele server', provider: 'openai', url: null },
+  { id: 'mock', label: 'Mock (offline, geen echt model)', provider: 'mock', url: '' },
 ]
 
-const PRESETS = [
-  { label: 'OpenAI', url: '' },
-  { label: 'Ollama', url: 'http://localhost:11434/v1' },
-  { label: 'LM Studio', url: 'http://localhost:1234/v1' },
-  { label: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
-  { label: 'EdenAI', url: 'https://api.edenai.run/v3' },
-]
+const trimSlash = (url: string) => url.trim().replace(/\/+$/, '').toLowerCase()
+
+/** The preset a provider + Base URL corresponds to; "custom" for an address that is not one of them. */
+function presetFor(provider: Provider | '', baseUrl: string): string {
+  if (provider === 'mock') return 'mock'
+  if (provider === 'anthropic') return 'anthropic'
+  const known = PROVIDER_PRESETS.find((p) => p.provider === 'openai' && p.url !== null && trimSlash(p.url) === trimSlash(baseUrl))
+  return known ? known.id : 'custom'
+}
 
 const TIER_INFO: Record<LLMTierName, { title: string; blurb: string }> = {
   main: {
@@ -74,7 +88,7 @@ function TierCard({
   const [draft, setDraft] = useState<Draft>(toDraft(saved))
   const [apiKey, setApiKey] = useState('')
   const [clearKey, setClearKey] = useState(false)
-  const [models, setModels] = useState<string[]>([])
+  const [models, setModels] = useState<ModelInfo[]>([])
   const [modelsNote, setModelsNote] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [result, setResult] = useState<LLMTestResult | null>(null)
@@ -87,15 +101,19 @@ function TierCard({
   const showFields = effectiveProvider !== 'mock'
   const showEndpoint = !followsMain && effectiveProvider === 'openai'
 
+  // Only the newest request may show its answer: a slow one (an unreachable local server) must not overwrite it.
+  const latestLoad = useRef(0)
   const loadModels = useCallback(
     async (p: string, baseUrl: string, key = '') => {
+      const mine = ++latestLoad.current
       if (!p || p === 'mock') {
         setModels([])
         setModelsNote(null)
         return
       }
       const res = await api.llmModels(tier, p, baseUrl, key)
-      setModels(res.models)
+      if (mine !== latestLoad.current) return
+      setModels(res.items.length > 0 ? res.items : res.models.map((id) => ({ id }) as ModelInfo))
       setModelsNote(res.error ?? (res.models.length === 0 ? 'Geen modellen gevonden.' : null))
     },
     [tier],
@@ -175,48 +193,43 @@ function TierCard({
       )}
 
       {!followsMain && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          {PROVIDERS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => {
+        <div className="mt-4">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Provider</span>
+            <select
+              className={`${inputCls} mt-0.5`}
+              value={presetFor(draft.provider, draft.base_url)}
+              onChange={(e) => {
+                const preset = PROVIDER_PRESETS.find((p) => p.id === e.target.value)
+                if (!preset) return
+                const base_url = preset.url ?? draft.base_url
                 // another provider has other models: do not keep a name that belongs to the previous one
-                setDraft({ ...draft, provider: p.id, model: draft.provider === p.id ? draft.model : '' })
-                void loadModels(p.id, draft.base_url, apiKey).catch(() => undefined)
+                const same = draft.provider === preset.provider && draft.base_url === base_url
+                setDraft({ ...draft, provider: preset.provider, base_url, model: same ? draft.model : '' })
+                setTypeModel(false)
+                void loadModels(preset.provider, base_url, apiKey).catch(() => undefined)
               }}
-              className={`rounded border px-3 py-2 text-left text-sm ${
-                draft.provider === p.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
-              }`}
             >
-              <span className="block font-medium">{p.label}</span>
-              <span className="block text-xs text-slate-500">{p.hint}</span>
-            </button>
-          ))}
+              {PROVIDER_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       )}
 
       {showFields && (
         <div className="mt-5 space-y-4">
           {showEndpoint && (
-            <Field label="Base URL" hint="Leeg = api.openai.com.">
+            <Field label="Base URL" hint="Wordt ingevuld door de provider hierboven; leeg = api.openai.com. Je kunt het aanpassen.">
               <input
                 className={inputCls}
                 value={draft.base_url}
                 onChange={(e) => setDraft({ ...draft, base_url: e.target.value })}
                 placeholder="https://api.openai.com/v1"
               />
-              <span className="mt-1.5 flex flex-wrap gap-1.5">
-                {PRESETS.map((p) => (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => setDraft({ ...draft, base_url: p.url })}
-                    className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </span>
             </Field>
           )}
 
@@ -249,33 +262,31 @@ function TierCard({
             </Field>
           )}
 
-          <Field
-            label="Model"
-            hint={isBackground ? 'Leeg = het model van het hoofdmodel (alleen bij hetzelfde endpoint).' : undefined}
-          >
-            {models.length > 0 && !typeModel ? (
-              <select
-                className={inputCls}
-                value={draft.model}
-                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-              >
-                <option value="">{isBackground ? 'zelfde als hoofdmodel' : '— kies een model —'}</option>
-                {draft.model && !models.includes(draft.model) && <option value={draft.model}>{draft.model}</option>}
-                {models.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                className={inputCls}
-                value={draft.model}
-                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-                placeholder={isBackground ? 'zelfde als hoofdmodel' : 'modelnaam'}
-              />
+          <div>
+            <span className="text-sm font-medium text-slate-700">Model</span>
+            <div className="mt-0.5">
+              {models.length > 0 && !typeModel ? (
+                <ModelPicker
+                  value={draft.model}
+                  models={models}
+                  emptyLabel={isBackground ? 'zelfde als hoofdmodel' : '— kies een model —'}
+                  onChange={(model) => setDraft({ ...draft, model })}
+                />
+              ) : (
+                <input
+                  className={inputCls}
+                  value={draft.model}
+                  onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+                  placeholder={isBackground ? 'zelfde als hoofdmodel' : 'modelnaam'}
+                />
+              )}
+            </div>
+            {isBackground && (
+              <span className="mt-1 block text-xs text-slate-500">
+                Leeg = het model van het hoofdmodel (alleen bij hetzelfde endpoint).
+              </span>
             )}
-          </Field>
+          </div>
           {models.length > 0 && (
             <button type="button" onClick={() => setTypeModel((v) => !v)} className="text-xs text-slate-500 underline hover:text-slate-700">
               {typeModel ? 'Kies uit de lijst' : 'Zelf een modelnaam typen'}
