@@ -4,7 +4,8 @@ import ThemeToggle from '../components/ThemeToggle'
 import { ReaderProvider, useReader } from '../reader'
 import { BUILD_TIME, BUILD_VERSION } from '../version'
 
-export type NavItem = { id: string; label: string; icon?: ReactNode }
+/** `below`: shown under the divider at the end of the menu. */
+export type NavItem = { id: string; label: string; icon?: ReactNode; below?: boolean }
 
 type AppShellProps = {
   nav: NavItem[]
@@ -90,20 +91,22 @@ function Shell({
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           <nav className="mt-1 space-y-0.5">
-            {nav.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => onNavigate(n.id)}
-                title={leftCollapsed ? n.label : undefined}
-                className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm ${
-                  active === n.id
-                    ? 'bg-slate-100 font-medium text-slate-900'
-                    : 'text-slate-600 hover:bg-slate-50'
-                } ${leftCollapsed ? 'justify-center' : ''}`}
-              >
-                <span className="w-5 shrink-0 text-center text-slate-400">{n.icon ?? '•'}</span>
-                {!leftCollapsed && <span className="truncate">{n.label}</span>}
-              </button>
+            {[...nav.filter((n) => !n.below), ...nav.filter((n) => n.below)].map((n, i, all) => (
+              <div key={n.id}>
+                {n.below && !all[i - 1]?.below && <hr className="my-2 border-slate-200" />}
+                <button
+                  onClick={() => onNavigate(n.id)}
+                  title={leftCollapsed ? n.label : undefined}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm ${
+                    active === n.id
+                      ? 'bg-slate-100 font-medium text-slate-900'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  } ${leftCollapsed ? 'justify-center' : ''}`}
+                >
+                  <span className="flex w-5 shrink-0 items-center justify-center text-center text-slate-400">{n.icon ?? '•'}</span>
+                  {!leftCollapsed && <span className="truncate">{n.label}</span>}
+                </button>
+              </div>
             ))}
           </nav>
         </div>

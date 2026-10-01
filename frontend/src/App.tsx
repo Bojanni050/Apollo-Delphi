@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import DocumentsPage from './pages/DocumentsPage'
 import AnalysisPage from './pages/AnalysisPage'
 import IssuesPage from './pages/IssuesPage'
@@ -11,22 +11,23 @@ import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
 import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
+import delphiIcon from './icons/delphi.png'
 import { useTheme } from './theme'
 import { api, type Workspace } from './api'
 
 type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
-const NAV: { id: Page; label: string; icon: string }[] = [
+const NAV: { id: Page; label: string; icon: ReactNode; below?: boolean }[] = [
   { id: 'documents', label: 'Documents', icon: '▦' },
   { id: 'search', label: 'Zoeken', icon: '⌕' },
   { id: 'ask', label: 'Vragen', icon: '?' },
-  { id: 'pulse', label: 'Delphi Pulse', icon: '✦' },
   { id: 'analysis', label: 'Analysis', icon: '◔' },
   { id: 'issues', label: 'Issues', icon: '⚠' },
   { id: 'knowledge', label: 'Knowledge', icon: '❖' },
   { id: 'generated', label: 'Generated', icon: '▤' },
   { id: 'workspace', label: 'Werkmap', icon: '⎇' },
   { id: 'settings', label: 'Instellingen', icon: '⚙' },
+  { id: 'pulse', label: 'Delphi Pulse', icon: <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" />, below: true },
 ]
 
 const CONTEXT_TITLES: Record<Page, string> = {

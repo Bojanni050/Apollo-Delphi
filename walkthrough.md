@@ -123,3 +123,9 @@ achteraf ingevuld voor het werk van 2026-10-01 (commits tussen haakjes).
 - Findings: De Docker-backend draaide zonder `--reload`, dus na een codewijziging gaf de oude container HTML/404 aan de nieuwe frontend ("Unexpected token '<'"). Verder is Docker op Windows het trage pad: de CPU-llama is ~30× trager dan de Vulkan-GPU-server, en de desktop-app (SQLite of lokale Postgres) doet al alles wat Compose deed.
 - Conclusions: Docker blijft als optie (compose-bestand behouden, nu met `--reload`), maar de desktop-app wordt het standaardpad. De enige losse stap was de embedding-server: die start `start.cmd` nu zelf, en faalt nooit hard (zonder model of netwerk start de app gewoon).
 - Actions: `docker-compose.yml` (`--reload`); `scripts/llama-vulkan.ps1` (`-Optional`, zoekt het model ook in `%LOCALAPPDATA%\Apollo-Delphi\models`); `start.cmd` (roept het script aan, uit te zetten met `APOLLO_LLAMA=0`); `README.md` (tabel "zonder Docker"); validated: script parseert, met een draaiende server meldt `-Optional` dat hij al draait.
+
+## 2026-10-01 (Delphi Pulse onder een divider in het menu)
+
+- Findings: Delphi Pulse stond tussen de gewone pagina's en had een tekstsymbool, terwijl het een eigen onderdeel is met een eigen icoon (`frontend/src/icons/delphi.png`).
+- Conclusions: Een algemene optie `below` voor menu-items, zodat de volgorde in `NAV` leesbaar blijft en andere items er later ook onder kunnen.
+- Actions: `frontend/src/layout/AppShell.tsx` (`NavItem.below`, divider vóór het eerste item eronder, iconen verticaal gecentreerd), `frontend/src/App.tsx` (Pulse met het icoon achteraan, `below: true`), `frontend/src/icons/delphi.png`; validated met `npm run build` en in de browser.
