@@ -44,6 +44,9 @@ vaststaat; **Generated** maakt en controleert een samenvattend document.
   informatie: beschrijving, mogelijkheden (tekst, vision, bestanden, audio, video; tools, redeneren…), kosten en limieten.
 - **Embeddingmodel**: voor het zoeken op betekenis. Een model wisselen betekent opnieuw indexeren ("Her-indexeer").
   Lokale modellen: Ollama of llama.cpp; met `docker compose --profile llama up -d llama` draait een llama-server mee.
+  Dat gaat op de CPU en duurt ongeveer 1,3 s per fragment. Op een Vulkan-GPU (bijvoorbeeld AMD Radeon) is het ongeveer
+  30 keer sneller: `powershell -ExecutionPolicy Bypass -File scripts\llama-vulkan.ps1`, daarna Base URL
+  `http://localhost:8082/v1` (zelfde modelnaam; opnieuw indexeren is niet nodig).
 - **Vragen en zoeken**: aantal fragmenten per vraag, gespreksbeurten als context en de zoekafstemming.
 
 Staat een model op de mock, dan zijn antwoorden eenvoudige fragmenten en is zoeken niet echt semantisch.

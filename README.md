@@ -273,6 +273,12 @@ search point `EMBEDDING_PROVIDER=openai` at any OpenAI-compatible endpoint (Inst
 - **Local**: a running Ollama or `llama-server`. The app can download the recommended models for you
   (`BAAI/bge-m3` via an Ollama pull; GGUF files for llama.cpp into `LLAMACPP_MODELS_DIR`). It does not
   change your configuration by itself: after a download you choose the model, save, and re-index.
+- **On the GPU (Vulkan, Windows)**: embedding on a CPU takes about 1.3 s per fragment with Jina code 1.5B (100
+  documents ≈ half an hour); an AMD Radeon RX 7800 XT does it in 0.04 s (about 30 times faster, 36 documents in 3 s).
+  Docker Desktop cannot give a Vulkan GPU to a container, so `scripts/llama-vulkan.ps1` runs the official Windows
+  build of llama-server directly (it downloads it once, 32 MB, and checks GitHub's SHA-256), on port 8082. Set the
+  Base URL to `http://localhost:8082/v1` and keep the same model name: the vectors are practically identical
+  (cosine 0.9998), so nothing has to be re-indexed. `-Stop` stops it.
 - **llama.cpp in docker-compose**: `docker compose --profile llama up -d llama` (or `COMPOSE_PROFILES=llama` in
   `.env`) starts a `llama-server` that serves a GGUF from `backend/models`, the folder the app downloads into.
   Download the model in Instellingen, choose it (Base URL becomes `http://llama:8080/v1`), save, test, re-index.
