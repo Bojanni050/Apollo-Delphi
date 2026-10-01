@@ -214,8 +214,8 @@ export default function FolderUpload({ workspaceId, onChanged }: { workspaceId: 
         >
           <p className="font-medium text-slate-800">{count(plan.items.length, 'bestand wordt', 'bestanden worden')} toegevoegd.</p>
           <p className="mt-1 text-xs text-slate-500">
-            Alle submappen zijn meegenomen. Elk bestand wordt bewaard onder zijn pad in de map. Het indexeren loopt daarna op de
-            achtergrond; je kunt gewoon verder werken.
+            Alle submappen zijn meegenomen. Elk bestand wordt bewaard onder zijn pad in de map. Daarna worden ze op de achtergrond
+            gelezen en geëmbed; je kunt gewoon verder werken.
             {plan.skipped.length > 0 && ` Overgeslagen: ${reasons(plan.skipped)}.`}
             {plan.truncated && ' De map bevat meer bestanden dan hier staan; kies een kleinere map of voeg de rest later toe.'}
           </p>
@@ -269,8 +269,9 @@ export default function FolderUpload({ workspaceId, onChanged }: { workspaceId: 
           </p>
           {outcome.queued > 0 && (
             <p className="mt-1 text-xs text-slate-500">
-              Het indexeren van {outcome.queued} {outcome.queued === 1 ? 'bestand loopt' : 'bestanden loopt'} op de achtergrond. De voortgang staat op
-              de Documents-pagina; tot dan zijn ze nog niet doorzoekbaar.
+              {outcome.queued} {outcome.queued === 1 ? 'bestand wordt' : 'bestanden worden'} nu op de achtergrond gelezen: dat duurt een paar
+              seconden, daarna zijn ze te lezen en te doorzoeken op woorden. Het embedden (zoeken op betekenis) volgt daarna; de voortgang staat
+              op de Documents-pagina.
             </p>
           )}
           <ErrorText message={error} />

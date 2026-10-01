@@ -15,6 +15,12 @@ export function Badge({ kind, children }: { kind: 'ok' | 'warn' | 'err' | 'neutr
 }
 
 export function StatusBadge({ status }: { status: string }) {
+  if (status === 'parsed')
+    return (
+      <span title="Gelezen: het document is te lezen en te doorzoeken op woorden. Het embedden (zoeken op betekenis) loopt nog of wacht.">
+        <Badge kind="warn">gelezen</Badge>
+      </span>
+    )
   if (status === 'indexed' || status === 'resolved' || status === 'completed' || status === 'confirmed')
     return <Badge kind="ok">{status}</Badge>
   if (status === 'failed' || status === 'error' || status === 'disputed' || status === 'remaining_contradiction')

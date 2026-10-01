@@ -24,7 +24,7 @@ export interface DocumentRecord {
   file_size: number
   /** SHA-256 of the file. */
   content_hash: string
-  indexing_status: 'pending' | 'processing' | 'indexed' | 'failed'
+  indexing_status: 'pending' | 'processing' | 'parsed' | 'indexed' | 'failed'
   error_message: string | null
   created_at: string
   indexed_at: string | null
@@ -194,6 +194,23 @@ export interface GeneratedDocument {
   created_at: string
 }
 
+/** A document in full, for the reading pane. Line numbers refer to ``text``. */
+export interface DocumentText {
+  id: number
+  workspace_id: number | null
+  filename: string
+  title: string | null
+  file_type: string
+  source_type: string
+  text: string
+  line_count: number
+  /** The line where each page starts (PDF). */
+  pages: { page_number: number; line: number }[]
+  /** The indexed fragments and the lines they cover. */
+  chunks: { id: number; chunk_index: number; section: string | null; page_number: number | null; line_start: number | null; line_end: number | null }[]
+  truncated: boolean
+}
+
 /** A folder of the machine the backend runs on, read recursively by the backend (no browser upload). */
 export interface FolderScan {
   /** Full path of the folder. */
@@ -209,11 +226,15 @@ export interface FolderScan {
 /** Progress of the background indexing. */
 export interface IndexProgress {
   active: boolean
+  /** Documents in this batch; how many are read (parsed), completely indexed (embedded) and failed. */
   total: number
+  parsed: number
   done: number
   failed: number
+  /** "lezen" or "embedden" while a document is being worked on. */
+  phase: string | null
   current: string | null
-  /** Seconds per document so far in this batch. */
+  /** Seconds of embedding per document so far in this batch. */
   seconds_per_document: number | null
   errors: { document_id: number; filename: string; error: string | null }[]
   added: number
@@ -538,6 +559,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, working_dir: workingDir || null }),
     }),
+  documentText: (id: number) => request<DocumentText>(`/api/documents/${id}/text`),
   scanFolder: (path: string) =>
     request<FolderScan>('/api/documents/folder/scan', {
       method: 'POST',

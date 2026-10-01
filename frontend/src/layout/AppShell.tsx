@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import ReadingPane from '../components/ReadingPane'
 import ThemeToggle from '../components/ThemeToggle'
+import { ReaderProvider, useReader } from '../reader'
 import { BUILD_TIME, BUILD_VERSION } from '../version'
 
 export type NavItem = { id: string; label: string; icon?: ReactNode }
@@ -16,7 +18,16 @@ type AppShellProps = {
   children: ReactNode
 }
 
-export default function AppShell({
+/** The application frame: sidebar, page, reading pane (opened from search hits, citations, evidence) and context column. */
+export default function AppShell(props: AppShellProps) {
+  return (
+    <ReaderProvider>
+      <Shell {...props} />
+    </ReaderProvider>
+  )
+}
+
+function Shell({
   nav,
   active,
   onNavigate,
@@ -30,6 +41,7 @@ export default function AppShell({
   // Left expanded by default, right collapsed by default (contextual)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightOpen, setRightOpen] = useState(false)
+  const reader = useReader()
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100 text-slate-800">
@@ -111,6 +123,16 @@ export default function AppShell({
           {topActions && <div className="flex shrink-0 items-center gap-2">{topActions}</div>}
           <ThemeToggle />
           <button
+            onClick={reader.toggle}
+            title={reader.isOpen ? 'Leesvenster sluiten' : 'Leesvenster openen'}
+            aria-pressed={reader.isOpen}
+            className={`shrink-0 rounded border px-2 py-1 text-sm ${
+              reader.isOpen ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            ▤ <span className="hidden sm:inline">Lezen</span>
+          </button>
+          <button
             onClick={() => setRightOpen((v) => !v)}
             title={rightOpen ? 'Collapse context panel' : 'Open context panel'}
             className={`shrink-0 rounded border px-2 py-1 text-sm ${
@@ -126,6 +148,9 @@ export default function AppShell({
         <div className="flex min-h-0 flex-1">
           {/* Main content (2nd + 3rd columns live inside children via SplitView) */}
           <main className="flex min-w-0 flex-1 flex-col overflow-hidden">{children}</main>
+
+          {/* Reading pane: a document in full, in front of the context column */}
+          {reader.isOpen && <ReadingPane />}
 
           {/* 4th column: right contextual sidebar, collapsed by default */}
           {rightOpen ? (

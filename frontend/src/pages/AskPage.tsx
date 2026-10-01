@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, formatLines, type Answer } from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
+import { useReader } from '../reader'
 
 /** Renders the answer text with each [n] as a button that jumps to its source. */
 function AnswerText({ text, onCite }: { text: string; onCite: (n: number) => void }) {
@@ -51,6 +52,7 @@ function threadOf(history: Answer[], id: number): Answer[] {
 function AnswerCard({ answer }: { answer: Answer }) {
   const [active, setActive] = useState<number | null>(null)
   const sourceRefs = useRef<Record<number, HTMLLIElement | null>>({})
+  const reader = useReader()
 
   const cite = (n: number) => {
     setActive(n)
@@ -117,6 +119,12 @@ function AnswerCard({ answer }: { answer: Answer }) {
                   </Badge>
                 </div>
                 <p className="mt-1.5 whitespace-pre-wrap text-slate-600">{c.excerpt}</p>
+                <button
+                  onClick={() => reader.open({ documentId: c.document_id, chunkId: c.chunk_id, excerpt: c.excerpt, page: c.page_number })}
+                  className="mt-1.5 text-xs text-slate-500 underline hover:text-slate-800"
+                >
+                  Lees in het leesvenster
+                </button>
               </li>
             ))}
           </ul>

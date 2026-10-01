@@ -23,11 +23,23 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
   bestanden). Elk bestand krijgt zijn pad als naam (`docs/adr/001.md`). Opnieuw dezelfde map kiezen voegt alleen toe
   wat nieuw is. Stoppen kan tussendoor. ("of upload via de browser" kan ook, maar dan toont de browser zelf een
   bevestiging.)
-- **Indexeren op de achtergrond**: bestanden zijn binnen een paar seconden toegevoegd; het indexeren (embedden)
-  loopt daarna op de achtergrond. Boven op de Documents-pagina staat de voortgang met de geschatte tijd. Je kunt
-  gewoon verder werken; documenten zijn doorzoekbaar zodra ze klaar zijn. Wachten er nog documenten (bijvoorbeeld na
-  een herstart), dan staat er "Nu indexeren".
+- **Eerst lezen, dan embedden**: bestanden zijn binnen een paar seconden toegevoegd en daarna meteen **gelezen**
+  (uitgelezen en in fragmenten geknipt). Een gelezen document (status "gelezen") is al te lezen in het leesvenster
+  en te doorzoeken op woorden. Het **embedden** (nodig om op betekenis te zoeken) is het trage deel en loopt daarna op
+  de achtergrond, een document tegelijk; zodra een document klaar is staat het op "indexed". Boven op de
+  Documents-pagina staat de voortgang ("gelezen 36 van 36 · geëmbed 2 van 36") met de geschatte tijd. Je kunt gewoon
+  verder werken. Is het embeddingmodel niet bereikbaar, dan blijven de documenten "gelezen" met de reden erbij en
+  probeert "Nu indexeren" het later opnieuw; wachten er documenten na een herstart, dan staat die knop er ook.
 - Een GitHub-repository toevoegen kan ook (de inhoud wordt als één document geïndexeerd).
+
+## Het leesvenster
+
+Rechtsboven staat **▤ Lezen**: een eigen kolom, vóór de contextkolom, waarin je een document **in zijn geheel** leest.
+Open het met **Lees** bij een document, **Lees in het leesvenster** bij een zoekresultaat, een bron bij Vragen of bewijs
+bij een issue. Je ziet de tekst met regelnummers (bij een PDF met de pagina-overgangen), de plek waar je voor kwam
+gemarkeerd en in beeld gebracht (bij een bron het hele fragment) en je zoekwoorden gemarkeerd. Bovenin kun je in het
+document zoeken (Enter of ▲▼ naar de volgende treffer). Sleep de linkerrand om de breedte te veranderen; die wordt
+onthouden. Het venster toont de tekst zoals Apollo die las; de regelnummers zijn die van die tekst.
 
 ## Zoeken
 

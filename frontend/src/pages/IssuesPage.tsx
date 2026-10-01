@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { api, formatLines, type Issue, type IssueDetail } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 import { SplitView } from '../layout/AppShell'
+import { useReader } from '../reader'
 
 export default function IssuesPage({ workspaceId }: { workspaceId?: number | null }) {
+  const reader = useReader()
   const [issues, setIssues] = useState<Issue[]>([])
   const [selected, setSelected] = useState<IssueDetail | null>(null)
   const [note, setNote] = useState('')
@@ -132,6 +134,14 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                         document #{e.document_id} {e.page_number ? `· page ${e.page_number}` : ''} {e.section ? `· ${e.section}` : ''} {e.line_start != null ? `· ${formatLines(e.line_start, e.line_end)}` : ''} · {e.evidence_type}
                       </div>
                       <p className="text-slate-600">{e.original_text}</p>
+                      <button
+                        onClick={() =>
+                          reader.open({ documentId: e.document_id, lineStart: e.line_start, lineEnd: e.line_end, excerpt: e.original_text, page: e.page_number })
+                        }
+                        className="mt-1 text-xs text-slate-500 underline hover:text-slate-800"
+                      >
+                        Lees in het leesvenster
+                      </button>
                     </li>
                   ))}
                   {selected.evidence.length === 0 && <li className="text-slate-400">No linked evidence.</li>}

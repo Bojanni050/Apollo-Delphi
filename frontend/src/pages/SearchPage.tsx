@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { api, formatLines, type SearchHit, type SearchMode } from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
+import { useReader } from '../reader'
 
 const MODES: { id: SearchMode; label: string; hint: string }[] = [
   { id: 'hybrid', label: 'Hybride', hint: 'Combineert betekenis en exacte woorden (bedragen, namen, id’s)' },
@@ -38,6 +39,7 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
   const [note, setNote] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const reader = useReader()
 
   // Results belong to one werkmap: switching werkmap starts a clean page.
   useEffect(() => {
@@ -111,7 +113,7 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
           </h3>
           {results.hits.length === 0 && (
             <p className="mt-2 text-sm text-slate-500">
-              Probeer andere woorden, of een andere zoekmethode. Documenten die nog niet zijn geïndexeerd worden niet doorzocht.
+              Probeer andere woorden, of een andere zoekmethode. Documenten die nog niet zijn gelezen worden niet doorzocht; die nog worden geëmbed alleen op woorden.
             </p>
           )}
           <ul className="mt-3 space-y-3">
@@ -130,6 +132,12 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
                 <p className="mt-1.5 line-clamp-4 whitespace-pre-line break-words text-slate-600">
                   <Highlighted text={r.excerpt} query={results.query} />
                 </p>
+                <button
+                  onClick={() => reader.open({ documentId: r.document_id, chunkId: r.chunk_id, excerpt: r.excerpt, query: results.query, page: r.page_number })}
+                  className="mt-1.5 text-xs text-slate-500 underline hover:text-slate-800"
+                >
+                  Lees in het leesvenster
+                </button>
               </li>
             ))}
           </ul>

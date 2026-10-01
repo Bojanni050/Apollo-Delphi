@@ -3,6 +3,7 @@ import { api, type DocumentRecord } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 import FolderUpload from './FolderUpload'
 import IndexProgress from './IndexProgress'
+import { useReader } from '../reader'
 import UnassignedBanner from './UnassignedBanner'
 
 function formatSize(bytes: number): string {
@@ -21,6 +22,7 @@ export default function DocumentsPage({
   onChanged?: () => void
 }) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
+  const reader = useReader()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [repoUrl, setRepoUrl] = useState('')
@@ -116,7 +118,7 @@ export default function DocumentsPage({
       />
       <IndexProgress
         workspaceId={workspaceId ?? null}
-        waiting={documents.filter((d) => d.indexing_status === 'pending' || d.indexing_status === 'failed').length}
+        waiting={documents.filter((d) => d.indexing_status === 'pending' || d.indexing_status === 'failed' || d.indexing_status === 'parsed').length}
         onProgress={() => void refresh()}
       />
       <Card>
@@ -191,6 +193,9 @@ export default function DocumentsPage({
                 <td><StatusBadge status={d.indexing_status} /></td>
                 <td className="text-slate-500">{new Date(d.created_at).toLocaleString()}</td>
                 <td className="text-right space-x-2 whitespace-nowrap">
+                  <Button variant="secondary" onClick={() => reader.open({ documentId: d.id })}>
+                    Lees
+                  </Button>
                   <Button variant="secondary" onClick={() => void indexDoc(d.id)} disabled={busy}>
                     Index
                   </Button>

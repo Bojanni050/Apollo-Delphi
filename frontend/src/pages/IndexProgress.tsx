@@ -10,8 +10,10 @@ function duration(seconds: number): string {
 }
 
 /**
- * The indexing that runs in the background on the server: how far it is, what is being indexed and how long it will take.
- * Also offers to index documents that are still waiting (for example after the app was stopped half way).
+ * The indexing that runs in the background on the server, in its two steps: first every document is *read* (a few seconds
+ * for a whole folder: then it can be read in the reading pane and searched by words), then the documents are *embedded* one
+ * after the other (slow: this is what makes searching by meaning work). Also offers to continue with documents that are
+ * still waiting, for example after the app was stopped half way or the embedding model was not reachable.
  */
 export default function IndexProgress({
   workspaceId,
@@ -19,7 +21,7 @@ export default function IndexProgress({
   onProgress,
 }: {
   workspaceId: number | null
-  /** Documents of this werkmap that are not indexed yet (pending or failed). */
+  /** Documents of this werkmap that still have to be read or embedded (pending, parsed or failed). */
   waiting: number
   /** Called when the numbers change, so the list of documents can refresh. */
   onProgress?: () => void
@@ -37,7 +39,7 @@ export default function IndexProgress({
         const p = await api.indexingProgress()
         if (cancelled) return
         setProgress(p)
-        const key = `${p.active}|${p.done}|${p.failed}`
+        const key = `${p.active}|${p.parsed}|${p.done}|${p.failed}`
         if (key !== last.current) {
           last.current = key
           onProgress?.()
@@ -67,37 +69,46 @@ export default function IndexProgress({
   if (!progress) return null
   if (!progress.active && progress.total === 0 && waiting === 0) return null
 
-  const finished = progress.done + progress.failed
-  const remaining = Math.max(0, progress.total - finished)
+  const remaining = Math.max(0, progress.total - progress.done - progress.failed)
+  const reading = progress.parsed < progress.total - progress.failed
+  const embedFailures = progress.errors.filter((e) => (e.error ?? '').startsWith('Embedden mislukt')).length
 
   return (
     <Card className="border border-slate-200">
       {progress.active ? (
         <div aria-live="polite">
           <p className="text-sm font-medium text-slate-800">
-            Indexeren op de achtergrond: {finished} van {progress.total}
+            {reading ? 'Documenten lezen' : 'Embedden op de achtergrond'}: gelezen {progress.parsed} van {progress.total} · geëmbed {progress.done} van{' '}
+            {progress.total}
             {progress.failed > 0 && <span className="text-red-600"> ({progress.failed} mislukt)</span>}
           </p>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-slate-200">
-            <div className="h-full bg-slate-900 transition-all" style={{ width: `${(finished / Math.max(1, progress.total)) * 100}%` }} />
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded bg-slate-200" title="Geëmbed">
+            <div className="h-full bg-slate-900 transition-all" style={{ width: `${((progress.done + progress.failed) / Math.max(1, progress.total)) * 100}%` }} />
           </div>
           <p className="mt-1 truncate text-xs text-slate-500">
-            {progress.current ? `Nu: ${progress.current}` : 'Even geduld…'}
-            {progress.seconds_per_document != null && remaining > 0 && ` · nog ${duration(remaining * progress.seconds_per_document)}`}
+            {progress.current ? `Nu ${progress.phase ?? ''}: ${progress.current}` : 'Even geduld…'}
+            {!reading && progress.seconds_per_document != null && remaining > 0 && ` · nog ${duration(remaining * progress.seconds_per_document)}`}
           </p>
-          <p className="mt-0.5 text-xs text-slate-400">Je kunt gewoon verder werken; documenten zijn doorzoekbaar zodra ze klaar zijn.</p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {progress.parsed > 0
+              ? 'Gelezen documenten zijn al te lezen en te doorzoeken op woorden; zoeken op betekenis volgt zodra ze zijn geëmbed. Je kunt gewoon verder werken.'
+              : 'Je kunt gewoon verder werken.'}
+          </p>
         </div>
       ) : progress.total > 0 ? (
         <p className="text-sm text-slate-800">
-          Indexeren klaar: {progress.done} van {progress.total}
+          Klaar: {progress.parsed} gelezen, {progress.done} van {progress.total} ook geëmbed
           {progress.failed > 0 && <span className="text-red-600">, {progress.failed} mislukt</span>}.
+          {embedFailures > 0 && (
+            <span className="text-slate-500"> De mislukte zijn wel te lezen en te doorzoeken op woorden; “Nu indexeren” probeert het embedden opnieuw.</span>
+          )}
         </p>
       ) : null}
 
       {!progress.active && waiting > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <span className="text-sm text-slate-700">
-            {waiting} {waiting === 1 ? 'document wacht' : 'documenten wachten'} op indexering.
+            {waiting} {waiting === 1 ? 'document wacht' : 'documenten wachten'} op lezen of embedden.
           </span>
           <Button variant="secondary" onClick={() => void start()}>
             Nu indexeren
