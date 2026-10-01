@@ -49,6 +49,15 @@ _STOPWORDS = frozenset(
 )
 
 
+def has_citable_lines(doc: Document) -> bool:
+    """Line numbers only mean something for an uploaded text file, where they are the file's own lines.
+
+    For pdf and docx they number the extracted text, and a GitHub digest is a stitched-together text of many
+    files; neither can be found back in anything the reader can open.
+    """
+    return doc.source_type == "upload" and doc.file_type in ("txt", "md")
+
+
 class SearchError(Exception):
     pass
 
@@ -67,7 +76,8 @@ class SearchHit:
     score: float = 0.0
     #: Which leg(s) found it: "semantic", "keyword" or "both".
     match: str = "semantic"
-    #: Inclusive line range in the document's text, when known (not for chunks indexed before it existed).
+    #: Inclusive line range in the uploaded text file, when known: only txt/md uploads (see has_citable_lines),
+    #: and not for chunks indexed before line ranges existed.
     line_start: int | None = None
     line_end: int | None = None
 
@@ -316,8 +326,8 @@ class SearchService:
                     excerpt=chunk.content,
                     page_number=chunk.page_number,
                     section=chunk.section,
-                    line_start=chunk.line_start,
-                    line_end=chunk.line_end,
+                    line_start=chunk.line_start if has_citable_lines(doc) else None,
+                    line_end=chunk.line_end if has_citable_lines(doc) else None,
                     similarity=sim,
                     score=f.score,
                     match="both" if len(f.sources) == 2 else f.sources[0],
