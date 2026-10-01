@@ -58,6 +58,21 @@ def has_citable_lines(doc: Document) -> bool:
     return doc.source_type == "upload" and doc.file_type in ("txt", "md")
 
 
+def evidence_lines(doc: Document, chunk: DocumentChunk, quote: str | None = None) -> tuple[int | None, int | None]:
+    """Line range for evidence taken from ``chunk``: the quote's own lines when it is found in the chunk,
+    otherwise the whole chunk's. (None, None) when lines are not citable or were never recorded."""
+    if chunk.line_start is None or not has_citable_lines(doc):
+        return None, None
+    start, end = chunk.line_start, chunk.line_end
+    body = chunk.content.lstrip()  # line_start is the chunk's first line with text
+    quote = (quote or "").strip()
+    at = body.find(quote) if quote else -1
+    if at >= 0:
+        start = chunk.line_start + body.count("\n", 0, at)
+        end = start + quote.count("\n")
+    return start, end
+
+
 class SearchError(Exception):
     pass
 

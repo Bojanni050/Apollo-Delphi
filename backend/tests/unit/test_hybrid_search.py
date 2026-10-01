@@ -47,3 +47,36 @@ def test_bm25_prefers_rare_terms_and_ignores_non_matching_chunks():
 
 def test_bm25_empty_inputs():
     assert bm25_rank({}, ["x"]) == [] and bm25_rank({1: "x"}, []) == []
+
+
+from app.models import Document, DocumentChunk
+from app.services.search.service import evidence_lines
+
+
+def _chunk(content, start=10, end=14):
+    return DocumentChunk(content=content, line_start=start, line_end=end)
+
+
+def test_evidence_lines_narrow_to_the_quote():
+    chunk = _chunk("Intro line\nThe budget is 250000 EUR.\nMore text\nand more\nlast")
+    doc = Document(file_type="txt", source_type="upload")
+    assert evidence_lines(doc, chunk, "The budget is 250000 EUR.") == (11, 11)
+    assert evidence_lines(doc, chunk, "More text\nand more") == (12, 13)
+
+
+def test_evidence_lines_fall_back_to_the_whole_chunk():
+    doc = Document(file_type="md", source_type="upload")
+    chunk = _chunk("alpha\nbeta")
+    assert evidence_lines(doc, chunk, "something the model paraphrased") == (10, 14)
+    assert evidence_lines(doc, chunk) == (10, 14)
+
+
+def test_evidence_lines_start_at_the_first_line_with_text():
+    chunk = _chunk("\n\nfirst\nsecond", start=3, end=4)  # line_start already skips the leading blank lines
+    assert evidence_lines(Document(file_type="txt", source_type="upload"), chunk, "second") == (4, 4)
+
+
+def test_evidence_lines_are_absent_when_not_citable_or_not_recorded():
+    assert evidence_lines(Document(file_type="pdf", source_type="upload"), _chunk("x"), "x") == (None, None)
+    assert evidence_lines(Document(file_type="md", source_type="github"), _chunk("x"), "x") == (None, None)
+    assert evidence_lines(Document(file_type="txt", source_type="upload"), _chunk("x", None, None), "x") == (None, None)

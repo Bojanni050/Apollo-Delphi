@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type Issue, type IssueDetail } from '../api'
+import { api, formatLines, type Issue, type IssueDetail } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 import { SplitView } from '../layout/AppShell'
 
@@ -129,7 +129,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                   {selected.evidence.map((e) => (
                     <li key={e.id} className="border rounded p-2">
                       <div className="text-xs text-slate-400 mb-1">
-                        document #{e.document_id} {e.page_number ? `· page ${e.page_number}` : ''} {e.section ? `· ${e.section}` : ''} · {e.evidence_type}
+                        document #{e.document_id} {e.page_number ? `· page ${e.page_number}` : ''} {e.section ? `· ${e.section}` : ''} {e.line_start != null ? `· ${formatLines(e.line_start, e.line_end)}` : ''} · {e.evidence_type}
                       </div>
                       <p className="text-slate-600">{e.original_text}</p>
                     </li>

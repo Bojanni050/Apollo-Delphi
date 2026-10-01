@@ -17,6 +17,7 @@ from app.models import (
     IssueClaim,
     IssueEvidence,
 )
+from app.services.search.service import evidence_lines
 from app.services.analysis.claim_extraction import ExtractedClaim, get_claim_extractor, normalize_value
 from app.services.issues.detection import (
     detect_entity_contradictions,
@@ -139,12 +140,15 @@ class AnalysisService:
         return len(persisted), len(persisted_open_questions), len(real_contradictions)
 
     def _persist_claim(self, db: Session, run: AnalysisRun, ex: ExtractedClaim, doc: Document, chunk: DocumentChunk) -> Claim:
+        quote_lines = evidence_lines(doc, chunk, ex.quote)
         evidence = Evidence(
             document_id=doc.id,
             chunk_id=chunk.id,
             evidence_type="explicit",
             page_number=chunk.page_number,
             section=chunk.section,
+            line_start=quote_lines[0],
+            line_end=quote_lines[1],
             original_text=ex.quote,
             normalized_text=ex.quote,
             extraction_metadata=json.dumps({"extractor": "claim_extraction", "chunk_id": chunk.id}),
@@ -172,12 +176,15 @@ class AnalysisService:
         return claim
 
     def _persist_open_question(self, db: Session, run: AnalysisRun, doc: Document, chunk: DocumentChunk, q: DetectedOpenQuestion) -> Issue:
+        quote_lines = evidence_lines(doc, chunk, q.source_quote)
         evidence = Evidence(
             document_id=doc.id,
             chunk_id=chunk.id,
             evidence_type="explicit",
             page_number=chunk.page_number,
             section=chunk.section,
+            line_start=quote_lines[0],
+            line_end=quote_lines[1],
             original_text=q.source_quote,
             extraction_metadata=json.dumps({"detector": "open_questions", "marker": q.marker}),
         )

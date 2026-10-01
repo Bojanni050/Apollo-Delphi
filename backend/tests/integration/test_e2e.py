@@ -76,6 +76,14 @@ def test_full_apollo_loop(client, db):
     assert len(detail["claims"]) == 2
     assert detail["evidence"]
     assert {c["value"] for c in detail["claims"]} == {"25000", "30000"}
+    # every piece of evidence points at the lines of its own file that hold the quoted text
+    by_name = {"doc_a_initial.txt": DOC_A, "doc_b_revised.txt": DOC_B, "doc_c_memo.txt": DOC_C}
+    texts = {d["id"]: by_name[d["filename"]] for d in client.get("/api/documents").json()}
+    for e in detail["evidence"]:
+        assert e["line_start"] is not None, e
+        covered = "\n".join(texts[e["document_id"]].splitlines()[e["line_start"] - 1 : e["line_end"]])
+        assert e["original_text"].strip() in covered, (e, covered)
+    assert {(e["line_start"], e["line_end"]) for e in detail["evidence"]} == {(3, 3), (4, 4)}, "the quote's line, not the whole chunk"
 
     # Phase 5: investigate and resolve the contradiction
     resolved_detail = client.post(f"/api/issues/{contra['id']}/investigate").json()

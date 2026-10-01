@@ -17,6 +17,9 @@ class Evidence(Base):
     evidence_type: Mapped[str] = mapped_column(String(32), default="explicit")
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    #: Lines of the uploaded text file the evidence comes from (see services/search/service.py: evidence_lines).
+    line_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    line_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
     original_text: Mapped[str] = mapped_column(Text, nullable=False)
     normalized_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     extraction_metadata: Mapped[str | None] = mapped_column(Text, nullable=True)

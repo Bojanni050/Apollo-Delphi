@@ -13,6 +13,8 @@ class EvidenceOut(BaseModel):
     evidence_type: str
     page_number: int | None
     section: str | None
+    line_start: int | None = None
+    line_end: int | None = None
     original_text: str
 
 

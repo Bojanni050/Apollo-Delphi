@@ -120,6 +120,8 @@ class InvestigationEngine:
                     evidence_type="explicit",
                     page_number=hit.page_number,
                     section=hit.section,
+                    line_start=hit.line_start,
+                    line_end=hit.line_end,
                     original_text=chunk.content[:2000],
                     extraction_metadata=json.dumps({"retrieved_for_issue": issue.id, "similarity": hit.similarity}),
                 )

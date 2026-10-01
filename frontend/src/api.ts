@@ -66,6 +66,8 @@ export interface EvidenceRecord {
   evidence_type: string
   page_number: number | null
   section: string | null
+  line_start: number | null
+  line_end: number | null
   original_text: string
 }
 
