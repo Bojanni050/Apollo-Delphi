@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, type DocumentRecord, type SearchHit } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
+import UnassignedBanner from './UnassignedBanner'
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -8,7 +9,15 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?: number | null; onChanged?: () => void }) {
+export default function DocumentsPage({
+  workspaceId,
+  workspaceName,
+  onChanged,
+}: {
+  workspaceId?: number | null
+  workspaceName?: string | null
+  onChanged?: () => void
+}) {
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -109,6 +118,14 @@ export default function DocumentsPage({ workspaceId, onChanged }: { workspaceId?
 
   return (
     <div className="space-y-6">
+      <UnassignedBanner
+        workspaceId={workspaceId}
+        workspaceName={workspaceName}
+        onAdopted={() => {
+          void refresh()
+          onChanged?.()
+        }}
+      />
       <Card>
         <h2 className="text-lg font-semibold mb-3">Upload documents</h2>
         <p className="text-sm text-slate-500 mb-3">Supported: PDF, DOCX, TXT, Markdown. Files are validated and indexed server-side.</p>

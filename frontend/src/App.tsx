@@ -190,7 +190,7 @@ export default function App() {
       {(page === 'documents' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
-            {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} onChanged={() => void loadWorkspaces()} />}
+            {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} onChanged={() => void loadWorkspaces()} />}
             {page === 'pulse' && <PulsePage workspaceId={activeWorkspaceId} />}
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
             {page === 'settings' && <SettingsPage />}

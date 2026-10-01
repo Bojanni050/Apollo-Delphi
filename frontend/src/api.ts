@@ -327,6 +327,17 @@ export interface ReindexResult {
   failed: { document_id: number; error: string | null }[]
 }
 
+export interface Unassigned {
+  documents: number
+  analysis_runs: number
+  generated_documents: number
+}
+
+export interface AdoptResult extends Unassigned {
+  mirrored_to_repository: number
+  not_mirrored: { document_id: number; filename: string; reason: string }[]
+}
+
 export interface LLMTestResult {
   ok: boolean
   tier: string
@@ -398,6 +409,9 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, working_dir: workingDir || null }),
     }),
+  unassigned: () => request<Unassigned>('/api/workspaces/unassigned'),
+  adoptUnassigned: (workspaceId: number) =>
+    request<AdoptResult>(`/api/workspaces/${workspaceId}/adopt-unassigned`, { method: 'POST' }),
   workspaceHistory: (id: number) => request<Commit[]>(`/api/workspaces/${id}/history`),
   getPulse: (workspaceId: number) => request<PulseResult>(`/api/workspaces/${workspaceId}/pulse`),
   runPulse: (workspaceId: number, force = false) =>

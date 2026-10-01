@@ -7,8 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
 from app.models import AnalysisRun, Document, Workspace
-from app.schemas.workspaces import CommitOut, WorkspaceCreate, WorkspaceDetailOut, WorkspaceOut
-from app.services import workspace_repo
+from app.schemas.workspaces import (
+    AdoptResultOut,
+    CommitOut,
+    UnassignedOut,
+    WorkspaceCreate,
+    WorkspaceDetailOut,
+    WorkspaceOut,
+)
+from app.services import workspace_adopt, workspace_repo
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
@@ -34,6 +41,12 @@ def _detail(db: Session, ws: Workspace) -> WorkspaceDetailOut:
 @router.get("", response_model=list[WorkspaceOut])
 def list_workspaces(db: Session = Depends(get_session)):
     return db.query(Workspace).order_by(Workspace.created_at.desc()).all()
+
+
+@router.get("/unassigned", response_model=UnassignedOut)
+def unassigned(db: Session = Depends(get_session)):
+    """Documents, analyses and generated documents that belong to no werkmap (declared before /{id})."""
+    return workspace_adopt.unassigned_counts(db)
 
 
 @router.post("", response_model=WorkspaceOut, status_code=201)
@@ -83,3 +96,15 @@ def delete_workspace(workspace_id: int, db: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Workspace not found")
     db.delete(ws)
     db.commit()
+
+
+@router.post("/{workspace_id}/adopt-unassigned", response_model=AdoptResultOut)
+def adopt_unassigned(workspace_id: int, db: Session = Depends(get_session)):
+    """Move everything that belongs to no werkmap into this one (documents, analyses, generated documents).
+
+    Uploaded originals are also committed to the werkmap's repository. Safe to repeat.
+    """
+    ws = db.get(Workspace, workspace_id)
+    if ws is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return workspace_adopt.adopt_unassigned(db, ws)

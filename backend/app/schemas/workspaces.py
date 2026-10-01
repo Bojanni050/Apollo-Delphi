@@ -29,3 +29,25 @@ class CommitOut(BaseModel):
     author: str
     date: str
     message: str
+
+
+class UnassignedOut(BaseModel):
+    """What currently belongs to no werkmap."""
+
+    documents: int
+    analysis_runs: int
+    generated_documents: int
+
+
+class NotMirroredOut(BaseModel):
+    document_id: int
+    filename: str
+    reason: str
+
+
+class AdoptResultOut(BaseModel):
+    documents: int
+    analysis_runs: int
+    generated_documents: int
+    mirrored_to_repository: int
+    not_mirrored: list[NotMirroredOut]
