@@ -14,7 +14,9 @@ app = FastAPI(title="Apollo", version="0.1.0", description="AI document reasonin
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4173"],
+    # The dev (5173) and preview (4173) servers, reached as localhost or as 127.0.0.1: browsers treat the two as
+    # different origins, so both must be allowed. Any other port on a loopback address is fine too.
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
