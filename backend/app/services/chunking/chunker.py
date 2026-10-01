@@ -13,6 +13,10 @@ class Chunk:
     content: str
     page_number: int | None
     section: str | None
+    #: 1-based, inclusive line range of the chunk in the extracted text (the first line that holds
+    #: text to the last one). For txt/md that is the file's own numbering.
+    line_start: int | None = None
+    line_end: int | None = None
 
 
 def _split_into_blocks(text: str) -> list[tuple[str | None, str]]:
@@ -43,22 +47,33 @@ class Chunker:
             return None
         return extraction.page_for_offset(start)
 
-    def _sliding_windows(self, text: str) -> list[str]:
+    def _sliding_windows(self, text: str) -> list[tuple[int, str]]:
+        """(start offset within the stripped text, window) pairs."""
         text = text.strip()
         if len(text) <= self.chunk_size:
-            return [text] if text else []
+            return [(0, text)] if text else []
         step = max(1, self.chunk_size - self.overlap)
-        windows = []
+        windows: list[tuple[int, str]] = []
         start = 0
         while start < len(text):
             window = text[start : start + self.chunk_size]
-            if windows and window == windows[-1]:
+            if windows and window == windows[-1][1]:
                 break
-            windows.append(window)
+            windows.append((start, window))
             if start + self.chunk_size >= len(text):
                 break
             start += step
         return windows
+
+    @staticmethod
+    def _line_range(full_text: str, start: int, window: str) -> tuple[int, int] | None:
+        """Lines holding the window's text; ``start`` is the window's offset in ``full_text``."""
+        body = window.strip()
+        if not body:
+            return None
+        first = start + len(window) - len(window.lstrip())
+        line_start = full_text.count("\n", 0, first) + 1
+        return line_start, line_start + body.count("\n")
 
     def chunk(self, extraction: ExtractionResult) -> list[Chunk]:
         chunks: list[Chunk] = []
@@ -68,16 +83,30 @@ class Chunker:
             if not windows:
                 offset += len(block)
                 continue
+            lead = len(block) - len(block.lstrip())  # _sliding_windows works on the stripped block
             window_start = 0
-            for w in windows:
+            for start, w in windows:
                 page_number = self._page_number(extraction, offset + window_start)
+                lines = self._line_range(extraction.full_text, offset + lead + start, w)
                 chunks.append(
-                    Chunk(chunk_index=len(chunks), content=w, page_number=page_number, section=heading)
+                    Chunk(
+                        chunk_index=len(chunks),
+                        content=w,
+                        page_number=page_number,
+                        section=heading,
+                        line_start=lines[0] if lines else None,
+                        line_end=lines[1] if lines else None,
+                    )
                 )
                 window_start += max(1, self.chunk_size - self.overlap)
             offset += len(block)
         if not chunks and extraction.full_text.strip():
+            full = extraction.full_text
+            lines = self._line_range(full, 0, full)
             chunks.append(
-                Chunk(chunk_index=0, content=extraction.full_text.strip(), page_number=None, section=None)
+                Chunk(
+                    chunk_index=0, content=full.strip(), page_number=None, section=None,
+                    line_start=lines[0], line_end=lines[1],
+                )
             )
         return chunks

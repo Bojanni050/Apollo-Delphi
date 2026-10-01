@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, type Answer } from '../api'
+import { api, formatLines, type Answer } from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
 
 /** Renders the answer text with each [n] as a button that jumps to its source. */
@@ -80,6 +80,7 @@ function AnswerCard({ answer }: { answer: Answer }) {
                     <span className="font-medium text-slate-700">{c.document_filename}</span>
                     {c.page_number ? ` · pagina ${c.page_number}` : ''}
                     {c.section ? ` · ${c.section}` : ''}
+                    {c.line_start != null ? ` · ${formatLines(c.line_start, c.line_end)}` : ''}
                   </span>
                   <Badge kind={c.match === 'both' ? 'ok' : 'neutral'}>
                     {c.match === 'both' ? 'betekenis + woorden' : c.match === 'keyword' ? 'woorden' : 'betekenis'}

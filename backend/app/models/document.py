@@ -59,6 +59,9 @@ class DocumentChunk(Base):
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    #: Inclusive 1-based line range in the extracted text; NULL for chunks indexed before this existed.
+    line_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    line_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(vector_column(None), nullable=True)
     #: Model and dimension this vector was produced with; search only compares vectors of the active model.

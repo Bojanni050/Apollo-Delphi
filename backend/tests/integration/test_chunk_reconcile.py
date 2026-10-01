@@ -154,3 +154,17 @@ def test_failed_embedding_leaves_stored_chunks_untouched(db, doc, text):
     assert asyncio.run(service.index_document(db, doc.id)).indexing_status == "failed"
     db.expire_all()
     assert [(c.id, c.content) for c in _chunks(db, doc)] == before
+
+
+def test_line_ranges_are_refreshed_on_a_reused_chunk(db, doc, text):
+    text["sections"] = [("One", "alpha"), ("Two", "beta")]
+    _index(db, doc, CountingEmbedder())
+    assert [(c.line_start, c.line_end) for c in _chunks(db, doc)] == [(1, 2), (4, 5)]
+
+    text["sections"] = [("Zero", "new\nmore"), ("One", "alpha"), ("Two", "beta")]
+    emb = CountingEmbedder()
+    stats = _index(db, doc, emb)
+    assert (stats.added, stats.reused) == (1, 2)
+    assert [(c.section, c.line_start, c.line_end) for c in _chunks(db, doc)] == [
+        ("Zero", 1, 3), ("One", 5, 6), ("Two", 8, 9),
+    ]

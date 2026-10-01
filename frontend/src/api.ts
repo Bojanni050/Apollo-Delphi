@@ -118,6 +118,8 @@ export interface SearchHit {
   excerpt: string
   page_number: number | null
   section: string | null
+  line_start: number | null
+  line_end: number | null
   similarity: number
   score: number
   match: 'semantic' | 'keyword' | 'both'
@@ -139,6 +141,8 @@ export interface Citation {
   document_filename: string
   page_number: number | null
   section: string | null
+  line_start: number | null
+  line_end: number | null
   excerpt: string
   match: 'semantic' | 'keyword' | 'both'
 }
@@ -500,4 +504,10 @@ export const api = {
       body: JSON.stringify({ runtime, model }),
     }),
   llmTest: (tier: LLMTierName) => request<LLMTestResult>(`/api/llm/test?tier=${tier}`, { method: 'POST' }),
+}
+
+/** "regel 12" or "regels 12–18"; empty when the range is unknown. */
+export function formatLines(start: number | null, end: number | null): string {
+  if (start == null) return ''
+  return end == null || end === start ? `regel ${start}` : `regels ${start}–${end}`
 }

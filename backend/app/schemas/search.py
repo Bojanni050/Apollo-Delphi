@@ -10,6 +10,8 @@ class SearchHitOut(BaseModel):
     excerpt: str
     page_number: int | None
     section: str | None
+    line_start: int | None = None
+    line_end: int | None = None
     similarity: float
     score: float = 0.0
     match: str = "semantic"  # semantic | keyword | both

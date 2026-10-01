@@ -31,3 +31,15 @@ def test_search_no_results_for_unkwown_terms(client):
     resp = client.get("/api/search", params={"q": "xylophone quantum banana"})
     assert resp.status_code == 200
     assert isinstance(resp.json()["results"], list)
+
+
+def test_hits_carry_the_line_range_of_their_chunk(client):
+    ws = client.post("/api/workspaces", json={"name": "w"}).json()["id"]
+    text = "# Intro\nGeneral words.\n\n# Harbour\nThe harbour budget covers quay repairs.\nDredging follows."
+    d = client.post(
+        "/api/documents", params={"workspace_id": ws}, files={"file": ("h.md", io.BytesIO(text.encode()), "text/markdown")}
+    ).json()
+    assert client.post(f"/api/documents/{d['id']}/index").json()["indexing_status"] == "indexed"
+    hits = client.get("/api/search", params={"q": "harbour budget quay", "workspace_id": ws, "mode": "keyword"}).json()["results"]
+    harbour = next(h for h in hits if h["section"] == "Harbour")
+    assert (harbour["line_start"], harbour["line_end"]) == (4, 6)

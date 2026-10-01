@@ -67,6 +67,9 @@ class SearchHit:
     score: float = 0.0
     #: Which leg(s) found it: "semantic", "keyword" or "both".
     match: str = "semantic"
+    #: Inclusive line range in the document's text, when known (not for chunks indexed before it existed).
+    line_start: int | None = None
+    line_end: int | None = None
 
 
 @dataclass
@@ -313,6 +316,8 @@ class SearchService:
                     excerpt=chunk.content,
                     page_number=chunk.page_number,
                     section=chunk.section,
+                    line_start=chunk.line_start,
+                    line_end=chunk.line_end,
                     similarity=sim,
                     score=f.score,
                     match="both" if len(f.sources) == 2 else f.sources[0],

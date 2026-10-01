@@ -20,6 +20,8 @@ class CitationOut(BaseModel):
     document_filename: str
     page_number: int | None = None
     section: str | None = None
+    line_start: int | None = None
+    line_end: int | None = None
     excerpt: str
     match: str = "semantic"
 

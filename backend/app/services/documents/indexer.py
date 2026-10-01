@@ -46,7 +46,7 @@ class IndexingService:
         """Bring the stored chunks in line with ``chunks`` and embed only what is new.
 
         A chunk is identified by its text. A stored row whose text is still present is kept (same id, so
-        claims and evidence pointing at it survive) and gets its position, page and section refreshed. Its
+        claims and evidence pointing at it survive) and gets its position, page, section and line range refreshed. Its
         embedding is reused when it was made with the active model, and recomputed otherwise. Rows whose
         text is gone are deleted; text without a row is inserted. Duplicate texts are matched one to one.
         """
@@ -82,6 +82,7 @@ class IndexingService:
                 emb = list(next(vectors))
                 row.embedding, row.embedding_model, row.embedding_dim = emb, self.embedding_service.model, len(emb)
             row.chunk_index, row.page_number, row.section = chunk.chunk_index, chunk.page_number, chunk.section
+            row.line_start, row.line_end = chunk.line_start, chunk.line_end
 
         for leftover in existing.values():
             for row in leftover:

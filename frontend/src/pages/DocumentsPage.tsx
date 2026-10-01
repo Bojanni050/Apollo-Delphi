@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, type DocumentRecord, type SearchHit, type SearchMode } from '../api'
+import { api, formatLines, type DocumentRecord, type SearchHit, type SearchMode } from '../api'
 import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
 import UnassignedBanner from './UnassignedBanner'
 
@@ -248,7 +248,9 @@ export default function DocumentsPage({
                 <div className="flex justify-between text-xs text-slate-500 mb-1">
                   <span className="font-medium text-slate-700">{r.document_filename}</span>
                   <span className="flex items-center gap-2">
-                    {r.page_number ? `page ${r.page_number}` : ''}
+                    {[r.page_number ? `page ${r.page_number}` : '', formatLines(r.line_start, r.line_end)]
+                      .filter(Boolean)
+                      .join(' · ')}
                     <Badge kind={r.match === 'both' ? 'ok' : 'neutral'}>
                       {r.match === 'both' ? 'betekenis + woorden' : r.match === 'keyword' ? 'woorden' : 'betekenis'}
                     </Badge>

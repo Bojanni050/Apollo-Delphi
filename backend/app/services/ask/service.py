@@ -60,6 +60,8 @@ class Source:
     page_number: int | None
     section: str | None
     excerpt: str
+    line_start: int | None = None
+    line_end: int | None = None
     match: str = "semantic"
 
 
@@ -176,6 +178,8 @@ class AskService:
                 document_filename=h.document_filename,
                 page_number=h.page_number,
                 section=h.section,
+                line_start=h.line_start,
+                line_end=h.line_end,
                 excerpt=h.excerpt[:MAX_SOURCE_CHARS],
                 match=h.match,
             )
