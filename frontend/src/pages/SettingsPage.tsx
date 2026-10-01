@@ -66,8 +66,11 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 type Draft = { provider: Provider | ''; model: string; base_url: string }
 
+/** "mock-model" is what is left over after leaving the mock provider: not a model of a real one, so not shown as one. */
+const realModel = (provider: string, model: string) => (provider !== 'mock' && model === 'mock-model' ? '' : model)
+
 function toDraft(t: TierSettings): Draft {
-  return { provider: t.provider, model: t.model, base_url: t.base_url }
+  return { provider: t.provider, model: realModel(t.provider, t.model), base_url: t.base_url }
 }
 
 function TierCard({
@@ -126,7 +129,7 @@ function TierCard({
 
   const dirty =
     draft.provider !== saved.provider ||
-    draft.model !== saved.model ||
+    draft.model !== realModel(saved.provider, saved.model) ||
     draft.base_url !== saved.base_url ||
     apiKey !== '' ||
     clearKey
@@ -324,7 +327,7 @@ function TierCard({
         </Button>
         {status && (
           <span className="font-mono text-xs text-slate-500">
-            {status.model || '—'}
+            {realModel(status.provider, status.model) || '—'}
             {status.inherits && ' (volgt hoofdmodel)'}
           </span>
         )}

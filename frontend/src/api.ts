@@ -306,6 +306,17 @@ export interface ModelInfo {
   /** USD per 1M tokens; null = not stated, 0 = free. */
   input_per_million: number | null
   output_per_million: number | null
+  cache_read_per_million: number | null
+  cache_write_per_million: number | null
+  max_output_tokens: number | null
+  /** "text", "image", "file", "audio", "video" */
+  input_modalities: string[]
+  output_modalities: string[]
+  /** tools, parallel_tools, reasoning, structured_output, web_search, prompt_caching, computer_use */
+  features: string[]
+  regions: string[]
+  /** Unix time the model was added. */
+  created: number | null
 }
 
 export interface ModelList {

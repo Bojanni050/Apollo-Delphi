@@ -264,7 +264,7 @@ def _build(tier: str) -> LLMProvider:
     if cfg.provider not in PROVIDERS:
         raise LLMError(f"Unknown LLM provider: {cfg.provider}")
     label = "Main" if tier == "main" else "Background"
-    if not cfg.model:
+    if not cfg.model or cfg.model == "mock-model":  # "mock-model" is what is left behind after leaving the mock
         raise LLMError(f"{label} model: no model selected. Choose one in Settings.")
     if cfg.provider == "openai":
         if not cfg.base_url and not cfg.api_key:

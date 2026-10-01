@@ -28,6 +28,9 @@ function pointsAtRuntime(url: string, runtime: string): boolean {
 
 const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm'
 
+/** "mock-embedder" is what is left over after leaving the mock provider: not a model of a real one. */
+const realModel = (provider: string, model: string) => (provider !== 'mock' && model === 'mock-embedder' ? '' : model)
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
@@ -60,7 +63,7 @@ export default function EmbeddingsCard() {
       api.embeddingCatalog(runtime).catch(() => null),
     ])
     setSaved(s)
-    setDraft({ provider: s.provider, model: s.model, base_url: s.base_url })
+    setDraft({ provider: s.provider, model: realModel(s.provider, s.model), base_url: s.base_url })
     setStatus(st)
     setCatalog(cat)
   }, [])
@@ -73,7 +76,7 @@ export default function EmbeddingsCard() {
 
   if (!saved || !draft) return <Card>{error ? <ErrorText message={error} /> : 'Laden…'}</Card>
 
-  const dirty = draft.provider !== saved.provider || draft.model !== saved.model || draft.base_url !== saved.base_url || apiKey !== '' || clearKey
+  const dirty = draft.provider !== saved.provider || draft.model !== realModel(saved.provider, saved.model) || draft.base_url !== saved.base_url || apiKey !== '' || clearKey
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key)
     setError(null)

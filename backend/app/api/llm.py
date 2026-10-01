@@ -74,6 +74,14 @@ class ModelInfoOut(BaseModel):
     #: USD per 1M tokens; None = not stated, 0 = free.
     input_per_million: float | None = None
     output_per_million: float | None = None
+    cache_read_per_million: float | None = None
+    cache_write_per_million: float | None = None
+    max_output_tokens: int | None = None
+    input_modalities: list[str] = []
+    output_modalities: list[str] = []
+    features: list[str] = []
+    regions: list[str] = []
+    created: int | None = None
 
 
 class ModelList(BaseModel):

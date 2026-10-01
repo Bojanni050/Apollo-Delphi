@@ -5,7 +5,7 @@ length and what it costs per token. That is kept (prices converted to USD per 1M
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -16,8 +16,19 @@ ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
-#: Descriptions are cut here: the picker shows two lines and a "read more", not an essay.
-MAX_DESCRIPTION = 800
+#: Descriptions are cut here. The picker clamps them to two lines; "read more" shows the whole (cut) text.
+MAX_DESCRIPTION = 2000
+
+#: What the endpoints call a capability -> one name for it (OpenRouter's supported_parameters, EdenAI's capabilities).
+FEATURES = {
+    "tools": "tools", "tool_choice": "tools", "supports_function_calling": "tools", "supports_tool_choice": "tools",
+    "supports_parallel_function_calling": "parallel_tools",
+    "reasoning": "reasoning", "include_reasoning": "reasoning", "reasoning_effort": "reasoning", "supports_reasoning": "reasoning",
+    "structured_outputs": "structured_output", "response_format": "structured_output", "supports_response_schema": "structured_output",
+    "web_search_options": "web_search", "supports_web_search": "web_search",
+    "supports_prompt_caching": "prompt_caching",
+    "supports_computer_use": "computer_use",
+}
 
 
 @dataclass
@@ -30,6 +41,17 @@ class ModelInfo:
     #: USD per 1M tokens; None when the endpoint does not say. 0 means free.
     input_per_million: float | None = None
     output_per_million: float | None = None
+    cache_read_per_million: float | None = None
+    cache_write_per_million: float | None = None
+    max_output_tokens: int | None = None
+    #: What goes in and comes out: "text", "image", "file", "audio", "video", ...
+    input_modalities: list[str] = field(default_factory=list)
+    output_modalities: list[str] = field(default_factory=list)
+    #: Capabilities by one name: tools, parallel_tools, reasoning, structured_output, web_search, prompt_caching, computer_use.
+    features: list[str] = field(default_factory=list)
+    regions: list[str] = field(default_factory=list)
+    #: Unix time the model was added, when the endpoint says.
+    created: int | None = None
 
 
 def _number(value: Any) -> float | None:
@@ -45,6 +67,16 @@ def _per_million(price_per_token: Any) -> float | None:
     return None if price is None else round(price * 1_000_000, 6)
 
 
+def _strings(value: Any) -> list[str]:
+    return [str(v) for v in value] if isinstance(value, list) else []
+
+
+def _features(entry: dict[str, Any], capabilities: dict[str, Any]) -> list[str]:
+    found = {FEATURES[p] for p in _strings(entry.get("supported_parameters")) if p in FEATURES}
+    found |= {FEATURES[k] for k, v in capabilities.items() if v is True and k in FEATURES}
+    return sorted(found)
+
+
 def model_info(entry: dict[str, Any]) -> ModelInfo | None:
     """One entry of a /models answer as a ModelInfo (OpenAI-style, Anthropic, OpenRouter and EdenAI shapes)."""
     model_id = entry.get("id") or entry.get("name") or entry.get("model")
@@ -58,6 +90,11 @@ def model_info(entry: dict[str, Any]) -> ModelInfo | None:
     pricing = entry.get("pricing") if isinstance(entry.get("pricing"), dict) else {}
     top = entry.get("top_provider") if isinstance(entry.get("top_provider"), dict) else {}
     context = _number(entry.get("context_length") or top.get("context_length") or entry.get("max_input_tokens"))
+    arch = entry.get("architecture") if isinstance(entry.get("architecture"), dict) else {}
+    caps = entry.get("capabilities") if isinstance(entry.get("capabilities"), dict) else {}
+    max_output = _number(top.get("max_completion_tokens") or entry.get("max_output_tokens"))
+    regions = [str(r.get("name") or r.get("code")) for r in entry.get("regions") or [] if isinstance(r, dict) and (r.get("name") or r.get("code"))]
+    created = _number(entry.get("created"))
     return ModelInfo(
         id=model_id,
         name=str(name) if name and str(name) != model_id else None,
@@ -66,6 +103,14 @@ def model_info(entry: dict[str, Any]) -> ModelInfo | None:
         context_length=int(context) if context else None,
         input_per_million=_per_million(pricing.get("prompt", pricing.get("input_cost_per_token"))),
         output_per_million=_per_million(pricing.get("completion", pricing.get("output_cost_per_token"))),
+        cache_read_per_million=_per_million(pricing.get("input_cache_read", pricing.get("cache_read_input_token_cost"))),
+        cache_write_per_million=_per_million(pricing.get("input_cache_write", pricing.get("cache_creation_input_token_cost"))),
+        max_output_tokens=int(max_output) if max_output else None,
+        input_modalities=_strings(arch.get("input_modalities") or caps.get("input_modalities")),
+        output_modalities=_strings(arch.get("output_modalities") or caps.get("output_modalities")),
+        features=_features(entry, caps),
+        regions=regions,
+        created=int(created) if created else None,
     )
 
 

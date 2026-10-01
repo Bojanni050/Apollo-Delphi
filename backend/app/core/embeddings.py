@@ -277,6 +277,8 @@ def _build() -> EmbeddingProvider:
                 "No Base URL and no API key are set for the embedding model. Enter the Base URL of your local runtime "
                 "(http://localhost:8080/v1 for llama-server, http://localhost:11434/v1 for Ollama) or an OpenAI API key"
             )
+        if not s.embedding_model or s.embedding_model == "mock-embedder":  # what is left behind after leaving the mock
+            raise EmbeddingError("No embedding model selected. Choose one in Settings.")
         return OpenAICompatibleEmbeddingProvider(
             s.embedding_model,
             base_url=s.embedding_base_url or OPENAI_BASE_URL,
