@@ -140,6 +140,38 @@ async def available_models(tier: str = "main", provider: str | None = None, base
     return ModelList(models=models)
 
 
+class ModelsRequest(BaseModel):
+    """What the settings page has typed so far: it need not be saved to look at the models."""
+
+    tier: str = "main"
+    provider: str | None = None
+    base_url: str | None = None
+    #: A key typed but not saved yet. Sent in the body, never in a URL.
+    api_key: str | None = None
+
+
+@router.post("/models", response_model=ModelList)
+async def models_for_draft(body: ModelsRequest):
+    """Models offered by the endpoint as typed in the form, before anything is saved.
+
+    The key typed in the form is used for that endpoint. The tier's *saved* key is used only while provider and
+    base URL are still the saved ones: a stored key must not be sent to an address someone is merely trying out.
+    """
+    tier = body.tier if body.tier in TIERS else "main"
+    cfg = tier_config(tier)
+    provider = body.provider or cfg.provider
+    base_url = cfg.base_url if body.base_url is None else body.base_url
+    if body.api_key:
+        key = body.api_key
+    else:
+        key = cfg.api_key if (provider, base_url) == (cfg.provider, cfg.base_url) else ""
+    try:
+        models = await list_models(provider, base_url, key, timeout=min(get_settings().llm_timeout_seconds, 15.0))
+    except LLMError as exc:
+        return ModelList(models=[], error=str(exc))
+    return ModelList(models=models)
+
+
 @router.get("/status", response_model=LLMStatus)
 def llm_status():
     """What each tier runs on. Never contacts the provider and never returns keys."""

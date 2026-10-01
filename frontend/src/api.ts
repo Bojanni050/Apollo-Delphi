@@ -508,8 +508,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
-  llmModels: (tier: LLMTierName, provider: string, baseUrl: string) =>
-    request<ModelList>(`/api/llm/models?tier=${tier}&provider=${provider}&base_url=${encodeURIComponent(baseUrl)}`),
+  /** Models the endpoint offers, for what is typed in the form: nothing needs to be saved first. The key travels in the body. */
+  llmModels: (tier: LLMTierName, provider: string, baseUrl: string, apiKey = '') =>
+    request<ModelList>('/api/llm/models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier, provider, base_url: baseUrl, api_key: apiKey || null }),
+    }),
   getRetrievalSettings: () => request<RetrievalSettings>('/api/retrieval/settings'),
   updateRetrievalSettings: (body: Partial<RetrievalSettings>) =>
     request<RetrievalSettings>('/api/retrieval/settings', {

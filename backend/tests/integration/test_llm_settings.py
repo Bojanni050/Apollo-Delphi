@@ -174,3 +174,30 @@ def test_model_picker_asks_the_tiers_own_endpoint_with_its_own_key(client, fake_
 def test_model_picker_reports_problems(client, fake_http):
     missing = client.get("/api/llm/models", params={"provider": "anthropic"}).json()
     assert missing["models"] == [] and "API key" in missing["error"]
+
+
+def _post_models(client, **body):
+    return client.post("/api/llm/models", json=body).json()
+
+
+def test_models_can_be_listed_with_a_key_that_is_not_saved_yet(client, fake_http):
+    body = _post_models(client, tier="main", provider="openai", base_url=EDEN, api_key="typed-not-saved")
+    assert body == {"models": ["llama3", "mistral"], "error": None}
+    assert str(fake_http[0].url).startswith(EDEN) and fake_http[0].headers["authorization"] == "Bearer typed-not-saved"
+    assert client.get("/api/llm/settings").json()["main"]["api_key_set"] is False, "nothing was saved"
+
+
+def test_a_saved_key_is_used_while_the_endpoint_is_unchanged_but_never_for_another_one(client, fake_http):
+    _put(client, main={"provider": "openai", "base_url": EDEN, "model": "m", "api_key": "saved-key"})
+    _post_models(client, tier="main")  # untouched form: the saved endpoint and key
+    _post_models(client, tier="main", provider="openai", base_url=GEMINI)  # someone trying another address
+    same, other = fake_http
+    assert same.headers["authorization"] == "Bearer saved-key"
+    assert "authorization" not in other.headers, "the stored key must not follow a typed-in address"
+
+
+def test_posted_models_report_problems_and_keep_the_key_out_of_the_error(client, fake_http):
+    missing = _post_models(client, provider="anthropic")
+    assert missing["models"] == [] and "API key" in missing["error"]
+    ok = _post_models(client, provider="anthropic", api_key="sk-secret")
+    assert ok["models"] == ["claude-a", "claude-b"] and "sk-secret" not in str(ok)

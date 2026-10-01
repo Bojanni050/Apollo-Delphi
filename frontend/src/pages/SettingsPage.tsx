@@ -79,6 +79,7 @@ function TierCard({
   const [busy, setBusy] = useState<string | null>(null)
   const [result, setResult] = useState<LLMTestResult | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [typeModel, setTypeModel] = useState(false) // type the model name instead of picking it from the list
 
   // The background tier follows the main tier's provider and endpoint while both are left empty.
   const followsMain = isBackground && draft.provider === '' && draft.base_url === ''
@@ -87,13 +88,13 @@ function TierCard({
   const showEndpoint = !followsMain && effectiveProvider === 'openai'
 
   const loadModels = useCallback(
-    async (p: string, baseUrl: string) => {
+    async (p: string, baseUrl: string, key = '') => {
       if (!p || p === 'mock') {
         setModels([])
         setModelsNote(null)
         return
       }
-      const res = await api.llmModels(tier, p, baseUrl)
+      const res = await api.llmModels(tier, p, baseUrl, key)
       setModels(res.models)
       setModelsNote(res.error ?? (res.models.length === 0 ? 'Geen modellen gevonden.' : null))
     },
@@ -179,8 +180,9 @@ function TierCard({
             <button
               key={p.id}
               onClick={() => {
-                setDraft({ ...draft, provider: p.id })
-                void loadModels(p.id, draft.base_url).catch(() => undefined)
+                // another provider has other models: do not keep a name that belongs to the previous one
+                setDraft({ ...draft, provider: p.id, model: draft.provider === p.id ? draft.model : '' })
+                void loadModels(p.id, draft.base_url, apiKey).catch(() => undefined)
               }}
               className={`rounded border px-3 py-2 text-left text-sm ${
                 draft.provider === p.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'
@@ -251,19 +253,34 @@ function TierCard({
             label="Model"
             hint={isBackground ? 'Leeg = het model van het hoofdmodel (alleen bij hetzelfde endpoint).' : undefined}
           >
-            <input
-              className={inputCls}
-              list={`llm-models-${tier}`}
-              value={draft.model}
-              onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-              placeholder={isBackground ? 'zelfde als hoofdmodel' : 'modelnaam'}
-            />
+            {models.length > 0 && !typeModel ? (
+              <select
+                className={inputCls}
+                value={draft.model}
+                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+              >
+                <option value="">{isBackground ? 'zelfde als hoofdmodel' : '— kies een model —'}</option>
+                {draft.model && !models.includes(draft.model) && <option value={draft.model}>{draft.model}</option>}
+                {models.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className={inputCls}
+                value={draft.model}
+                onChange={(e) => setDraft({ ...draft, model: e.target.value })}
+                placeholder={isBackground ? 'zelfde als hoofdmodel' : 'modelnaam'}
+              />
+            )}
           </Field>
-          <datalist id={`llm-models-${tier}`}>
-            {models.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          {models.length > 0 && (
+            <button type="button" onClick={() => setTypeModel((v) => !v)} className="text-xs text-slate-500 underline hover:text-slate-700">
+              {typeModel ? 'Kies uit de lijst' : 'Zelf een modelnaam typen'}
+            </button>
+          )}
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -271,7 +288,7 @@ function TierCard({
               disabled={busy !== null}
               onClick={() => {
                 setBusy('models')
-                loadModels(effectiveProvider, followsMain ? (status?.base_url ?? '') : draft.base_url)
+                loadModels(effectiveProvider, followsMain ? (status?.base_url ?? '') : draft.base_url, apiKey)
                   .catch((e: Error) => onError(e.message))
                   .finally(() => setBusy(null))
               }}
@@ -279,8 +296,9 @@ function TierCard({
               {busy === 'models' ? 'Ophalen…' : 'Modellen ophalen'}
             </Button>
             <span className="text-xs text-slate-500">
-              {models.length > 0 ? `${models.length} modellen — kies in het veld hierboven.` : modelsNote}
-              {dirty && ' Sla een nieuwe sleutel of endpoint eerst op, dan gebruikt het ophalen die.'}
+              {models.length > 0
+                ? `${models.length} modellen — kies er een hierboven.`
+                : (modelsNote ?? 'Haalt de modellen op met het adres en de sleutel zoals je ze hierboven ziet; opslaan hoeft nog niet.')}
             </span>
           </div>
         </div>
@@ -301,7 +319,15 @@ function TierCard({
         )}
         {message && !dirty && <span className="text-sm text-emerald-700">{message}</span>}
       </div>
-      {status?.error && <ErrorText message={status.error} />}
+      {status?.error &&
+        (status.model ? (
+          <ErrorText message={status.error} />
+        ) : (
+          // Nothing is wrong yet: the endpoint is saved, a model is just not chosen. No red error for that.
+          <p className="mt-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            Nog geen model gekozen. Klik op “Modellen ophalen”, kies er een en sla op.
+          </p>
+        ))}
       {result && (
         <p className={`mt-3 text-sm ${result.ok ? 'text-emerald-700' : 'text-red-600'}`}>
           {result.ok ? `Antwoord: ${result.reply}` : result.error}
