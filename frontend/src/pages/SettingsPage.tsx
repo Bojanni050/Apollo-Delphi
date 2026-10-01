@@ -12,6 +12,7 @@ import {
 } from '../api'
 import { Badge, Button, Card, ErrorText } from '../components'
 import EmbeddingsCard from './EmbeddingsCard'
+import AppearanceCard from './AppearanceCard'
 import ModelPicker from './ModelPicker'
 import RetrievalCard from './RetrievalCard'
 
@@ -412,6 +413,8 @@ export default function SettingsPage() {
       <EmbeddingsCard />
 
       <RetrievalCard />
+
+      <AppearanceCard />
 
       <Card>
         <Field label="Time-out (seconden)" hint="Geldt voor beide modellen.">

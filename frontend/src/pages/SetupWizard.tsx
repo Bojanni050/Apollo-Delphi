@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, type Workspace } from '../api'
 import { Button, Card, ErrorText } from '../components'
+import ThemeToggle from '../components/ThemeToggle'
 import FolderPickerModal from './FolderPickerModal'
 import FolderUpload from './FolderUpload'
 
@@ -129,6 +130,9 @@ export default function SetupWizard({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
+      <div className="fixed right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-xl">
         <div className="mb-5 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-900 text-sm font-bold text-white">A</div>

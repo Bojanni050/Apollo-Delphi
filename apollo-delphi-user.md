@@ -64,6 +64,13 @@ vaststaat; **Generated** maakt en controleert een samenvattend document.
 
 Staat een model op de mock, dan zijn antwoorden eenvoudige fragmenten en is zoeken niet echt semantisch.
 
+## Weergave: licht of ambient (donker)
+
+Rechtsboven staat een knop die wisselt tussen **licht** (☀︎), **ambient** (☾) en **automatisch** (◐, volgt je computer);
+dezelfde keuze staat onder Instellingen → Weergave. Ambient is een rustig donker thema in het palet van Gaia (warm
+rookgrijs en saliegroen, zoals intro.higaia.nl) met een zacht groen schijnsel dat langzaam beweegt. Staat je computer op
+"minder beweging", dan staat het schijnsel stil. De keuze wordt onthouden. Een nieuwe installatie volgt je computer.
+
 ## Versie
 
 Onder de titel "Apollo" in de zijbalk staat het buildnummer (`0.` + datum en tijd, bijvoorbeeld `0.202610011556`) met de
