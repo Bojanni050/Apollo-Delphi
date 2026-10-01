@@ -291,6 +291,14 @@ export interface ModelList {
   error: string | null
 }
 
+export interface RetrievalSettings {
+  search_top_k: number
+  search_rrf_k: number
+  search_candidate_multiplier: number
+  ask_top_k: number
+  ask_history_turns: number
+}
+
 export interface EmbeddingSettings {
   provider: 'mock' | 'openai'
   model: string
@@ -488,6 +496,13 @@ export const api = {
     }),
   llmModels: (tier: LLMTierName, provider: string, baseUrl: string) =>
     request<ModelList>(`/api/llm/models?tier=${tier}&provider=${provider}&base_url=${encodeURIComponent(baseUrl)}`),
+  getRetrievalSettings: () => request<RetrievalSettings>('/api/retrieval/settings'),
+  updateRetrievalSettings: (body: Partial<RetrievalSettings>) =>
+    request<RetrievalSettings>('/api/retrieval/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
   getEmbeddingSettings: () => request<EmbeddingSettings>('/api/embeddings/settings'),
   updateEmbeddingSettings: (body: EmbeddingSettingsUpdate) =>
     request<EmbeddingSettings>('/api/embeddings/settings', {

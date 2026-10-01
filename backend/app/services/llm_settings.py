@@ -37,9 +37,23 @@ FIELDS: dict[str, type] = {
     "embedding_api_key": str,
     "embedding_batch_size": int,
     "embedding_runtime": str,
+    # Retrieval and question answering (the "Vragen en zoeken" card).
+    "search_top_k": int,
+    "search_rrf_k": int,
+    "search_candidate_multiplier": int,
+    "ask_top_k": int,
+    "ask_history_turns": int,
     # Legacy: written by the first settings page; still read as a fallback key.
     "openai_api_key": str,
     "anthropic_api_key": str,
+}
+#: Allowed range (inclusive) of each integer retrieval setting; the same bounds as the environment variables.
+RETRIEVAL_RANGES: dict[str, tuple[int, int]] = {
+    "search_top_k": (1, 50),
+    "search_rrf_k": (1, 1000),
+    "search_candidate_multiplier": (1, 50),
+    "ask_top_k": (1, 30),
+    "ask_history_turns": (1, 10),
 }
 EMBEDDING_PROVIDERS = ("mock", "openai")
 EMBEDDING_RUNTIMES = ("ollama", "llamacpp")
@@ -85,6 +99,10 @@ def validate(updates: dict[str, object]) -> None:
     batch = updates.get("embedding_batch_size")
     if batch is not None and not (1 <= int(batch) <= 512):  # type: ignore[arg-type]
         raise SettingsError("Embedding batch size must be between 1 and 512")
+    for key, (low, high) in RETRIEVAL_RANGES.items():
+        value = updates.get(key)
+        if value is not None and not (low <= int(value) <= high):  # type: ignore[arg-type]
+            raise SettingsError(f"{key} must be between {low} and {high}")
     for key in ("llm_base_url", "background_llm_base_url", "embedding_base_url"):
         base_url = updates.get(key)
         if base_url and not str(base_url).startswith(("http://", "https://")):

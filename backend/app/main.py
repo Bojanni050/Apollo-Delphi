@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analysis, ask, documents, embeddings, github, issues, knowledge, llm, pulse, search, workspaces
+from app.api import analysis, ask, documents, embeddings, github, issues, knowledge, llm, pulse, retrieval, search, workspaces
 from app.core.config import get_settings
 from app.core.logging import get_logger
 
@@ -28,6 +28,7 @@ app.include_router(knowledge.router, prefix=settings.api_prefix)
 app.include_router(ask.router, prefix=settings.api_prefix)
 app.include_router(pulse.router, prefix=settings.api_prefix)
 app.include_router(embeddings.router, prefix=settings.api_prefix)
+app.include_router(retrieval.router, prefix=settings.api_prefix)
 app.include_router(llm.router, prefix=settings.api_prefix)
 app.include_router(workspaces.router, prefix=settings.api_prefix)
 app.include_router(github.router, prefix=settings.api_prefix)
