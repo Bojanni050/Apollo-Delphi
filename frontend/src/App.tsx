@@ -8,6 +8,7 @@ import PulsePage from './pages/PulsePage'
 import AskPage from './pages/AskPage'
 import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
+import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
 import { api, type Workspace } from './api'
 
@@ -40,6 +41,9 @@ const CONTEXT_TITLES: Record<Page, string> = {
 export default function App() {
   const [page, setPage] = useState<Page>('documents')
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  // true once the list has been fetched: an empty list before that must not show the setup wizard
+  const [workspacesLoaded, setWorkspacesLoaded] = useState(false)
+  const [wizardSkipped, setWizardSkipped] = useState(false)
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
@@ -52,6 +56,7 @@ export default function App() {
     try {
       const list = await api.listWorkspaces()
       setWorkspaces(list)
+      setWorkspacesLoaded(true)
       if (!preserveActive || activeWorkspaceId === null || !list.some((w) => w.id === activeWorkspaceId)) {
         const stored = localStorage.getItem('apollo.activeWorkspaceId')
         const id = stored ? Number(stored) : null
@@ -93,6 +98,12 @@ export default function App() {
     } catch (e) {
       setError((e as Error).message)
     }
+  }
+
+  const finishSetup = async (ws: Workspace, after: AfterSetup) => {
+    await loadWorkspaces(false)
+    setActiveWorkspaceId(ws.id)
+    setPage(after)
   }
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null
@@ -173,6 +184,10 @@ export default function App() {
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   )
+
+  if (workspacesLoaded && workspaces.length === 0 && !wizardSkipped) {
+    return <SetupWizard onFinished={finishSetup} onSkip={() => setWizardSkipped(true)} />
+  }
 
   return (
     <AppShell
