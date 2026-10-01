@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, type AdoptResult, type Unassigned } from '../api'
 import { Button, Card, ErrorText } from '../components'
+import Modal from '../components/Modal'
 
 function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`
@@ -19,6 +20,7 @@ export default function UnassignedBanner({
   const [counts, setCounts] = useState<Unassigned | null>(null)
   const [result, setResult] = useState<AdoptResult | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -33,16 +35,19 @@ export default function UnassignedBanner({
     void load()
   }, [load, workspaceId])
 
+  const what = counts
+    ? [
+        plural(counts.documents, 'document', 'documenten'),
+        counts.analysis_runs ? plural(counts.analysis_runs, 'analyse', 'analyses') : '',
+        counts.generated_documents ? plural(counts.generated_documents, 'gegenereerd document', 'gegenereerde documenten') : '',
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : ''
+
   const adopt = async () => {
     if (!workspaceId || !counts) return
-    const what = [
-      plural(counts.documents, 'document', 'documenten'),
-      counts.analysis_runs ? plural(counts.analysis_runs, 'analyse', 'analyses') : '',
-      counts.generated_documents ? plural(counts.generated_documents, 'gegenereerd document', 'gegenereerde documenten') : '',
-    ]
-      .filter(Boolean)
-      .join(', ')
-    if (!window.confirm(`${what} onderbrengen in werkmap "${workspaceName}"?\n\nDit is niet terug te draaien vanuit de app.`)) return
+    setConfirming(false)
     setBusy(true)
     setError(null)
     try {
@@ -92,12 +97,31 @@ export default function UnassignedBanner({
             : 'Kies of maak eerst een werkmap om ze onder te brengen.'}
         </div>
         {workspaceId ? (
-          <Button onClick={() => void adopt()} disabled={busy}>
+          <Button onClick={() => setConfirming(true)} disabled={busy}>
             {busy ? 'Bezig…' : `Onderbrengen in “${workspaceName}”`}
           </Button>
         ) : null}
       </div>
       <ErrorText message={error} />
+      {confirming && (
+        <Modal
+          title={`Onderbrengen in “${workspaceName}”?`}
+          onClose={() => setConfirming(false)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
+                Annuleren
+              </Button>
+              <Button onClick={() => void adopt()}>Onderbrengen</Button>
+            </>
+          }
+        >
+          <p>
+            {what} worden ondergebracht in de werkmap <strong>{workspaceName}</strong>.
+          </p>
+          <p className="mt-2 text-xs text-slate-500">Dit is niet terug te draaien vanuit de app.</p>
+        </Modal>
+      )}
     </Card>
   )
 }

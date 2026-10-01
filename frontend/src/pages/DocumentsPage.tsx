@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, formatLines, type DocumentRecord, type SearchHit, type SearchMode } from '../api'
 import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
 import FolderUpload from './FolderUpload'
+import IndexProgress from './IndexProgress'
 import UnassignedBanner from './UnassignedBanner'
 
 function formatSize(bytes: number): string {
@@ -132,6 +133,11 @@ export default function DocumentsPage({
           void refresh()
           onChanged?.()
         }}
+      />
+      <IndexProgress
+        workspaceId={workspaceId ?? null}
+        waiting={documents.filter((d) => d.indexing_status === 'pending' || d.indexing_status === 'failed').length}
+        onProgress={() => void refresh()}
       />
       <Card>
         <h2 className="text-lg font-semibold mb-3">Upload documents</h2>

@@ -18,9 +18,15 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
 - Een werkmap bundelt de documenten van één onderwerp; zoeken, vragen en analyses blijven binnen de werkmap. Elke
   werkmap is ook een git-map: elke upload wordt vastgelegd in `Inbox/`.
 - **Documents → Upload documents**: PDF, Word, Markdown en tekst. Bestanden worden geïndexeerd.
-- **Map uploaden…**: kies een map; alle submappen worden doorlopen. Je ziet eerst wat wordt toegevoegd en wat wordt
-  overgeslagen (verborgen/tooling-mappen, niet-ondersteunde, lege en tijdelijke bestanden). Elk bestand krijgt zijn pad
-  als naam (`docs/adr/001.md`). Opnieuw dezelfde map kiezen voegt alleen toe wat nieuw is. Stoppen kan tussendoor.
+- **Map toevoegen…**: kies een map met de eigen mappenkiezer van de app; alle submappen worden doorlopen. Je ziet
+  eerst wat wordt toegevoegd en wat wordt overgeslagen (verborgen/tooling-mappen, niet-ondersteunde, lege en tijdelijke
+  bestanden). Elk bestand krijgt zijn pad als naam (`docs/adr/001.md`). Opnieuw dezelfde map kiezen voegt alleen toe
+  wat nieuw is. Stoppen kan tussendoor. ("of upload via de browser" kan ook, maar dan toont de browser zelf een
+  bevestiging.)
+- **Indexeren op de achtergrond**: bestanden zijn binnen een paar seconden toegevoegd; het indexeren (embedden)
+  loopt daarna op de achtergrond. Boven op de Documents-pagina staat de voortgang met de geschatte tijd. Je kunt
+  gewoon verder werken; documenten zijn doorzoekbaar zodra ze klaar zijn. Wachten er nog documenten (bijvoorbeeld na
+  een herstart), dan staat er "Nu indexeren".
 - Een GitHub-repository toevoegen kan ook (de inhoud wordt als één document geïndexeerd).
 
 ## Vragen stellen

@@ -194,6 +194,31 @@ export interface GeneratedDocument {
   created_at: string
 }
 
+/** A folder of the machine the backend runs on, read recursively by the backend (no browser upload). */
+export interface FolderScan {
+  /** Full path of the folder. */
+  root: string
+  /** The folder's own name: the first part of every imported file's name. */
+  name: string
+  files: { path: string; size: number; content_hash: string }[]
+  skipped: { path: string; reason: string }[]
+  /** More importable files than are listed. */
+  truncated: boolean
+}
+
+/** Progress of the background indexing. */
+export interface IndexProgress {
+  active: boolean
+  total: number
+  done: number
+  failed: number
+  current: string | null
+  /** Seconds per document so far in this batch. */
+  seconds_per_document: number | null
+  errors: { document_id: number; filename: string; error: string | null }[]
+  added: number
+}
+
 export interface FolderBrowse {
   current_path: string
   /** null at the top (a drive root or "/"). */
@@ -513,6 +538,27 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, working_dir: workingDir || null }),
     }),
+  scanFolder: (path: string) =>
+    request<FolderScan>('/api/documents/folder/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    }),
+  /** Import one file of a scanned folder (the backend reads it from disk). */
+  importFolderFile: (workspaceId: number | null, root: string, path: string) =>
+    request<DocumentRecord>('/api/documents/folder/file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace_id: workspaceId, root, path }),
+    }),
+  /** Index in the background and return at once: every pending document of the werkmap, or just ``documentIds``. */
+  queueIndexing: (workspaceId: number | null, documentIds?: number[]) =>
+    request<IndexProgress>('/api/documents/index-queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace_id: workspaceId, document_ids: documentIds ?? null }),
+    }),
+  indexingProgress: () => request<IndexProgress>('/api/documents/index-queue'),
   browseFolders: (path?: string) =>
     request<FolderBrowse>(`/api/system/folders${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   unassigned: () => request<Unassigned>('/api/workspaces/unassigned'),
