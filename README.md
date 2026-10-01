@@ -76,6 +76,9 @@ alembic upgrade head
 
 Apollo also runs as a normal Windows application (Tauri 2): its own window, no browser, no Docker, no PostgreSQL.
 
+The quickest way: **double-click `start.cmd`** (in a terminal: `.\start.cmd`). The first time it sets everything up
+(the steps below), after that it just opens the app. `start.cmd setup` only sets up or updates.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup-desktop.ps1   # once: .venv, packages, frontend build
 npm run desktop                                                      # builds the frontend and opens the app
