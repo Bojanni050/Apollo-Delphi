@@ -33,3 +33,6 @@ backend/models/
 .venv/
 src-tauri/target/
 src-tauri/gen/
+
+# Agent instructions (personal, not part of the project)
+agents.md
