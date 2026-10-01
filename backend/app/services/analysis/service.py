@@ -6,6 +6,7 @@ import json
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
+from app.models.document import READY_STATUSES
 from app.models import (
     AnalysisRun,
     Claim,
@@ -44,7 +45,7 @@ class AnalysisService:
 
     def run_analysis(self, db: Session, workspace_id: int | None = None) -> AnalysisRun:
         # Documents of this werkmap; without one, only documents that belong to no werkmap.
-        docs = db.query(Document).filter(Document.indexing_status == "indexed", Document.workspace_id == workspace_id).all()
+        docs = db.query(Document).filter(Document.indexing_status.in_(READY_STATUSES), Document.workspace_id == workspace_id).all()
         run = AnalysisRun(status="running", workspace_id=workspace_id)
         db.add(run)
         db.commit()

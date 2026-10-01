@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models import Document, DocumentChunk
 from app.services.chunking.chunker import Chunk, Chunker
@@ -23,12 +24,21 @@ class IndexingError(Exception):
 class ReconcileStats:
     added: int = 0
     reused: int = 0  #: kept with their existing embedding
-    reembedded: int = 0  #: kept, but embedded again (other model or missing vector)
+    reembedded: int = 0  #: kept, but to be embedded again (other model or missing vector)
     removed: int = 0
 
 
 class IndexingService:
-    """Pipeline: extraction → normalization → chunking → reconcile with stored chunks → embedding → storage."""
+    """Indexing in two steps, so a document is usable long before the slow part is done.
+
+    1. ``parse_document``: extraction → chunking → reconcile with the stored chunks. Quick (a fraction of a second). The
+       document is then ``parsed``: it can be read, its fragments exist and it is searchable by words.
+    2. ``embed_document``: embed the fragments that have no vector of the active model, a batch at a time, storing each batch
+       as it comes. Slow (seconds per fragment on a CPU). The document is ``indexed`` when none is missing; until then
+       semantic search already uses the fragments that are done.
+
+    ``index_document`` does both, one after the other.
+    """
 
     def __init__(self, embedding_service: EmbeddingService | None = None, chunker: Chunker | None = None):
         self.embedding_service = embedding_service or EmbeddingService()
@@ -42,13 +52,13 @@ class IndexingService:
             and row.embedding_dim == len(row.embedding)
         )
 
-    async def _reconcile_chunks(self, db: Session, document_id: int, chunks: list[Chunk]) -> ReconcileStats:
-        """Bring the stored chunks in line with ``chunks`` and embed only what is new.
+    def _reconcile_chunks(self, db: Session, document_id: int, chunks: list[Chunk]) -> ReconcileStats:
+        """Bring the stored chunks in line with ``chunks``; nothing is embedded here.
 
-        A chunk is identified by its text. A stored row whose text is still present is kept (same id, so
-        claims and evidence pointing at it survive) and gets its position, page, section and line range refreshed. Its
-        embedding is reused when it was made with the active model, and recomputed otherwise. Rows whose
-        text is gone are deleted; text without a row is inserted. Duplicate texts are matched one to one.
+        A chunk is identified by its text. A stored row whose text is still present is kept (same id, so claims and
+        evidence pointing at it survive) and gets its position, page, section and line range refreshed; its embedding
+        stays, and ``embed_document`` replaces it when it was made with another model. Rows whose text is gone are
+        deleted; text without a row is inserted (without an embedding). Duplicate texts are matched one to one.
         """
         existing: dict[str, list[DocumentChunk]] = {}
         rows = (
@@ -60,16 +70,10 @@ class IndexingService:
         for row in rows:
             existing.setdefault(row.content, []).append(row)
 
-        matched: list[DocumentChunk | None] = []
+        stats = ReconcileStats()
         for chunk in chunks:
             candidates = existing.get(chunk.content)
-            matched.append(candidates.pop(0) if candidates else None)
-
-        to_embed = [c.content for c, row in zip(chunks, matched) if row is None or not self._has_current_embedding(row)]
-        vectors = iter(await self.embedding_service.embed_documents(to_embed) if to_embed else [])
-
-        stats = ReconcileStats()
-        for chunk, row in zip(chunks, matched):
+            row = candidates.pop(0) if candidates else None
             if row is None:
                 row = DocumentChunk(document_id=document_id, content=chunk.content)
                 db.add(row)
@@ -78,9 +82,6 @@ class IndexingService:
                 stats.reused += 1
             else:
                 stats.reembedded += 1
-            if not self._has_current_embedding(row):
-                emb = list(next(vectors))
-                row.embedding, row.embedding_model, row.embedding_dim = emb, self.embedding_service.model, len(emb)
             row.chunk_index, row.page_number, row.section = chunk.chunk_index, chunk.page_number, chunk.section
             row.line_start, row.line_end = chunk.line_start, chunk.line_end
 
@@ -93,7 +94,18 @@ class IndexingService:
         log.info("Reconciled document %s: %s", document_id, stats)
         return stats
 
-    async def index_document(self, db: Session, document_id: int) -> Document:
+    def _missing_embeddings(self, db: Session, document_id: int) -> list[DocumentChunk]:
+        rows = (
+            db.query(DocumentChunk)
+            .filter(DocumentChunk.document_id == document_id)
+            .order_by(DocumentChunk.chunk_index, DocumentChunk.id)
+            .all()
+        )
+        return [r for r in rows if not self._has_current_embedding(r)]
+
+    async def parse_document(self, db: Session, document_id: int) -> Document:
+        """Extract, chunk and store the fragments (no embedding): the document becomes ``parsed``, or ``indexed`` when
+        every fragment already has a vector of the active model."""
         doc = db.get(Document, document_id)
         if doc is None:
             raise IndexingError(f"Document {document_id} not found")
@@ -109,9 +121,10 @@ class IndexingService:
             chunks = self.chunker.chunk(extraction)
             if not chunks:
                 raise IndexingError("No text content could be extracted from the document")
-            await self._reconcile_chunks(db, doc.id, chunks)
+            self._reconcile_chunks(db, doc.id, chunks)
+            missing = bool(self._missing_embeddings(db, doc.id))
         except Exception as exc:
-            log.exception("Indexing failed for document %s", document_id)
+            log.exception("Parsing failed for document %s", document_id)
             db.rollback()
             doc = db.get(Document, document_id)
             doc.indexing_status = "failed"
@@ -120,11 +133,58 @@ class IndexingService:
             db.refresh(doc)
             return doc
 
-        doc.indexing_status = "indexed"
-        doc.indexed_at = dt.datetime.now(dt.timezone.utc)
+        doc.indexing_status = "parsed" if missing else "indexed"
+        if not missing:
+            doc.indexed_at = dt.datetime.now(dt.timezone.utc)
         doc.error_message = None
         if extraction.title and not doc.title:
             doc.title = extraction.title[:512]
         db.commit()
         db.refresh(doc)
         return doc
+
+    async def embed_document(self, db: Session, document_id: int) -> Document:
+        """Embed the fragments without a vector of the active model, a batch at a time, storing each batch as it comes.
+
+        A failure (the model is not reachable) keeps what is done, leaves the document ``parsed`` (so it stays readable and
+        searchable by words) and records the reason in ``error_message``; asking again continues with what is missing.
+        """
+        doc = db.get(Document, document_id)
+        if doc is None:
+            raise IndexingError(f"Document {document_id} not found")
+        if doc.indexing_status not in ("parsed", "indexed"):
+            raise IndexingError(f"Document is {doc.indexing_status}: parse it first")
+
+        missing = self._missing_embeddings(db, doc.id)
+        batch = max(1, get_settings().embedding_batch_size)
+        try:
+            for start in range(0, len(missing), batch):
+                part = missing[start : start + batch]
+                vectors = await self.embedding_service.embed_documents([row.content for row in part])
+                for row, vector in zip(part, vectors):
+                    emb = list(vector)
+                    row.embedding, row.embedding_model, row.embedding_dim = emb, self.embedding_service.model, len(emb)
+                db.commit()
+        except Exception as exc:
+            log.exception("Embedding failed for document %s", document_id)
+            db.rollback()
+            doc = db.get(Document, document_id)
+            doc.indexing_status = "parsed"
+            doc.error_message = f"Embedden mislukt: {str(exc)[:1900]}"
+            db.commit()
+            db.refresh(doc)
+            return doc
+
+        doc = db.get(Document, document_id)
+        doc.indexing_status = "indexed"
+        doc.indexed_at = dt.datetime.now(dt.timezone.utc)
+        doc.error_message = None
+        db.commit()
+        db.refresh(doc)
+        return doc
+
+    async def index_document(self, db: Session, document_id: int) -> Document:
+        doc = await self.parse_document(db, document_id)
+        if doc.indexing_status == "failed":
+            return doc
+        return await self.embed_document(db, document_id)

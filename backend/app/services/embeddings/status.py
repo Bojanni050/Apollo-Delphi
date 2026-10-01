@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.embeddings import EmbeddingError, get_embedding_provider
 from app.core.logging import get_logger
 from app.models import Document, DocumentChunk
+from app.models.document import READY_STATUSES
 
 log = get_logger(__name__)
 
@@ -27,8 +28,8 @@ class IndexStatus:
 
 
 def _stale_document_ids(db: Session, model: str | None, workspace_id: int | None) -> list[int]:
-    """Indexed documents with no chunk embedded by the active model (old model, legacy, or missing)."""
-    q = db.query(Document.id).filter(Document.indexing_status == "indexed")
+    """Documents with no chunk embedded by the active model (old model, legacy, or missing), and every ``parsed`` one."""
+    q = db.query(Document.id).filter(Document.indexing_status.in_(READY_STATUSES))
     if workspace_id is not None:
         q = q.filter(Document.workspace_id == workspace_id)
     ids = [r[0] for r in q.order_by(Document.id).all()]
@@ -41,7 +42,8 @@ def _stale_document_ids(db: Session, model: str | None, workspace_id: int | None
         .distinct()
         .all()
     }
-    return [i for i in ids if i not in current]
+    parsed = {r[0] for r in db.query(Document.id).filter(Document.id.in_(ids), Document.indexing_status == "parsed").all()}
+    return [i for i in ids if i not in current or i in parsed]
 
 
 def index_status(db: Session, workspace_id: int | None = None) -> IndexStatus:
@@ -83,7 +85,7 @@ async def reindex(db: Session, workspace_id: int | None = None, everything: bool
 
     provider = get_embedding_provider()
     if everything:
-        q = db.query(Document.id).filter(Document.indexing_status.in_(("indexed", "failed")))
+        q = db.query(Document.id).filter(Document.indexing_status.in_(("parsed", "indexed", "failed")))
         if workspace_id is not None:
             q = q.filter(Document.workspace_id == workspace_id)
         ids = [r[0] for r in q.order_by(Document.id).all()]

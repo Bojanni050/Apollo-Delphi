@@ -41,7 +41,7 @@ def test_pending_documents_of_a_werkmap_are_indexed_in_the_background(client):
     assert started["added"] == 3 and started["total"] == 3, "the request returns at once; the work runs on"
 
     status = _wait(client)
-    assert (status["total"], status["done"], status["failed"]) == (3, 3, 0)
+    assert (status["total"], status["parsed"], status["done"], status["failed"]) == (3, 3, 3, 0)
     assert status["seconds_per_document"] is not None
     assert {d["indexing_status"] for d in client.get("/api/documents", params={"workspace_id": ws}).json()} == {"indexed"}
     assert client.get("/api/search", params={"q": "harbour quay", "workspace_id": ws}).json()["results"]
@@ -89,3 +89,42 @@ def test_documents_left_processing_by_a_stopped_app_become_pending_again(client,
     db.commit()
     assert recover_interrupted_indexing() == 1
     assert client.get(f"/api/documents/{doc['id']}").json()["indexing_status"] == "pending"
+
+
+class _DownProvider:
+    name, model, dimensions = "down", "down-model", 4
+
+    async def embed_documents(self, texts):
+        raise RuntimeError("embedding server unreachable")
+
+    async def embed_query(self, text):
+        raise RuntimeError("embedding server unreachable")
+
+
+def test_when_the_embedding_model_is_down_the_documents_are_still_read_and_found_by_words(client):
+    from app.core import embeddings as emb
+
+    emb.set_embedding_provider(_DownProvider())
+    try:
+        ws = _ws(client)
+        for i in range(3):
+            _upload(client, ws, f"d{i}.txt", f"Document {i} about the harbour quay repairs.")
+        client.post("/api/documents/index-queue", json={"workspace_id": ws})
+        status = _wait(client)
+        assert (status["total"], status["parsed"], status["done"], status["failed"]) == (3, 3, 0, 3)
+        assert all("Embedden mislukt" in (e["error"] or "") for e in status["errors"])
+        docs = client.get("/api/documents", params={"workspace_id": ws}).json()
+        assert {d["indexing_status"] for d in docs} == {"parsed"}
+        hits = client.get("/api/search", params={"q": "harbour quay", "workspace_id": ws, "mode": "keyword"}).json()["results"]
+        assert len(hits) == 3, "readable, and searchable by words, although nothing could be embedded"
+        assert client.get(f"/api/documents/{docs[0]['id']}/text").json()["chunks"], "and the reading pane has its fragments"
+    finally:
+        emb.set_embedding_provider(None)
+
+    # the model is back: the same button finishes what is left
+    ws2 = client.get("/api/workspaces").json()[0]["id"]
+    added = client.post("/api/documents/index-queue", json={"workspace_id": ws2}).json()["added"]
+    assert added == 3, "parsed documents wait for their vectors, they are queued again"
+    status = _wait(client)
+    assert (status["done"], status["failed"]) == (3, 0)
+    assert {d["indexing_status"] for d in client.get("/api/documents", params={"workspace_id": ws2}).json()} == {"indexed"}

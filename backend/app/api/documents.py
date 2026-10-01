@@ -5,11 +5,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
 from app.core.config import get_settings
-from app.models import Document
+from app.models import Document, DocumentChunk
 from app.schemas.documents import (
-    DocumentOut, FolderFileRequest, FolderScanOut, FolderScanRequest, IndexQueueOut, IndexQueueRequest,
+    DocumentOut, DocumentTextOut, FolderFileRequest, FolderScanOut, FolderScanRequest, IndexQueueOut, IndexQueueRequest,
 )
 from app.services.documents.index_queue import index_queue
+from app.services.documents.reading import cached_text
+from app.services.extraction.base import ExtractionError
 from app.services.documents import folder_import
 from app.schemas.generated import GeneratedDocumentOut
 from app.services.documents.indexer import IndexingError, IndexingService
@@ -46,16 +48,18 @@ def _queue_out(added: int = 0) -> IndexQueueOut:
 
 @router.post("/index-queue", response_model=IndexQueueOut)
 async def queue_indexing(body: IndexQueueRequest, db: Session = Depends(get_session)):
-    """Index documents in the background, one after the other, and return at once.
+    """Index documents in the background and return at once.
 
-    Storing a file takes a fraction of a second, indexing it seconds to minutes (every fragment is embedded), so a page
-    that adds many files stores them first and queues them here. Progress: GET /documents/index-queue.
+    Every queued document is first read (extracted, cut into fragments: a fraction of a second, after which it can be read
+    and searched by words), then the documents are embedded one after the other (seconds per fragment on a CPU). Progress:
+    GET /documents/index-queue.
     """
     query = db.query(Document.id)
     if body.document_ids is not None:
         query = query.filter(Document.id.in_(body.document_ids))
     else:
-        query = query.filter(Document.workspace_id == body.workspace_id, Document.indexing_status == "pending")
+        # what still has to be read or embedded (a failed one is tried again)
+        query = query.filter(Document.workspace_id == body.workspace_id, Document.indexing_status.in_(("pending", "parsed", "failed")))
     ids = [row[0] for row in query.order_by(Document.id)]
     return _queue_out(added=index_queue.enqueue(ids))
 
@@ -115,6 +119,38 @@ def get_document(document_id: int, db: Session = Depends(get_session)):
     if doc is None:
         raise HTTPException(status_code=404, detail="Document not found")
     return doc
+
+
+@router.get("/{document_id}/text", response_model=DocumentTextOut)
+def get_document_text(document_id: int, db: Session = Depends(get_session)):
+    """The extracted text of a document with its pages and fragments, for the reading pane."""
+    doc = document_service.get_document(db, document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    try:
+        readable = cached_text(doc, document_service.extract)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="The stored file of this document is gone")
+    except (DocumentValidationError, ExtractionError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).order_by(DocumentChunk.chunk_index).all()
+    return DocumentTextOut(
+        id=doc.id,
+        workspace_id=doc.workspace_id,
+        filename=doc.filename,
+        title=doc.title,
+        file_type=doc.file_type,
+        source_type=doc.source_type,
+        text=readable.text,
+        line_count=readable.line_count,
+        pages=[{"page_number": p.page_number, "line": p.line} for p in readable.pages],
+        chunks=[
+            {"id": c.id, "chunk_index": c.chunk_index, "section": c.section, "page_number": c.page_number,
+             "line_start": c.line_start, "line_end": c.line_end}
+            for c in chunks
+        ],
+        truncated=readable.truncated,
+    )
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

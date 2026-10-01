@@ -9,6 +9,11 @@ from app.db.session import Base
 from app.db.vector import vector_column
 
 
+#: pending -> processing -> parsed -> indexed (or failed). A ``parsed`` document has its fragments: it can be read and is
+#: searchable by words; ``indexed`` means every fragment also has a vector of the active embedding model.
+READY_STATUSES = ("parsed", "indexed")
+
+
 class Document(Base):
     __tablename__ = "documents"
 

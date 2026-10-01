@@ -75,12 +75,49 @@ class IndexQueueOut(BaseModel):
     """Progress of the background indexing batch."""
 
     active: bool
+    #: Documents queued in this batch, how many are read (parsed), how many are completely indexed, how many failed.
     total: int
+    parsed: int
     done: int
     failed: int
+    #: "lezen" or "embedden" while a document is being worked on, with its name.
+    phase: str | None = None
     current: str | None = None
-    #: Seconds per document so far in this batch; None before the first one is finished.
+    #: Seconds of embedding per document so far in this batch; None before the first one is done.
     seconds_per_document: float | None = None
     errors: list[IndexErrorOut] = []
     #: How many documents this request added to the queue.
     added: int = 0
+
+
+class ReadingChunkOut(BaseModel):
+    id: int
+    chunk_index: int
+    section: str | None = None
+    page_number: int | None = None
+    #: Inclusive, 1-based lines in ``text``; None for a fragment indexed before line ranges existed.
+    line_start: int | None = None
+    line_end: int | None = None
+
+
+class ReadingPageOut(BaseModel):
+    page_number: int
+    #: The line of ``text`` where the page starts.
+    line: int
+
+
+class DocumentTextOut(BaseModel):
+    """What the reading pane shows: the extracted text of a document, its pages and where its indexed fragments lie."""
+
+    id: int
+    workspace_id: int | None
+    filename: str
+    title: str | None
+    file_type: str
+    source_type: str
+    text: str
+    line_count: int
+    pages: list[ReadingPageOut]
+    chunks: list[ReadingChunkOut]
+    #: The text was cut at a limit.
+    truncated: bool = False

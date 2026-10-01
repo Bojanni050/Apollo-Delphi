@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.core.llm import LLMError, LLMProvider, get_llm_provider, model_for
 from app.core.logging import get_logger
+from app.models.document import READY_STATUSES
 from app.models import Document, Workspace
 from app.models.pulse import PulseItem, PulseRun
 from app.services.documents.service import document_service
@@ -179,7 +180,7 @@ class PulseService:
 
         docs = (
             db.query(Document)
-            .filter(Document.workspace_id == workspace.id, Document.indexing_status == "indexed")
+            .filter(Document.workspace_id == workspace.id, Document.indexing_status.in_(READY_STATUSES))
             .order_by(Document.id)
             .all()
         )

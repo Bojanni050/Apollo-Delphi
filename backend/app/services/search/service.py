@@ -32,6 +32,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.embeddings import EmbeddingError
 from app.core.logging import get_logger
+from app.models.document import READY_STATUSES
 from app.services.embeddings.service import EmbeddingService
 
 log = get_logger(__name__)
@@ -234,7 +235,7 @@ class SearchService:
                 WHERE c.embedding IS NOT NULL
                   AND c.embedding_model = :model
                   AND c.embedding_dim = :dim
-                  AND d.indexing_status = 'indexed'
+                  AND d.indexing_status IN ('parsed', 'indexed')
                   AND (:has_docs = FALSE OR c.document_id = ANY(:doc_ids))
                 ORDER BY c.embedding <=> :vec
                 LIMIT :n
@@ -254,7 +255,7 @@ class SearchService:
                 DocumentChunk.embedding.isnot(None),
                 DocumentChunk.embedding_model == model,
                 DocumentChunk.embedding_dim == len(qvec),
-                Document.indexing_status == "indexed",
+                Document.indexing_status.in_(READY_STATUSES),
             )
             .all()
         )
@@ -286,7 +287,7 @@ class SearchService:
                 SELECT c.id
                 FROM document_chunks c
                 JOIN documents d ON d.id = c.document_id
-                WHERE d.indexing_status = 'indexed'
+                WHERE d.indexing_status IN ('parsed', 'indexed')
                   AND (:has_docs = FALSE OR c.document_id = ANY(:doc_ids))
                   AND to_tsvector('simple', c.content) @@ ({query})
                 ORDER BY ts_rank_cd(to_tsvector('simple', c.content), ({query})) DESC, c.id
@@ -305,7 +306,7 @@ class SearchService:
         rows = (
             db.query(DocumentChunk.id, DocumentChunk.document_id, DocumentChunk.content)
             .join(Document, Document.id == DocumentChunk.document_id)
-            .filter(Document.indexing_status == "indexed")
+            .filter(Document.indexing_status.in_(READY_STATUSES))
             .all()
         )
         docs = {cid: content for cid, doc_id, content in rows if not document_ids or doc_id in document_ids}

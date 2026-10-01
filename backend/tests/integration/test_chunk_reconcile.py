@@ -140,31 +140,78 @@ def test_evidence_keeps_pointing_at_unchanged_chunks(db, doc, text):
     assert db.get(Evidence, kept.id).chunk_id == chunks["One"].id
 
 
-def test_failed_embedding_leaves_stored_chunks_untouched(db, doc, text):
+class Broken(CountingEmbedder):
+    async def embed_documents(self, texts):
+        raise RuntimeError("provider down")
+
+
+def test_a_failing_embedding_keeps_the_document_readable_and_what_was_done(db, doc, text):
     text["sections"] = [("One", "alpha")]
     _index(db, doc, CountingEmbedder())
-    before = [(c.id, c.content) for c in _chunks(db, doc)]
-
-    class Broken(CountingEmbedder):
-        async def embed_documents(self, texts):
-            raise RuntimeError("provider down")
+    first = _chunks(db, doc)[0]
+    kept_id, kept_vector = first.id, list(first.embedding)
 
     text["sections"] = [("One", "alpha"), ("Two", "beta")]
     service = IndexingService(embedding_service=Broken(), chunker=Chunker(chunk_size=500, overlap=0))
-    assert asyncio.run(service.index_document(db, doc.id)).indexing_status == "failed"
+    result = asyncio.run(service.index_document(db, doc.id))
+    assert result.indexing_status == "parsed", "the fragments are stored and the document stays usable"
+    assert "Embedden mislukt" in result.error_message and "provider down" in result.error_message
     db.expire_all()
-    assert [(c.id, c.content) for c in _chunks(db, doc)] == before
+    one, two = _chunks(db, doc)
+    assert (one.id, list(one.embedding)) == (kept_id, kept_vector), "what already had its vector keeps it"
+    assert two.content.endswith("beta") and two.embedding is None, "the new fragment is stored, without a vector yet"
 
-
-def test_line_ranges_are_refreshed_on_a_reused_chunk(db, doc, text):
-    text["sections"] = [("One", "alpha"), ("Two", "beta")]
-    _index(db, doc, CountingEmbedder())
-    assert [(c.line_start, c.line_end) for c in _chunks(db, doc)] == [(1, 2), (4, 5)]
-
-    text["sections"] = [("Zero", "new\nmore"), ("One", "alpha"), ("Two", "beta")]
+    # asking again continues with what is missing
     emb = CountingEmbedder()
-    stats = _index(db, doc, emb)
-    assert (stats.added, stats.reused) == (1, 2)
-    assert [(c.section, c.line_start, c.line_end) for c in _chunks(db, doc)] == [
-        ("Zero", 1, 3), ("One", 5, 6), ("Two", 8, 9),
-    ]
+    done = asyncio.run(IndexingService(embedding_service=emb, chunker=Chunker(chunk_size=500, overlap=0)).embed_document(db, doc.id))
+    assert done.indexing_status == "indexed" and done.error_message is None
+    assert emb.calls == [["# Two\nbeta"]], "only the missing fragment is embedded"
+
+
+def _service(embedder):
+    return IndexingService(embedding_service=embedder, chunker=Chunker(chunk_size=500, overlap=0))
+
+
+def test_parsing_stores_the_fragments_without_embedding_anything(db, doc, text):
+    text["sections"] = [("One", "alpha"), ("Two", "beta")]
+    emb = CountingEmbedder()
+    parsed = asyncio.run(_service(emb).parse_document(db, doc.id))
+    assert parsed.indexing_status == "parsed" and emb.calls == []
+    db.expire_all()
+    chunks = _chunks(db, doc)
+    assert [c.section for c in chunks] == ["One", "Two"] and all(c.embedding is None for c in chunks)
+    assert [(c.line_start, c.line_end) for c in chunks] == [(1, 2), (4, 5)], "readable and locatable at once"
+
+
+def test_embedding_fills_in_the_vectors_a_batch_at_a_time(db, doc, text, monkeypatch):
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "embedding_batch_size", 2)
+    text["sections"] = [(f"S{i}", f"body {i}") for i in range(5)]
+    emb = CountingEmbedder()
+    service = _service(emb)
+    asyncio.run(service.parse_document(db, doc.id))
+    done = asyncio.run(service.embed_document(db, doc.id))
+    assert done.indexing_status == "indexed"
+    assert [len(call) for call in emb.calls] == [2, 2, 1], "each batch is stored as it comes"
+    db.expire_all()
+    assert all(c.embedding is not None and c.embedding_model == "m1" for c in _chunks(db, doc))
+
+
+def test_parsing_a_document_that_is_fully_embedded_leaves_it_indexed(db, doc, text):
+    text["sections"] = [("One", "alpha")]
+    _index(db, doc, CountingEmbedder())
+    emb = CountingEmbedder()
+    again = asyncio.run(_service(emb).parse_document(db, doc.id))
+    assert again.indexing_status == "indexed" and emb.calls == []
+
+
+def test_a_parsed_document_is_found_by_its_words_before_it_is_embedded(db, doc, text):
+    from app.services.search.service import SearchService
+
+    text["sections"] = [("Harbour", "The harbour budget is 250000 EUR."), ("Other", "Nothing about it.")]
+    asyncio.run(_service(CountingEmbedder()).parse_document(db, doc.id))
+    db.expire_all()
+    assert db.get(Document, doc.id).indexing_status == "parsed"
+    hits = asyncio.run(SearchService().search(db, "harbour budget", top_k=3, mode="keyword"))
+    assert hits and hits[0].section == "Harbour" and hits[0].match == "keyword"
