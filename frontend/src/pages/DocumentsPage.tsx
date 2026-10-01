@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, formatLines, type DocumentRecord, type SearchHit, type SearchMode } from '../api'
 import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
+import FolderUpload from './FolderUpload'
 import UnassignedBanner from './UnassignedBanner'
 
 function formatSize(bytes: number): string {
@@ -145,6 +146,12 @@ export default function DocumentsPage({
           className="text-sm"
         />
         <ErrorText message={error} />
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="text-sm text-slate-500 mb-2">
+            Of een hele map: alle submappen worden doorlopen en elk ondersteund bestand komt erin met zijn pad.
+          </p>
+          <FolderUpload workspaceId={workspaceId ?? null} onChanged={() => { onChanged?.(); void refresh() }} />
+        </div>
       </Card>
 
       <Card>

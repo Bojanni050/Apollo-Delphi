@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
@@ -20,11 +20,15 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 async def upload_document(
     file: UploadFile = File(...),
     workspace_id: int | None = None,
+    #: For a file of an uploaded folder: its path inside that folder ("docs/adr/001.md"). Names the document.
+    relative_path: str | None = Form(default=None),
     db: Session = Depends(get_session),
 ):
     data = await file.read()
     try:
-        doc = document_service.create_document(db, file.filename or "upload", data, workspace_id=workspace_id)
+        doc = document_service.create_document(
+            db, file.filename or "upload", data, workspace_id=workspace_id, relative_path=relative_path
+        )
     except DocumentValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return doc

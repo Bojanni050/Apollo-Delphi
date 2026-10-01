@@ -22,6 +22,8 @@ export interface DocumentRecord {
   title: string | null
   file_type: string
   file_size: number
+  /** SHA-256 of the file. */
+  content_hash: string
   indexing_status: 'pending' | 'processing' | 'indexed' | 'failed'
   error_message: string | null
   created_at: string
@@ -446,9 +448,11 @@ export interface WorkspaceDetail extends Workspace {
 export const api = {
   listDocuments: (workspaceId?: number | null) =>
     request<DocumentRecord[]>(`/api/documents${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
-  uploadDocument: (file: File, workspaceId?: number | null) => {
+  /** ``relativePath``: the file's path inside an uploaded folder ("docs/adr/001.md"); it names the document. */
+  uploadDocument: (file: File, workspaceId?: number | null, relativePath?: string) => {
     const form = new FormData()
     form.append('file', file)
+    if (relativePath) form.append('relative_path', relativePath)
     const qs = workspaceId ? `?workspace_id=${workspaceId}` : ''
     return request<DocumentRecord>(`/api/documents${qs}`, { method: 'POST', body: form })
   },

@@ -78,6 +78,31 @@ def _commit_paths(repo: Path, rel_paths: list[str], message: str) -> bool:
     return True
 
 
+MAX_PATH_DEPTH = 12
+MAX_PATH_CHARS = 500
+
+
+def clean_relative_path(path: str | None) -> str | None:
+    """A path inside an uploaded folder as ``a/b/c.md``: forward slashes, safe names, no way out of the folder.
+
+    None when there is no path. ValueError when it tries to leave the folder (``..``, an absolute path, a drive).
+    """
+    if not path or not path.strip():
+        return None
+    raw = path.replace("\\", "/")
+    if raw.startswith("/") or (len(raw) > 1 and raw[1] == ":"):
+        raise ValueError("A path must be relative to the uploaded folder")
+    parts = [p for p in raw.split("/") if p not in ("", ".")]
+    if not parts:
+        return None
+    if any(p == ".." for p in parts):
+        raise ValueError("A path must not contain '..'")
+    cleaned = [_SAFE_NAME_RE.sub("_", p).strip(" .") or "_" for p in parts]
+    if len(cleaned) > MAX_PATH_DEPTH or sum(len(p) + 1 for p in cleaned) > MAX_PATH_CHARS:
+        raise ValueError("That path is too deep or too long")
+    return "/".join(cleaned)
+
+
 def _unique_name(directory: Path, filename: str) -> str:
     name = _SAFE_NAME_RE.sub("_", Path(filename).name).strip(" .") or "document"
     stem, suffix = Path(name).stem, Path(name).suffix
@@ -89,14 +114,21 @@ def _unique_name(directory: Path, filename: str) -> str:
 
 
 def store_in_inbox(repo: Path, filename: str, data: bytes) -> str:
-    """Write the original into ``Inbox/`` (never overwriting) and commit it. Returns the repo-relative path."""
+    """Write the original into ``Inbox/`` (never overwriting) and commit it. Returns the repo-relative path.
+
+    ``filename`` may be a path from an uploaded folder (``docs/adr/001.md``): the subfolders are kept under Inbox.
+    """
     inbox = repo / INBOX_DIR
-    inbox.mkdir(parents=True, exist_ok=True)
-    name = _unique_name(inbox, filename)
-    tmp = inbox / f".{name}.part"
+    *folders, base = clean_relative_path(filename).split("/") if clean_relative_path(filename) else ["document"]
+    directory = inbox.joinpath(*folders)
+    directory.mkdir(parents=True, exist_ok=True)
+    if inbox.resolve() not in (directory.resolve(), *directory.resolve().parents):
+        raise OSError("The path leaves the Inbox")
+    name = _unique_name(directory, base)
+    tmp = directory / f".{name}.part"
     tmp.write_bytes(data)
-    tmp.replace(inbox / name)
-    rel = f"{INBOX_DIR}/{name}"
+    tmp.replace(directory / name)
+    rel = "/".join([INBOX_DIR, *folders, name])
     try:
         _commit_paths(repo, [rel], f"Add {rel}")
     except GitError as exc:

@@ -17,6 +17,8 @@ class DocumentOut(BaseModel):
     title: str | None
     file_type: str
     file_size: int
+    #: SHA-256 of the file: lets a client see that it is already there before uploading it again.
+    content_hash: str = ""
     indexing_status: str
     error_message: str | None
     created_at: dt.datetime

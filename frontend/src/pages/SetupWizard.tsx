@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api, type Workspace } from '../api'
 import { Button, Card, ErrorText } from '../components'
 import FolderPickerModal from './FolderPickerModal'
+import FolderUpload from './FolderUpload'
 
 type Step = 'name' | 'folder' | 'documents'
 
@@ -247,10 +248,11 @@ export default function SetupWizard({
                 className="hidden"
                 onChange={(e) => void upload(e.target.files)}
               />
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-start gap-2">
                 <Button variant="secondary" onClick={() => fileInput.current?.click()} disabled={busy}>
                   Bestanden kiezen…
                 </Button>
+                <FolderUpload workspaceId={created.id} />
               </div>
               {uploads.length > 0 && (
                 <ul className="mt-3 space-y-1 text-sm">

@@ -59,8 +59,18 @@ def store_file(data: bytes, ext: str) -> tuple[str, str]:
 
 
 class DocumentService:
-    def create_document(self, db: Session, filename: str, data: bytes, workspace_id: int | None = None) -> Document:
-        ext = validate_upload(filename, data)
+    def create_document(
+        self, db: Session, filename: str, data: bytes, workspace_id: int | None = None, relative_path: str | None = None
+    ) -> Document:
+        """``relative_path`` is the file's path inside an uploaded folder; it then names the document (and its place
+        in the werkmap's Inbox), so two README.md files of different subfolders stay apart."""
+        try:
+            display = workspace_repo.clean_relative_path(relative_path)
+        except ValueError as exc:
+            raise DocumentValidationError(str(exc)) from exc
+        # A plain upload keeps the strict check on its own name; only a folder path may contain slashes.
+        ext = validate_upload(display.rsplit("/", 1)[-1] if display else filename, data)
+        filename = display or filename
         stored, content_hash = store_file(data, ext)
         doc = Document(
             filename=filename[:512],

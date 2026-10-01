@@ -136,7 +136,10 @@ outputs validated by Pydantic models — the data model and pipeline are identic
 
 ```
 GET    /api/health
-POST   /api/documents                      upload (multipart)
+POST   /api/documents                      upload (multipart); optional form field relative_path = the file's path
+                                           inside an uploaded folder ("docs/adr/001.md"): names the document and is
+                                           kept under the werkmap's Inbox. The Documents page's "Map uploaden" walks
+                                           a chosen folder recursively and skips what is already there.
 GET    /api/documents                      list
 GET    /api/documents/{id}
 DELETE /api/documents/{id}
