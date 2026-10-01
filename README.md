@@ -93,6 +93,13 @@ The first start compiles the Rust shell and takes a few minutes.
   the app. The database is built and upgraded by Alembic at every start. Search runs over the stored vectors in
   Python and keyword search in memory, which is fine for one person's documents; Docker Compose with
   PostgreSQL/pgvector remains the setup for larger collections. The two do not share data.
+- **A local PostgreSQL instead of SQLite.** Put `DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/apollo_desktop`
+  in `backend/.env` (git ignores it; `APOLLO_DATABASE_URL` works too, in the environment or in that file, and wins).
+  At every start the app checks that the database exists and creates it when it does not (the user needs the
+  CREATE DATABASE right, a superuser has it), and checks that the server has the pgvector extension. Windows has no official pgvector download:
+  `scripts/install-pgvector-windows.ps1`, run as administrator, builds it from the official source with the MSVC
+  build tools and copies it into your PostgreSQL. Uploads and werkmappen stay in the data folder; the migrations
+  run at every start, as for SQLite.
 - **Folder picker.** In the desktop app the setup wizard browses your real folders.
 - **Not an installer yet.** The shell runs from this repository: it starts the repository's `.venv`, so moving the
   folder means running the setup again. A self-contained installer would have to bundle Python as well.
