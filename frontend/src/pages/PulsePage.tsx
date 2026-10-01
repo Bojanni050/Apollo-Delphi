@@ -14,6 +14,35 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
   const [items, setItems] = useState<PulseItem[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // documents that are not through indexing yet: unread ones do not take part, the ones still being embedded do
+  const [unread, setUnread] = useState(0)
+  const [embedding, setEmbedding] = useState(0)
+
+  useEffect(() => {
+    if (workspaceId === null) return
+    let cancelled = false
+    let timer: number | undefined
+    const tick = async () => {
+      let waiting = false
+      try {
+        const docs = await api.listDocuments(workspaceId)
+        if (cancelled) return
+        const open = docs.filter((d) => d.indexing_status === 'pending' || d.indexing_status === 'processing').length
+        const parsed = docs.filter((d) => d.indexing_status === 'parsed').length
+        setUnread(open)
+        setEmbedding(parsed)
+        waiting = open + parsed > 0
+      } catch {
+        /* the next look tries again */
+      }
+      if (!cancelled) timer = window.setTimeout(() => void tick(), waiting ? 3000 : 15000)
+    }
+    void tick()
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [workspaceId])
 
   const load = useCallback(async () => {
     if (workspaceId === null) return
@@ -79,6 +108,17 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
             </Button>
           </div>
         </div>
+        {unread > 0 && (
+          <p role="status" className="mt-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+            {unread} {unread === 1 ? 'document is' : 'documenten zijn'} nog niet gelezen en {unread === 1 ? 'doet' : 'doen'} niet mee. Wacht tot ze
+            klaar zijn en draai Delphi Pulse dan opnieuw; wat al is geanalyseerd wordt overgeslagen.
+          </p>
+        )}
+        {unread === 0 && embedding > 0 && (
+          <p role="status" className="mt-3 text-xs text-slate-500">
+            {embedding} {embedding === 1 ? 'document wordt' : 'documenten worden'} nog geëmbed. Delphi Pulse leest de tekst zelf, dus dat is geen probleem.
+          </p>
+        )}
         {run && (
           <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             Laatste run <StatusBadge status={run.status} />
