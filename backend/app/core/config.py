@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     api_prefix: str = "/api"
 
     database_url: str = "sqlite:///./apollo.db"
+    # The same as APOLLO_DATABASE_URL in the environment, but also read from backend/.env (which the desktop app uses).
+    apollo_database_url: str = ""
 
     upload_dir: str = "./uploads"
     workspaces_root: str = "./workspaces"

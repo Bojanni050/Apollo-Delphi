@@ -43,14 +43,31 @@ def default_data_dir() -> Path:
     return base / APP_FOLDER
 
 
-def configure_environment(data_dir: Path) -> dict[str, str]:
+def configured_database_url(settings=None) -> str:
+    """The database the user chose, if any: ``APOLLO_DATABASE_URL`` in the environment or in backend/.env, else
+    ``DATABASE_URL`` in backend/.env. Empty when nothing was chosen (the default SQLite file is meant then)."""
+    if os.environ.get("APOLLO_DATABASE_URL"):
+        return os.environ["APOLLO_DATABASE_URL"]
+    if settings is None:
+        # A fresh object, not get_settings(): that one is cached, and reading it now would freeze every setting
+        # before configure_environment has put the data folder in the environment.
+        from app.core.config import Settings
+
+        settings = Settings()
+    if settings.apollo_database_url:
+        return settings.apollo_database_url
+    return settings.database_url if "database_url" in settings.model_fields_set else ""
+
+
+def configure_environment(data_dir: Path, settings=None) -> dict[str, str]:
     """Point the app at ``data_dir`` by setting the environment variables it reads. Existing ones are kept.
 
-    Must run before ``app`` is imported: the database engine is created at import time.
+    The database is SQLite in ``data_dir`` unless one was chosen (see ``configured_database_url``), for example a
+    local PostgreSQL with pgvector. Must run before ``app`` is imported: the engine is created at import time.
     """
     data_dir.mkdir(parents=True, exist_ok=True)
     defaults = {
-        "APOLLO_DATABASE_URL": f"sqlite:///{(data_dir / 'apollo.db').as_posix()}",
+        "APOLLO_DATABASE_URL": configured_database_url(settings) or f"sqlite:///{(data_dir / 'apollo.db').as_posix()}",
         "UPLOAD_DIR": str(data_dir / "uploads"),
         "WORKSPACES_ROOT": str(data_dir / "workspaces"),
         "LLAMACPP_MODELS_DIR": str(data_dir / "models"),
@@ -61,6 +78,100 @@ def configure_environment(data_dir: Path) -> dict[str, str]:
             os.environ[key] = value
             applied[key] = value
     return applied
+
+
+class DatabaseError(SystemExit):
+    """A database problem the user can fix; the message says how. Raised as SystemExit so it prints cleanly."""
+
+
+def _describe(exc: Exception) -> str:
+    return str(getattr(exc, "orig", exc)).strip().splitlines()[0]
+
+
+def _missing_database(exc: Exception) -> bool:
+    orig = getattr(exc, "orig", exc)
+    return getattr(orig, "pgcode", None) == "3D000" or ("database" in str(orig) and "does not exist" in str(orig))
+
+
+def ensure_database(url: str, create_engine=None) -> bool:
+    """For PostgreSQL: make sure the database exists (create it when it does not) and that pgvector is available.
+
+    Returns True when the database was created. Other databases (SQLite creates its own file) are left alone.
+    Problems are reported in plain words, with what to do about them, instead of a driver traceback.
+    """
+    from sqlalchemy import text
+    from sqlalchemy.engine import make_url
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
+    if create_engine is None:
+        from sqlalchemy import create_engine
+
+    target = make_url(url)
+    if target.get_backend_name() != "postgresql":
+        return False
+    name, where = target.database, f"{target.host or 'localhost'}:{target.port or 5432}"
+
+    def connect(database: str):
+        return create_engine(target.set(database=database), isolation_level="AUTOCOMMIT", pool_pre_ping=False)
+
+    created = False
+    try:
+        engine = connect(name)
+        with engine.connect():
+            pass
+    except OperationalError as exc:
+        if not _missing_database(exc):
+            raise DatabaseError(_unreachable(target, where, exc)) from exc
+        created = _create_database(connect, name, target, where)
+        engine = connect(name)
+    try:
+        with engine.connect() as conn:
+            available = conn.execute(text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'")).first()
+    except (OperationalError, ProgrammingError) as exc:
+        raise DatabaseError(f"Could not check the database '{name}' on {where}: {_describe(exc)}") from exc
+    finally:
+        engine.dispose()
+    if not available:
+        raise DatabaseError(
+            f"The PostgreSQL server on {where} does not have the pgvector extension, which Apollo needs.\n"
+            "On Windows there is no official download: run, as administrator,\n"
+            "  powershell -ExecutionPolicy Bypass -File scripts\\install-pgvector-windows.ps1"
+        )
+    return created
+
+
+def _unreachable(target, where: str, exc: Exception) -> str:
+    reason = _describe(exc)
+    if "password authentication failed" in reason or "no password supplied" in reason:
+        return f"PostgreSQL on {where} refused the password for user '{target.username}'. Check DATABASE_URL in backend/.env."
+    return f"Could not connect to PostgreSQL on {where}: {reason}\nIs the server running? Check DATABASE_URL in backend/.env."
+
+
+def _create_database(connect, name: str, target, where: str) -> bool:
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+
+    last: Exception | None = None
+    for maintenance in ("postgres", "template1"):  # the databases every server has
+        try:
+            engine = connect(maintenance)
+            try:
+                with engine.connect() as conn:
+                    quoted = engine.dialect.identifier_preparer.quote(name)
+                    conn.execute(text(f"CREATE DATABASE {quoted}"))
+            finally:
+                engine.dispose()
+            print(f"Created database '{name}' on {where}", flush=True)
+            return True
+        except DBAPIError as exc:
+            last = exc
+            if "already exists" in str(exc):  # created by someone else in the meantime
+                return False
+    raise DatabaseError(
+        f"The database '{name}' does not exist on {where} and user '{target.username}' could not create it "
+        f"({_describe(last) if last else 'unknown error'}).\n"
+        f"Create it yourself:  CREATE DATABASE {name};  (as a user that may), then start Apollo again."
+    ) from last
 
 
 def migrate() -> None:
@@ -109,6 +220,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     configure_environment(args.data_dir or default_data_dir())
+    ensure_database(os.environ["APOLLO_DATABASE_URL"])  # PostgreSQL: create the database when it is missing
     migrate()
     app = build_app(args.frontend_dist)
 

@@ -54,9 +54,9 @@ def _load_runtime_settings() -> None:
 @app.on_event("startup")
 def startup() -> None:
     settings.ensure_upload_dir()
-    if not settings.database_url.startswith("postgresql"):
-        from app.db.session import init_db
+    from app.db.session import engine, init_db
 
+    if engine.dialect.name != "postgresql":  # PostgreSQL is built by Alembic (docker-compose, app.serve)
         init_db()
     _load_runtime_settings()
     log.info("Apollo started (environment=%s, llm=%s/%s, embeddings=%s/%s)", settings.environment, settings.llm_provider, settings.llm_model, settings.embedding_provider, settings.embedding_model)
