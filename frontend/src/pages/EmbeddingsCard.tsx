@@ -19,6 +19,19 @@ const PRESETS = [
   { label: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
 ]
 
+/** The Base URL a local runtime is served on (the same presets as the buttons under the Base URL field). */
+const RUNTIME_URLS: Record<string, string> = {
+  ollama: 'http://localhost:11434/v1',
+  llamacpp: 'http://localhost:8080/v1',
+}
+
+/** Whether ``url`` already points at that runtime (the backend recognises endpoints the same way). */
+function pointsAtRuntime(url: string, runtime: string): boolean {
+  const u = url.toLowerCase()
+  const ollama = u.includes('11434') || u.includes('ollama')
+  return runtime === 'ollama' ? ollama : !ollama && (u.includes('llama') || u.includes(':8080'))
+}
+
 const inputCls = 'w-full rounded border border-slate-300 px-2 py-1.5 text-sm'
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -192,6 +205,13 @@ export default function EmbeddingsCard() {
             </span>
           </Field>
 
+          {!draft.base_url.trim() && !saved.api_key_set && !apiKey && (
+            <p className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+              Zonder Base URL en zonder API-sleutel is er geen endpoint om te gebruiken. Vul de Base URL van je lokale
+              runtime in (zie de knoppen hierboven) of een sleutel voor OpenAI.
+            </p>
+          )}
+
           <Field label="Model" hint="Een model uit de lijst, of elke modelnaam die het endpoint kent. De dimensie wordt vastgelegd en bewaakt.">
             <input
               className={inputCls}
@@ -335,7 +355,12 @@ export default function EmbeddingsCard() {
                           variant="secondary"
                           disabled={busy !== null}
                           onClick={() => {
-                            setDraft({ ...draft, provider: 'openai', model: m.name })
+                            // A local model is only reachable through its runtime: without its address the
+                            // endpoint stays empty and the model cannot be used.
+                            const base_url = pointsAtRuntime(draft.base_url, catalog.runtime)
+                              ? draft.base_url
+                              : (RUNTIME_URLS[catalog.runtime] ?? draft.base_url)
+                            setDraft({ ...draft, provider: 'openai', model: m.name, base_url })
                           }}
                         >
                           Kiezen

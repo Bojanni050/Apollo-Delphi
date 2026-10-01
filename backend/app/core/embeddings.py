@@ -274,7 +274,8 @@ def _build() -> EmbeddingProvider:
         key = effective_embedding_key()
         if not s.embedding_base_url and not key:
             raise EmbeddingError(
-                "EMBEDDING_PROVIDER=openai needs an API key (OpenAI) or EMBEDDING_BASE_URL for a local runtime such as Ollama"
+                "No Base URL and no API key are set for the embedding model. Enter the Base URL of your local runtime "
+                "(http://localhost:8080/v1 for llama-server, http://localhost:11434/v1 for Ollama) or an OpenAI API key"
             )
         return OpenAICompatibleEmbeddingProvider(
             s.embedding_model,
