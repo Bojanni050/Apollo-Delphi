@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { api, type KnowledgeItem } from '../api'
 import { Button, Card, ErrorText } from '../components'
+import { useT } from '../i18n'
 
-const TYPE_LABELS: Record<string, string> = {
-  fact: 'Facts',
-  derived_conclusion: 'Derived conclusions',
-  assumption: 'Assumptions',
-  decision: 'Decisions',
-  unresolved_question: 'Unresolved questions',
-  resolved_contradiction: 'Resolved contradictions',
-  remaining_contradiction: 'Remaining contradictions',
+const TYPE_KEYS: Record<string, Parameters<ReturnType<typeof useT>>[0]> = {
+  fact: 'knowledge.facts',
+  derived_conclusion: 'knowledge.derived',
+  assumption: 'knowledge.assumptions',
+  decision: 'knowledge.decisions',
+  unresolved_question: 'knowledge.unresolvedQuestions',
+  resolved_contradiction: 'knowledge.resolvedContradictions',
+  remaining_contradiction: 'knowledge.remainingContradictions',
 }
 
 const TYPE_ORDER = [
@@ -23,6 +24,7 @@ const TYPE_ORDER = [
 ]
 
 export default function KnowledgePage({ workspaceId }: { workspaceId?: number | null }) {
+  const t = useT()
   const [items, setItems] = useState<KnowledgeItem[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,7 +81,7 @@ export default function KnowledgePage({ workspaceId }: { workspaceId?: number | 
 
       {grouped.map((g) => (
         <Card key={g.type}>
-          <h3 className="font-semibold mb-3">{TYPE_LABELS[g.type] ?? g.type}</h3>
+          <h3 className="font-semibold mb-3">{t(TYPE_KEYS[g.type] ?? g.type)}</h3>
           <ul className="space-y-2 text-sm">
             {g.items.map((i) => (
               <li key={i.id} className="border-b last:border-0 pb-2">

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { hasKey, translate, useLang } from './i18n'
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`card bg-white rounded-2xl border border-slate-200 shadow-sm p-5 ${className}`}>{children}</div>
@@ -15,17 +16,22 @@ export function Badge({ kind, children }: { kind: 'ok' | 'warn' | 'err' | 'neutr
 }
 
 export function StatusBadge({ status }: { status: string }) {
+  const lang = useLang()
+  const key = `status.${status}`
+  const label = hasKey(key) ? translate(lang, key) : status
   if (status === 'parsed')
     return (
-      <span title="Gelezen: het document is te lezen en te doorzoeken op woorden. Het embedden (zoeken op betekenis) loopt nog of wacht.">
-        <Badge kind="warn">gelezen</Badge>
+      <span title={translate(lang, 'status.gelezen')}>
+        <Badge kind="warn">{label}</Badge>
       </span>
     )
-  if (status === 'indexed' || status === 'resolved' || status === 'completed' || status === 'confirmed')
-    return <Badge kind="ok">{status}</Badge>
-  if (status === 'failed' || status === 'error' || status === 'disputed' || status === 'remaining_contradiction')
-    return <Badge kind="err">{status}</Badge>
-  return <Badge kind="warn">{status}</Badge>
+  const kind =
+    status === 'indexed' || status === 'resolved' || status === 'completed' || status === 'confirmed'
+      ? 'ok'
+      : status === 'failed' || status === 'error' || status === 'disputed' || status === 'remaining_contradiction'
+        ? 'err'
+        : 'warn'
+  return <Badge kind={kind}>{label}</Badge>
 }
 
 export function Button({

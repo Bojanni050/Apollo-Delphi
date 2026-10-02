@@ -5,6 +5,7 @@ import FolderUpload from './FolderUpload'
 import IndexProgress from './IndexProgress'
 import { useReader } from '../reader'
 import UnassignedBanner from './UnassignedBanner'
+import { useT } from '../i18n'
 
 /** The value of the group filter (and the key of the heading) for documents that have no group. */
 const NO_GROUP = '__none__'
@@ -24,6 +25,7 @@ export default function DocumentsPage({
   workspaceName?: string | null
   onChanged?: () => void
 }) {
+  const t = useT()
   const [documents, setDocuments] = useState<DocumentRecord[]>([])
   const reader = useReader()
   const [error, setError] = useState<string | null>(null)
@@ -144,7 +146,7 @@ export default function DocumentsPage({
         onProgress={() => void refresh()}
       />
       <Card>
-        <h2 className="text-lg font-semibold mb-3">Upload documents</h2>
+        <h2 className="text-lg font-semibold mb-3">{t('documents.upload')}</h2>
         <p className="text-sm text-slate-500 mb-3">Supported: PDF, DOCX, TXT, Markdown. Files are validated and indexed server-side.</p>
         <input
           ref={fileInput}
@@ -211,11 +213,11 @@ export default function DocumentsPage({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 border-b">
-              <th className="py-2">Name</th>
-              <th>Type</th>
-              <th>Size</th>
-              <th>Status</th>
-              <th>Uploaded</th>
+              <th className="py-2">{t('documents.name')}</th>
+              <th>{t('documents.type')}</th>
+              <th>{t('documents.size')}</th>
+              <th>{t('documents.status')}</th>
+              <th>{t('documents.uploaded')}</th>
               <th />
             </tr>
           </thead>

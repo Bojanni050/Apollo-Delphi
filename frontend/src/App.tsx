@@ -12,6 +12,7 @@ import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
 import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
+import { LangContext, loadLang, saveLang, type Lang } from './i18n'
 import DelphiChat from './DelphiChat'
 import delphiIcon from './icons/delphi.png'
 import { useTheme } from './theme'
@@ -61,6 +62,12 @@ const CONTEXT_TITLES: Record<Page, string> = {
 
 export default function App() {
   useTheme() // applies the chosen theme (also on the setup wizard, which has no top bar)
+  const [lang, setLang] = useState<Lang>(loadLang) // Dutch by default; remembered in this browser or app window
+  const chooseLang = (l: Lang) => {
+    setLang(l)
+    saveLang(l)
+    window.location.reload() // the interface texts are read once; a reload applies the choice everywhere
+  }
   const [page, setPage] = useState<Page>('documents')
   const pulseRunning = usePulseRunning()
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
@@ -235,10 +242,15 @@ export default function App() {
   )
 
   if (workspacesLoaded && workspaces.length === 0 && !wizardSkipped) {
-    return <SetupWizard onFinished={finishSetup} onSkip={() => setWizardSkipped(true)} />
+    return (
+      <LangContext.Provider value={lang}>
+        <SetupWizard onFinished={finishSetup} onSkip={() => setWizardSkipped(true)} />
+      </LangContext.Provider>
+    )
   }
 
   return (
+    <LangContext.Provider value={lang}>
     <AppShell
       flow={[
         { id: 'documents', label: 'Importeren', done: hasDocuments },
@@ -279,7 +291,7 @@ export default function App() {
             {page === 'pulse' && <PulsePage workspaceId={activeWorkspaceId} />}
             {page === 'weave' && <WeavePage workspaceId={activeWorkspaceId} />}
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
-            {page === 'settings' && <SettingsPage />}
+            {page === 'settings' && <SettingsPage onChooseLang={chooseLang} />}
             {page === 'analysis' && <AnalysisPage workspaceId={activeWorkspaceId} />}
             {page === 'knowledge' && <KnowledgePage workspaceId={activeWorkspaceId} />}
           </div>
@@ -288,5 +300,6 @@ export default function App() {
       {/* Delphi floats above every screen: her orb opens her chat, and dragging moves her out of the way */}
       <DelphiChat workspaceId={activeWorkspaceId} />
     </AppShell>
+    </LangContext.Provider>
   )
 }

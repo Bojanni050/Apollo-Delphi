@@ -3,8 +3,10 @@ import { api, formatLines, type Issue, type IssueDetail } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 import { SplitView } from '../layout/AppShell'
 import { useReader } from '../reader'
+import { useT } from '../i18n'
 
 export default function IssuesPage({ workspaceId }: { workspaceId?: number | null }) {
+  const t = useT()
   const reader = useReader()
   const [issues, setIssues] = useState<Issue[]>([])
   const [selected, setSelected] = useState<IssueDetail | null>(null)
@@ -181,10 +183,10 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                       rows={2}
                     />
                     <div className="flex gap-2">
-                      <Button onClick={() => void decide(selected.id, 'accept')} disabled={busy}>Accept</Button>
-                      <Button variant="secondary" onClick={() => void decide(selected.id, 'reject')} disabled={busy}>Reject</Button>
+                      <Button onClick={() => void decide(selected.id, 'accept')} disabled={busy}>{t('issues.accept')}</Button>
+                      <Button variant="secondary" onClick={() => void decide(selected.id, 'reject')} disabled={busy}>{t('issues.reject')}</Button>
                       <Button variant="secondary" onClick={() => void decide(selected.id, 'unresolved')} disabled={busy}>
-                        Mark unresolved
+                        {t('issues.markUnresolved')}
                       </Button>
                     </div>
                   </div>

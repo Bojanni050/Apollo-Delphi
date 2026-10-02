@@ -13,6 +13,8 @@ import {
 import { Badge, Button, Card, ErrorText } from '../components'
 import EmbeddingsCard from './EmbeddingsCard'
 import AppearanceCard from './AppearanceCard'
+import type { Lang } from '../i18n'
+import LanguageCard from './LanguageCard'
 import ModelPicker from './ModelPicker'
 import RetrievalCard from './RetrievalCard'
 
@@ -352,7 +354,7 @@ function TierCard({
   )
 }
 
-export default function SettingsPage() {
+export default function SettingsPage({ onChooseLang }: { onChooseLang: (lang: Lang) => void }) {
   const [settings, setSettings] = useState<LLMSettings | null>(null)
   const [status, setStatus] = useState<LLMStatus | null>(null)
   const [timeout, setTimeoutValue] = useState(120)
@@ -415,6 +417,7 @@ export default function SettingsPage() {
       <RetrievalCard />
 
       <AppearanceCard />
+      <LanguageCard onChoose={onChooseLang} />
 
       <Card>
         <Field label="Time-out (seconden)" hint="Geldt voor beide modellen.">

@@ -137,6 +137,13 @@ dezelfde keuze staat onder Instellingen → Weergave. Ambient is een rustig donk
 rookgrijs en saliegroen, zoals intro.higaia.nl) met een zacht groen schijnsel dat langzaam beweegt. Staat je computer op
 "minder beweging", dan staat het schijnsel stil. De keuze wordt onthouden. Een nieuwe installatie volgt je computer.
 
+## Taal
+
+De interface is in het **Nederlands** — dat is de standaardtaal. Wil je liever Engels, dan kies je dat
+onder Instellingen → Taal: de interface herlaadt meteen in de gekozen taal en onthoudt de keuze. Alle
+knoppen, labels en statusmeldingen volgen de taal; documenten, analyses en gesprekken met Delphi
+veranderen uiteraard niet van taal.
+
 ## Versie
 
 Onder de titel "Apollo" in de zijbalk staat het buildnummer (`0.` + datum en tijd, bijvoorbeeld `0.202610011556`) met de
