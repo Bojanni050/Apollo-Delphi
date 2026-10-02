@@ -47,6 +47,8 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
   const [error, setError] = useState<string | null>(null)
   const [noting, setNoting] = useState<number | null>(null)
   const [noted, setNoted] = useState<Set<number>>(new Set())
+  /** The reply Delphi just gave and offers to turn into a note (she asks herself, you only answer). */
+  const [offerNote, setOfferNote] = useState<number | null>(null)
   const orbRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -138,6 +140,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
       try {
         await api.delphiNote(workspaceId, replyId)
         setNoted((n) => new Set(n).add(replyId))
+        setOfferNote((id) => (id === replyId ? null : id))
       } catch (e) {
         setError((e as Error).message)
       } finally {
@@ -157,6 +160,8 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
     try {
       const result = await api.delphiChat(text, workspaceId, followUpOf)
       setMessages((m) => [...m, result.user_message, result.reply])
+      // An answer with substance is worth keeping: Delphi offers a note herself. A refusal is not.
+      setOfferNote(result.reply.refusal ? null : result.reply.id)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -258,6 +263,29 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
                 )}
               </div>
             ))}
+            {offerNote != null && !noted.has(offerNote) && !busy && (
+              <div className="flex flex-col items-start">
+                <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm italic text-slate-600">
+                  Zal ik van dit antwoord een notitie maken? Dan komt het bij de documenten van deze werkmap te
+                  staan.
+                </div>
+                <div className="mt-1 flex gap-1.5">
+                  <button
+                    onClick={() => void makeNote(offerNote)}
+                    disabled={noting != null}
+                    className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11.4px] font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-40"
+                  >
+                    {noting === offerNote ? 'notitie maken…' : 'Ja, maak er een notitie van'}
+                  </button>
+                  <button
+                    onClick={() => setOfferNote(null)}
+                    className="rounded-lg px-2.5 py-1 text-[11.4px] text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    Nee, laat maar
+                  </button>
+                </div>
+              </div>
+            )}
             {busy && (
               <div className="flex justify-start">
                 <div className="rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-400">Delphi denkt na…</div>
