@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
 from app.models.document import READY_STATUSES
+
+#: The value that stands for "the documents without a group" (the same one the search API takes).
+NO_GROUP = "__none__"
 from app.models import (
     AnalysisRun,
     Claim,
@@ -43,9 +46,22 @@ class AnalysisService:
     output is persisted as inspectable relational data before the next runs.
     """
 
-    def run_analysis(self, db: Session, workspace_id: int | None = None) -> AnalysisRun:
-        # Documents of this werkmap; without one, only documents that belong to no werkmap.
-        docs = db.query(Document).filter(Document.indexing_status.in_(READY_STATUSES), Document.workspace_id == workspace_id).all()
+    def run_analysis(self, db: Session, workspace_id: int | None = None, groups: list[str] | None = None) -> AnalysisRun:
+        """Analyse the documents of a werkmap (without one: the documents that belong to no werkmap).
+
+        ``groups`` limits the run to the documents of those groups (virtual folders; ``"__none__"`` = the ones without a group):
+        claims, open questions and contradictions are then found among those documents only, so one subject (or two) can be
+        looked at at a time, and a run is much smaller. Omitted or empty = every document.
+        """
+        query = db.query(Document).filter(Document.indexing_status.in_(READY_STATUSES), Document.workspace_id == workspace_id)
+        groups = [g for g in dict.fromkeys(groups or []) if g]
+        if groups:
+            named = [g for g in groups if g != NO_GROUP]
+            wanted = Document.group_name.in_(named) if named else None
+            if NO_GROUP in groups:
+                wanted = Document.group_name.is_(None) if wanted is None else (wanted | Document.group_name.is_(None))
+            query = query.filter(wanted)
+        docs = query.all()
         run = AnalysisRun(status="running", workspace_id=workspace_id)
         db.add(run)
         db.commit()
@@ -60,6 +76,7 @@ class AnalysisService:
                     "claims": claims_count,
                     "open_questions": questions_count,
                     "contradictions": contradictions_count,
+                    **({"groups": groups} if groups else {}),
                 }
             )
             run.completed_at = dt.datetime.now(dt.timezone.utc)

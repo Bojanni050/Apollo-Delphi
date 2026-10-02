@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_session
@@ -15,9 +15,13 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 
 @router.post("", response_model=AnalysisRunOut, status_code=201)
-def run_analysis(workspace_id: int | None = None, db: Session = Depends(get_session)):
+def run_analysis(
+    workspace_id: int | None = None,
+    groups: list[str] | None = Query(None, description="Only the documents of these groups (repeat the parameter); \"__none__\" = no group"),
+    db: Session = Depends(get_session),
+):
     try:
-        run = AnalysisService().run_analysis(db, workspace_id=workspace_id)
+        run = AnalysisService().run_analysis(db, workspace_id=workspace_id, groups=groups)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
     out = AnalysisRunOut(

@@ -40,5 +40,8 @@ class PulseItem(Base):
     tags: Mapped[str] = mapped_column(Text, default="[]")  # JSON list[str]
     connections: Mapped[str] = mapped_column(Text, default="[]")  # JSON list[{document_id, relation, why}]
     confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    #: Suggested type folder in the werkmap's repository (Reports, Drafts, ...) and virtual group; applied on accepting.
+    folder: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    group_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     decision: Mapped[str] = mapped_column(String(16), default="pending")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

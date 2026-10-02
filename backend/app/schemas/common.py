@@ -10,6 +10,8 @@ class AnalysisStats(BaseModel):
     claims: int = 0
     open_questions: int = 0
     contradictions: int = 0
+    #: The groups the run was limited to; None = every document.
+    groups: list[str] | None = None
 
 
 class AnalysisRunOut(BaseModel):

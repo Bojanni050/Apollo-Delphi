@@ -174,7 +174,8 @@ POST   /api/documents/folder/scan          read a folder of this machine recursi
                                            hashes) and what is skipped, and why
 POST   /api/documents/folder/file          import one scanned file, named by its path ("folder/docs/a.md")
 GET    /api/search?q=...&workspace_id=&mode=   hybrid search (default): meaning + exact words, fused with RRF;
-                                           mode=semantic|keyword to use one leg; only that werkmap's documents
+                                           mode=semantic|keyword to use one leg; only that werkmap's documents;
+                                           group= limits it to one virtual folder (`__none__` = documents without a group)
 POST   /api/ask                              ask a question in a werkmap: cited answer ([n] -> fragments), checked
 GET    /api/ask/history?workspace_id=       earlier questions and answers of a werkmap
 GET    /api/embeddings/status              active model, dimension, how much of the index is current
@@ -183,7 +184,8 @@ POST   /api/embeddings/test                embed a probe text: proves the endpoi
 POST   /api/embeddings/reindex             re-embed stale documents (?everything=true for all, ?workspace_id=)
 GET    /api/embeddings/catalog             recommended local models per runtime (ollama | llamacpp)
 GET/POST /api/embeddings/models/pull       download a recommended model to a local runtime, with progress
-POST   /api/analysis                       run analysis over the collection
+POST   /api/analysis                       run analysis over the collection; `groups=` (repeatable) limits it to the
+                                           documents of those groups (`__none__` = no group)
 GET    /api/analysis/{id}
 GET    /api/analysis/{id}/claims
 GET    /api/analysis/{id}/issues

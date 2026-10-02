@@ -16,7 +16,10 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
 ## Werkmappen en documenten
 
 - Een werkmap bundelt de documenten van één onderwerp; zoeken, vragen en analyses blijven binnen de werkmap. Elke
-  werkmap is ook een git-map: elke upload wordt vastgelegd in `Inbox/`.
+  werkmap is ook een git-map: elke upload wordt vastgelegd in `Inbox/`. Ook je beslissingen bij Delphi
+   Pulse (accepteren, negeren, ook alles tegelijk) worden vastgelegd: één commit per beslissing, met per voorstel een
+   regel in `Decisions/decisions.jsonl` (wanneer, welk document, wat besloten is, de thema’s en verbanden). Zo kun je
+   later terugzien wat je wanneer hebt besloten, en op de Werkmap-pagina staan ze in de geschiedenis.
 - **Documents → Upload documents**: PDF, Word, Markdown en tekst. Bestanden worden geïndexeerd.
 - **Map toevoegen…**: kies een map met de eigen mappenkiezer van de app; alle submappen worden doorlopen. Je ziet
   eerst wat wordt toegevoegd en wat wordt overgeslagen (verborgen/tooling-mappen, niet-ondersteunde, lege en tijdelijke
@@ -68,11 +71,20 @@ Stel daarna een **vervolgvraag**; "Nieuw gesprek" begint opnieuw. Een getal dat 
 de tekst zelf, dus het werkt ook terwijl het embedden nog loopt. Documenten die nog niet zijn gelezen doen niet mee: daarvoor
 toont de pagina een waarschuwing; terwijl Pulse draait pulseren het icoon en de naam in het menu zacht, ook als je naar een andere
 pagina gaat; draai Pulse dan opnieuw als ze klaar zijn (wat al is geanalyseerd wordt overgeslagen).
+Naast thema's en verbanden stelt Pulse per document ook **twee indelingen** voor. Een **map** op schijf, naar type: Drafts, Reports,
+Chapters, Notes, Specs, Reference of Other (past geen enkele, dan stelt Pulse een nieuwe map voor, met “nieuwe map” erbij):
+bij accepteren verhuist het bestand in de git-werkmap van `Inbox/` naar die map (met zijn submappen, in een eigen commit; een
+naam die al bestaat krijgt een nummer, er wordt nooit iets overschreven). En een **groep**: een virtuele map in Apollo (bij Gaia
+bijvoorbeeld architectuur, besluiten, gebruik). Een document zit in één groep. Op de Documents-pagina staan de documenten dan
+gegroepeerd, met een filter; bij Zoeken kun je ook in één groep zoeken. De documenten zelf veranderen niet: ze blijven
+leesbaar en doorzoekbaar. Documenten die al eerder zijn geanalyseerd krijgen deze voorstellen pas bij **Alles opnieuw**.
 Elk voorstel accepteer of negeer je per document, of allemaal tegelijk met **Alles accepteren** en **Alles negeren** (met
 een bevestiging vooraf: accepteren neemt de thema’s en verbanden op in de documenten). Klik op een voorstel, of op een
 verbonden document daarin, om dat document in het leesvenster te lezen.
 
-**Analysis** leest claims uit de documenten; **Issues** toont tegenstrijdigheden en open vragen met het bewijs
+**Analysis** leest claims uit de documenten, van de hele werkmap of alleen van de groepen die je kiest (bovenaan: Alles, of
+een of meer groepen, bijvoorbeeld twee tegelijk); tegenstrijdigheden worden dan alleen tussen de gekozen documenten gezocht,
+en zo'n analyse is veel kleiner; **Issues** toont tegenstrijdigheden en open vragen met het bewijs
 (bestand, pagina, regels); een onderzoek kan ze oplossen, waarna jij accepteert of afwijst. **Knowledge** toont wat
 vaststaat; **Generated** maakt en controleert een samenvattend document.
 

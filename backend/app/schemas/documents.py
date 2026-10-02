@@ -14,6 +14,10 @@ class DocumentOut(BaseModel):
     source_type: str = "upload"
     source_url: str | None = None
     repo_path: str | None = None
+    #: Where the copy in the werkmap's git repository lives ("Inbox/a.md", or "Reports/a.md" once sorted by Pulse).
+    inbox_path: str | None = None
+    #: The virtual folder (group) the document was put in by accepting a Pulse suggestion.
+    group_name: str | None = None
     title: str | None
     file_type: str
     file_size: int

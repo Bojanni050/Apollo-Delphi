@@ -2,12 +2,15 @@
 
 Uploaded originals land in ``Inbox/`` and each one is recorded as its own
 commit, so nothing a user puts in a werkmap can silently change or disappear.
+Human decisions (accepting or dismissing a Delphi Pulse suggestion) are appended to
+``Decisions/decisions.jsonl``, one commit per decision (or per "all" decision).
 Only an explicit list of paths is ever staged (never ``-A``) and nothing here
 deletes, rewrites history or pushes; deleting a werkmap in the database leaves
 its folder untouched.
 """
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -18,6 +21,11 @@ from app.core.logging import get_logger
 log = get_logger(__name__)
 
 INBOX_DIR = "Inbox"
+DECISIONS_DIR = "Decisions"
+#: The type folders Delphi Pulse sorts documents into (next to Inbox, which stays the place where new files arrive).
+TYPE_FOLDERS = ("Drafts", "Reports", "Chapters", "Notes", "Specs", "Reference", "Other")
+_RESERVED_FOLDERS = frozenset({"inbox", "decisions", "git"})
+DECISIONS_FILE = "decisions.jsonl"
 TIMEOUT_SECONDS = 20
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -133,6 +141,101 @@ def store_in_inbox(repo: Path, filename: str, data: bytes) -> str:
         _commit_paths(repo, [rel], f"Add {rel}")
     except GitError as exc:
         log.warning("Stored %s but could not commit it: %s", rel, exc)
+    return rel
+
+
+def clean_folder_name(name: str | None) -> str | None:
+    """A type folder name: one safe path segment, first letter capital. None when nothing usable is left.
+
+    A name from the fixed list is returned as spelled there ("reports", "Report" -> "Reports").
+    """
+    if not name or not str(name).strip():
+        return None
+    raw = _SAFE_NAME_RE.sub(" ", str(name)).strip(" ._-")
+    raw = re.sub(r"\s+", " ", raw)[:40].strip()
+    if not raw or raw.lower() in _RESERVED_FOLDERS:
+        return None
+    lowered = raw.lower()
+    for known in TYPE_FOLDERS:
+        k = known.lower()
+        if lowered in (k, k.rstrip("s")) or (lowered + "s") == k:
+            return known
+    return raw[0].upper() + raw[1:]
+
+
+def _is_tracked(repo: Path, rel: str) -> bool:
+    try:
+        return bool(_git(repo, "ls-files", "--", rel).strip())
+    except GitError:
+        return False
+
+
+def move_into_folders(repo: Path, moves: list[tuple[str, str]], message: str) -> dict[str, str]:
+    """Move files of the werkmap into type folders and record it in ONE commit. Returns {old path: new path}.
+
+    ``moves`` is [(repo-relative path, folder)]. A file in ``Inbox/docs/a.md`` goes to ``<folder>/docs/a.md`` (the subfolders
+    stay); a name that is taken becomes ``a-2.md``. Files already in their folder, missing files and paths that leave the
+    repository are skipped. Nothing is ever overwritten or deleted, and only the moved paths are staged.
+    """
+    done: dict[str, str] = {}
+    touched: list[str] = []
+    root = repo.resolve()
+    for rel, folder in moves:
+        clean = clean_relative_path(rel)
+        name = clean_folder_name(folder)
+        if not clean or not name:
+            continue
+        src = repo / clean
+        try:
+            if not src.is_file() or root not in src.resolve().parents:
+                continue
+        except OSError:
+            continue
+        parts = clean.split("/")
+        if parts[0] == name:
+            continue  # already there
+        rest = parts[1:] if parts[0] == INBOX_DIR or parts[0] in TYPE_FOLDERS else parts  # leaving a type folder too
+        *folders, base = rest
+        directory = repo.joinpath(name, *folders)
+        directory.mkdir(parents=True, exist_ok=True)
+        target_name = _unique_name(directory, base)
+        dst_rel = "/".join([name, *folders, target_name])
+        if _is_tracked(repo, clean):
+            _git(repo, "mv", "--", clean, dst_rel)
+        else:  # it never got committed: just move it, and the commit below adds it
+            src.replace(repo / dst_rel)
+            _git(repo, "add", "--", dst_rel)
+        touched += [clean, dst_rel]
+        done[clean] = dst_rel
+        # tidy up folders the move emptied (never the Inbox itself)
+        parent = src.parent
+        while parent != repo / INBOX_DIR and parent != repo and root in parent.resolve().parents:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+    if touched:
+        _git(repo, "commit", "-q", "-m", message, "--", *touched)
+    return done
+
+
+def record_decisions(repo: Path, entries: list[dict], message: str) -> str | None:
+    """Append decisions to ``Decisions/decisions.jsonl`` (one JSON object per line, never rewritten) and commit that file.
+
+    Returns the repo-relative path, or None when there was nothing to record. Raises OSError/GitError: the caller decides
+    whether failing to log may stop what it was doing (it should not).
+    """
+    if not entries:
+        return None
+    directory = repo / DECISIONS_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / DECISIONS_FILE
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        for entry in entries:
+            handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
+    rel = f"{DECISIONS_DIR}/{DECISIONS_FILE}"
+    _commit_paths(repo, [rel], message)
     return rel
 
 

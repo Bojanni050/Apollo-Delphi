@@ -23,6 +23,10 @@ class PulseItemOut(BaseModel):
     connections: list[PulseConnectionOut]
     confidence: float
     decision: str
+    #: Suggested type folder in the werkmap's repository, and whether it is outside the fixed list; suggested virtual group.
+    folder: str | None = None
+    folder_is_new: bool = False
+    group: str | None = None
 
 
 class PulseRunOut(BaseModel):

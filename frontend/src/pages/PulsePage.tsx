@@ -165,7 +165,7 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
       {items.length > 0 && (
         <Card className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-slate-600">
-            {items.length} {items.length === 1 ? 'voorstel wacht' : 'voorstellen wachten'} op je beslissing. Klik op een voorstel om het document te lezen.
+            {items.length} {items.length === 1 ? 'voorstel wacht' : 'voorstellen wachten'} op je beslissing. Accepteren verplaatst het bestand naar de voorgestelde map in de git-werkmap en zet het document in de voorgestelde groep. Klik op een voorstel om het document te lezen.
           </p>
           <div className="flex gap-2">
             <Button onClick={() => setConfirmAll('accepted')} disabled={busy || deciding}>
@@ -195,6 +195,21 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
               </Button>
             </div>
           </div>
+          {(item.folder || item.group) && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-slate-600">
+              {item.folder && (
+                <span className="flex items-center gap-1.5" title="De map in de git-werkmap waar het bestand heen verhuist als je accepteert">
+                  Map <Badge kind={item.folder_is_new ? 'warn' : 'neutral'}>{item.folder}/</Badge>
+                  {item.folder_is_new && <span className="text-xs text-amber-700">nieuwe map</span>}
+                </span>
+              )}
+              {item.group && (
+                <span className="flex items-center gap-1.5" title="De groep (virtuele map in Apollo) waar het document in komt als je accepteert">
+                  Groep <Badge kind="neutral">{item.group}</Badge>
+                </span>
+              )}
+            </div>
+          )}
           {item.tags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {item.tags.map((t) => (
@@ -242,7 +257,7 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
         >
           <p>
             {confirmAll === 'accepted'
-              ? 'De thema’s en verbanden van alle voorstellen worden in de documenten opgenomen. Dat kun je niet in één keer terugdraaien.'
+              ? 'De thema’s, verbanden en groepen van alle voorstellen worden in de documenten opgenomen en de bestanden verhuizen naar hun map in de git-werkmap (alles wordt vastgelegd in git). Dat kun je niet in één keer terugdraaien.'
               : 'Alle voorstellen verdwijnen zonder dat er iets in je documenten verandert. Ze komen pas terug als een document verandert of als je “Alles opnieuw” draait.'}
           </p>
         </Modal>

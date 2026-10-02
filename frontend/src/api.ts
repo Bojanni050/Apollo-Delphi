@@ -32,6 +32,10 @@ export interface DocumentRecord {
   source_type: string
   source_url: string | null
   repo_path: string | null
+  /** Where the copy in the werkmap's git repository lives ("Inbox/a.md", "Reports/a.md" once Delphi Pulse sorted it). */
+  inbox_path: string | null
+  /** The virtual folder (group), set by accepting a Delphi Pulse suggestion. */
+  group_name: string | null
 }
 
 export interface AnalysisStats {
@@ -39,6 +43,8 @@ export interface AnalysisStats {
   claims: number
   open_questions: number
   contradictions: number
+  /** The groups the run was limited to; absent = every document. */
+  groups?: string[] | null
 }
 
 export interface AnalysisRun {
@@ -281,6 +287,10 @@ export interface PulseItem {
   connections: PulseConnection[]
   confidence: number
   decision: 'pending' | 'accepted' | 'dismissed'
+  /** Suggested type folder in the werkmap's repository (Reports, Drafts...), whether it is outside the fixed list, and the suggested group. */
+  folder: string | null
+  folder_is_new: boolean
+  group: string | null
 }
 
 export interface PulseRun {
@@ -504,9 +514,11 @@ export const api = {
   },
   indexDocument: (id: number) => request<DocumentRecord>(`/api/documents/${id}/index`, { method: 'POST' }),
   deleteDocument: (id: number) => request<void>(`/api/documents/${id}`, { method: 'DELETE' }),
-  search: (q: string, workspaceId?: number | null, mode: SearchMode = 'hybrid') =>
+  search: (q: string, workspaceId?: number | null, mode: SearchMode = 'hybrid', group?: string | null) =>
     request<SearchResponse>(
-      `/api/search?q=${encodeURIComponent(q)}&mode=${mode}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
+      `/api/search?q=${encodeURIComponent(q)}&mode=${mode}${workspaceId ? `&workspace_id=${workspaceId}` : ''}${
+        group ? `&group=${encodeURIComponent(group)}` : ''
+      }`,
     ),
   ask: (question: string, workspaceId?: number | null, followUpOf?: number | null) =>
     request<Answer>('/api/ask', {
@@ -516,8 +528,11 @@ export const api = {
     }),
   askHistory: (workspaceId?: number | null) =>
     request<Answer[]>(`/api/ask/history${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
-  runAnalysis: (workspaceId?: number | null) =>
-    request<AnalysisRun>(`/api/analysis${workspaceId ? `?workspace_id=${workspaceId}` : ''}`, { method: 'POST' }),
+  /** Analyse the werkmap, or only the documents of the given groups ("__none__" = those without a group). */
+  runAnalysis: (workspaceId?: number | null, groups: string[] = []) => {
+    const qs = [workspaceId ? `workspace_id=${workspaceId}` : '', ...groups.map((g) => `groups=${encodeURIComponent(g)}`)].filter(Boolean).join('&')
+    return request<AnalysisRun>(`/api/analysis${qs ? `?${qs}` : ''}`, { method: 'POST' })
+  },
   listIssues: (status?: string, workspaceId?: number | null) => {
     const qs = [status ? `status=${status}` : '', workspaceId ? `workspace_id=${workspaceId}` : ''].filter(Boolean).join('&')
     return request<Issue[]>(`/api/issues${qs ? `?${qs}` : ''}`)

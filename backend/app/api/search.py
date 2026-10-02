@@ -18,9 +18,13 @@ async def search(
     top_k: int | None = Query(None, ge=1, le=50),
     workspace_id: int | None = Query(None, description="Search this werkmap; omitted = documents that belong to no werkmap"),
     mode: str = Query("hybrid", pattern="^(hybrid|semantic|keyword)$", description="hybrid = meaning + exact words fused (default)"),
+    group: str | None = Query(None, description="Only the documents in this group (virtual folder); \"__none__\" = the ones without a group"),
     db: Session = Depends(get_session),
 ):
-    scope = [r[0] for r in db.query(Document.id).filter(Document.workspace_id == workspace_id)]
+    documents = db.query(Document.id).filter(Document.workspace_id == workspace_id)
+    if group is not None:
+        documents = documents.filter(Document.group_name.is_(None) if group == "__none__" else Document.group_name == group)
+    scope = [r[0] for r in documents]
     service = SearchService()
     hits = []
     # An empty scope must not fall back to searching every werkmap.

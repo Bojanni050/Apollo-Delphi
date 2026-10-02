@@ -9,6 +9,9 @@ const MODES: { id: SearchMode; label: string; hint: string }[] = [
   { id: 'keyword', label: 'Trefwoorden', hint: 'Zoekt op de woorden zelf' },
 ]
 
+/** The value the API takes for "the documents without a group". */
+const NO_GROUP = '__none__'
+
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /** The excerpt with the words of the query marked, so it is clear why a fragment matched. */
@@ -40,12 +43,30 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const reader = useReader()
+  // search inside one group (virtual folder) only: '' = everywhere, NO_GROUP = the documents without one
+  const [group, setGroup] = useState('')
+  const [groups, setGroups] = useState<{ names: string[]; hasUngrouped: boolean }>({ names: [], hasUngrouped: false })
 
   // Results belong to one werkmap: switching werkmap starts a clean page.
   useEffect(() => {
     setResults(null)
     setNote(null)
     setError(null)
+    setGroup('')
+    setGroups({ names: [], hasUngrouped: false })
+    if (workspaceId === null) return
+    let cancelled = false
+    api
+      .listDocuments(workspaceId)
+      .then((docs) => {
+        if (cancelled) return
+        const names = [...new Set(docs.map((d) => d.group_name).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b, 'nl'))
+        setGroups({ names, hasUngrouped: names.length > 0 && docs.some((d) => !d.group_name) })
+      })
+      .catch(() => undefined) // without the list there is just no group filter
+    return () => {
+      cancelled = true
+    }
   }, [workspaceId])
 
   const run = async () => {
@@ -54,7 +75,7 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
     setBusy(true)
     setError(null)
     try {
-      const res = await api.search(q, workspaceId, mode)
+      const res = await api.search(q, workspaceId, mode, group || null)
       setResults({ query: q, hits: res.results })
       setNote(res.mode !== mode ? 'Het embeddingmodel is niet bereikbaar: er is alleen op trefwoorden gezocht.' : null)
     } catch (e) {
@@ -97,6 +118,23 @@ export default function SearchPage({ workspaceId, workspaceName }: { workspaceId
               </option>
             ))}
           </select>
+          {groups.names.length > 0 && (
+            <select
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              aria-label="Zoek in groep"
+              title="Zoek alleen in de documenten van één groep"
+              className="rounded-lg border border-slate-300 px-2 py-2 text-sm"
+            >
+              <option value="">Alle groepen</option>
+              {groups.names.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+              {groups.hasUngrouped && <option value={NO_GROUP}>Zonder groep</option>}
+            </select>
+          )}
           <Button onClick={() => void run()} disabled={busy || !query.trim()}>
             {busy ? 'Zoeken…' : 'Zoeken'}
           </Button>

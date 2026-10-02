@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { api, type AnalysisRun, type Claim, type Issue } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 
+/** The value the API takes for "the documents without a group". */
+const NO_GROUP = '__none__'
+
+type GroupChoice = { id: string; label: string; count: number }
+
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(path)
   if (!res.ok) throw new Error(res.statusText)
@@ -14,6 +19,9 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
   const [issues, setIssues] = useState<Issue[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Analyse everything, or only the documents of the chosen groups (one, two, more): conflicts are then looked for among those
+  const [choices, setChoices] = useState<GroupChoice[]>([])
+  const [selected, setSelected] = useState<string[]>([])
 
   const loadIssues = async () => {
     const allIssues = await api.listIssues(undefined, workspaceId)
@@ -25,6 +33,24 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
     setRun(null)
     setClaims([])
     setIssues([])
+    setChoices([])
+    setSelected([])
+    void (async () => {
+      try {
+        const docs = (await api.listDocuments(workspaceId)).filter((d) => d.indexing_status === 'parsed' || d.indexing_status === 'indexed')
+        const counts = new Map<string, number>()
+        for (const d of docs) counts.set(d.group_name ?? NO_GROUP, (counts.get(d.group_name ?? NO_GROUP) ?? 0) + 1)
+        const names = [...counts.keys()].filter((g) => g !== NO_GROUP).sort((a, b) => a.localeCompare(b, 'nl'))
+        if (names.length > 0) {
+          setChoices([
+            ...names.map((g) => ({ id: g, label: g, count: counts.get(g) ?? 0 })),
+            ...(counts.has(NO_GROUP) ? [{ id: NO_GROUP, label: 'Zonder groep', count: counts.get(NO_GROUP) ?? 0 }] : []),
+          ])
+        }
+      } catch {
+        // without the list there is just no group choice
+      }
+    })()
     void (async () => {
       try {
         const allIssues = await loadIssues()
@@ -44,7 +70,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
     setBusy(true)
     setError(null)
     try {
-      const newRun = await api.runAnalysis(workspaceId)
+      const newRun = await api.runAnalysis(workspaceId, selected)
       setRun(newRun)
       setClaims(await fetchJson<Claim[]>(`/api/analysis/${newRun.id}/claims`))
       await loadIssues()
@@ -54,6 +80,9 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
       setBusy(false)
     }
   }
+
+  const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((g) => g !== id) : [...cur, id]))
+  const chosenDocs = selected.length === 0 ? null : choices.filter((c) => selected.includes(c.id)).reduce((n, c) => n + c.count, 0)
 
   const contradictions = issues.filter((i) => i.issue_type === 'contradiction')
   const openQuestions = issues.filter((i) => i.issue_type === 'open_question')
@@ -69,6 +98,46 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
             {busy ? 'Analyzing…' : 'Run analysis'}
           </Button>
         </div>
+        {choices.length > 0 && (
+          <div className="mb-4">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Groepen om te analyseren">
+              <span className="text-sm text-slate-600">Analyseer</span>
+              <button
+                type="button"
+                onClick={() => setSelected([])}
+                aria-pressed={selected.length === 0}
+                className={`rounded-full border px-3 py-1 text-sm ${
+                  selected.length === 0 ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                Alles
+              </button>
+              {choices.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggle(c.id)}
+                  aria-pressed={selected.includes(c.id)}
+                  className={`rounded-full border px-3 py-1 text-sm ${
+                    selected.includes(c.id) ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {c.label} ({c.count})
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">
+              {chosenDocs === null
+                ? 'Alle documenten van de werkmap. Kies een of meer groepen om een onderwerp (of twee) apart te analyseren: tegenstrijdigheden worden dan alleen tussen de gekozen documenten gezocht.'
+                : `${chosenDocs} ${chosenDocs === 1 ? 'document' : 'documenten'} in ${selected.length} ${selected.length === 1 ? 'groep' : 'groepen'}: tegenstrijdigheden worden alleen daartussen gezocht.`}
+            </p>
+          </div>
+        )}
+        {run && run.stats && run.stats.groups && run.stats.groups.length > 0 && (
+          <p className="mb-2 text-xs text-slate-500">
+            Laatste analyse beperkt tot: {run.stats.groups.map((g) => (g === NO_GROUP ? 'zonder groep' : g)).join(', ')}
+          </p>
+        )}
         {run && run.stats && (
           <div className="grid grid-cols-4 gap-3 text-center">
             <div className="bg-slate-50 rounded-lg p-3">

@@ -25,6 +25,8 @@ class Document(Base):
     file_size: Mapped[int] = mapped_column(Integer, default=0)
     content_hash: Mapped[str] = mapped_column(String(64), default="")
     inbox_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    #: The virtual folder (group) in Apollo, accepted from a Delphi Pulse suggestion: "architectuur", "foundation"...
+    group_name: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(512), nullable=True)
     doc_metadata: Mapped[dict] = mapped_column(Text, default="{}", nullable=True)
     indexing_status: Mapped[str] = mapped_column(String(32), default="pending")

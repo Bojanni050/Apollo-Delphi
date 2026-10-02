@@ -11,6 +11,7 @@ from app.models import Document, Workspace
 from app.models.pulse import PulseItem, PulseRun
 from app.schemas.pulse import PulseDecideAllOut, PulseDecision, PulseItemOut, PulseResultOut, PulseRunOut
 from app.services.pulse.service import PulseError, PulseService
+from app.services.workspace_repo import TYPE_FOLDERS
 
 router = APIRouter(tags=["pulse"])
 
@@ -27,6 +28,9 @@ def _item_out(item: PulseItem, names: dict[int, str]) -> PulseItemOut:
         connections=connections,
         confidence=item.confidence,
         decision=item.decision,
+        folder=item.folder,
+        folder_is_new=bool(item.folder) and item.folder not in TYPE_FOLDERS,
+        group=item.group_name,
     )
 
 
