@@ -607,12 +607,19 @@ export const api = {
     }),
   delphiHistory: (workspaceId: number) =>
     request<DelphiMessage[]>(`/api/delphi/history?workspace_id=${workspaceId}`),
-  /** Turn an exchange with Delphi into a note: a document (Generated) and a file in the werkmap. */
-  delphiNote: (workspaceId: number, replyId: number) =>
-    request<GeneratedDocument>('/api/delphi/note', {
+  /** Turn an exchange with Delphi into an oracle: a document (Oracles) and a file in the werkmap. */
+  delphiOracle: (workspaceId: number, replyId: number) =>
+    request<GeneratedDocument>('/api/delphi/oracle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspace_id: workspaceId, reply_id: replyId }),
+    }),
+  /** Add a note the user writes themselves: a document (Notities) and a file in the werkmap. */
+  addNote: (workspaceId: number, title: string, content: string) =>
+    request<GeneratedDocument>('/api/delphi/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace_id: workspaceId, title, content }),
     }),
   /** Start an analysis in the background and return at once; follow it with `analysisProgress`. */
   startAnalysis: (workspaceId?: number | null, groups: string[] = []) => {
@@ -657,7 +664,7 @@ export const api = {
       `/api/documents/generate?title=${encodeURIComponent(title)}${analysisRunId ? `&analysis_run_id=${analysisRunId}` : ''}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
       { method: 'POST' },
     ),
-  listGenerated: (workspaceId?: number | null, docKind?: 'report' | 'note') =>
+  listGenerated: (workspaceId?: number | null, docKind?: 'report' | 'note' | 'oracle') =>
     request<GeneratedDocument[]>(
       `/api/documents/generated/list?${[
         workspaceId ? `workspace_id=${workspaceId}` : '',

@@ -1,12 +1,12 @@
-"""A note made from a conversation with Delphi.
+"""An oracle made from a conversation with Delphi.
 
-Asking Delphi "make a note of this" turns an exchange into a document: the model summarises the
-conversation into a short, tidy note (with the mock provider the conversation text itself becomes the
-note), which is stored as a ``GeneratedDocument`` of kind ``note`` — visible on the Generated page —
-and written into the werkmap's git repository as ``Notes/Delphi/<slug>.md``, so it is a real file
+Asking Delphi "make an oracle of this" turns an exchange into a document: the model summarises the
+conversation into a short, tidy oracle (with the mock provider the conversation text itself becomes
+the oracle), which is stored as a ``GeneratedDocument`` of kind ``oracle`` — visible on the Oracles page —
+and written into the werkmap's git repository as ``Oracles/<slug>.md``, so it is a real file
 among the other documents, with its own commit.
 
-The note records where it came from (the exchange it summarises) in its metadata; the chat itself
+The oracle records where it came from (the exchange it summarises) in its metadata; the chat itself
 stays in ``Conversations/delphi-chat.jsonl`` untouched.
 """
 
@@ -27,24 +27,24 @@ from app.services import workspace_repo
 
 log = get_logger(__name__)
 
-MAX_NOTE_CHARS = 6000
+MAX_ORACLE_CHARS = 6000
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
-NOTE_SYSTEM_PROMPT = (
-    "You turn a conversation with Delphi, the chat agent of a document workspace, into a short note "
+ORACLE_SYSTEM_PROMPT = (
+    "You turn a conversation with Delphi, the chat agent of a document workspace, into a short oracle "
     "the user can keep. Use ONLY what the conversation says; never add outside knowledge or opinions. "
     "Write in the language of the conversation, in Markdown: a '# ' title line, then a few compact "
     "paragraphs or bullets that capture what was discussed and concluded. Keep it short and factual. "
-    "Reply with the note only, no preamble."
+    "Reply with the oracle only, no preamble."
 )
 
 
 def _slug(title: str) -> str:
     slug = _SLUG_RE.sub("-", title.lower()).strip("-")[:60]
-    return slug or "notitie"
+    return slug or "oracle"
 
 
-class DelphiNoteService:
+class DelphiOracleService:
     def __init__(self, llm: LLMProvider | None = None):
         self._llm = llm
 
@@ -54,8 +54,8 @@ class DelphiNoteService:
             self._llm = get_llm_provider()
         return self._llm
 
-    async def make_note(self, db: Session, workspace_id: int, reply_id: int) -> GeneratedDocument:
-        """Turn the exchange that ``reply_id`` belongs to into a note. Raises ValueError when the
+    async def make_oracle(self, db: Session, workspace_id: int, reply_id: int) -> GeneratedDocument:
+        """Turn the exchange that ``reply_id`` belongs to into an oracle. Raises ValueError when the
         reply does not exist or belongs to another werkmap."""
         reply = db.get(DelphiChatMessage, reply_id)
         if reply is None or reply.workspace_id != workspace_id:
@@ -69,16 +69,16 @@ class DelphiNoteService:
         turns = self._exchange(db, reply)
         conversation = "\n".join(
             f"{'Gebruiker' if m.role == 'user' else 'Delphi'}: {m.content}" for m in turns
-        )[:MAX_NOTE_CHARS]
+        )[:MAX_ORACLE_CHARS]
 
         content = await self._compose(conversation, reply)
-        title = self._title(reply, user_message.content if user_message else "Notitie")
+        title = self._title(reply, user_message.content if user_message else "Oracle")
 
         doc = GeneratedDocument(
             workspace_id=workspace_id,
             title=title,
             status="drafted",
-            doc_kind="note",
+            doc_kind="oracle",
             content=content,
             verification_status="pending",
             revision=0,
@@ -105,41 +105,41 @@ class DelphiNoteService:
 
     async def _compose(self, conversation: str, reply: DelphiChatMessage) -> str:
         if self.llm.name == "mock":
-            return f"# Notitie\n\n{conversation}"
+            return f"# Oracle\n\n{conversation}"
         try:
-            raw = (await self.llm.complete(NOTE_SYSTEM_PROMPT, conversation) or "").strip()
-        except Exception as exc:  # a failing model must not cost the user their note
-            log.warning("Delphi note: the model failed (%s); the conversation text becomes the note", exc)
+            raw = (await self.llm.complete(ORACLE_SYSTEM_PROMPT, conversation) or "").strip()
+        except Exception as exc:  # a failing model must not cost the user their oracle
+            log.warning("Delphi oracle: the model failed (%s); the conversation text becomes the oracle", exc)
             raw = ""
         if not raw:
-            return f"# Notitie\n\n{conversation}"
+            return f"# Oracle\n\n{conversation}"
         return raw
 
     def _title(self, reply: DelphiChatMessage, question: str) -> str:
-        base = question.strip() or reply.content.strip() or "Notitie"
+        base = question.strip() or reply.content.strip() or "Oracle"
         title = " ".join(base.split())
         return (title[:80] + "…") if len(title) > 80 else title
 
     def _store_in_repo(self, workspace: Workspace, doc: GeneratedDocument) -> None:
-        """Write the note into the werkmap as ``Notes/Delphi/<slug>.md``, its own commit. Failing
-        here must not cost the user their note (it is already in the database)."""
+        """Write the oracle into the werkmap as ``Oracles/<slug>.md``, its own commit. Failing
+        here must not cost the user their oracle (it is already in the database)."""
         try:
             if workspace.working_dir is None:
                 workspace.working_dir = str(workspace_repo.init_repo(workspace_repo.default_working_dir(workspace.id, workspace.name)))
-            notes = Path(workspace.working_dir) / "Notes" / "Delphi"
-            notes.mkdir(parents=True, exist_ok=True)
-            path = notes / f"{_slug(doc.title)}.md"
+            folder = Path(workspace.working_dir) / "Oracles"
+            folder.mkdir(parents=True, exist_ok=True)
+            path = folder / f"{_slug(doc.title)}.md"
             n = 1
             stem = _slug(doc.title)
             while path.exists():
                 n += 1
-                path = notes / f"{stem}-{n}.md"
+                path = folder / f"{stem}-{n}.md"
             body = doc.content or ""
             header = f"---\ntitle: {doc.title}\nmade_from: delphi chat ({dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')})\n---\n\n"
             path.write_text(header + body, encoding="utf-8")
             rel = path.relative_to(workspace.working_dir).as_posix()
             from app.services.workspace_repo import _commit_paths
 
-            _commit_paths(Path(workspace.working_dir), [rel], f"Add note from Delphi chat: {doc.title[:60]}")
+            _commit_paths(Path(workspace.working_dir), [rel], f"Add oracle from Delphi chat: {doc.title[:60]}")
         except (OSError, workspace_repo.GitError) as exc:
-            log.warning("Could not store the Delphi note of werkmap %s in its repository: %s", workspace.id, exc)
+            log.warning("Could not store the Delphi oracle of werkmap %s in its repository: %s", workspace.id, exc)

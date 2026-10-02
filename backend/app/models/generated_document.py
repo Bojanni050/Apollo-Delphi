@@ -15,7 +15,8 @@ class GeneratedDocument(Base):
     workspace_id: Mapped[int | None] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="drafting")
-    #: What kind of document this is: a report from the knowledge state, or a note made from a Delphi chat.
+    #: What kind of document this is: a report from the knowledge state, an oracle made from a Delphi chat,
+    #: or a note the user wrote themselves.
     doc_kind: Mapped[str] = mapped_column(String(32), default="report")
     outline: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)

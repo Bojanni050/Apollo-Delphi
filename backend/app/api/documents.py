@@ -241,7 +241,7 @@ async def generate_document(
 @router.get("/generated/list", response_model=list[GeneratedDocumentOut])
 def list_generated_documents(workspace_id: int | None = None, doc_kind: str | None = None, db: Session = Depends(get_session)):
     """Generated documents of one werkmap; omitted = those that belong to no werkmap.
-    `doc_kind` filters by kind: "report" = made from the knowledge state, "note" = made from a Delphi chat."""
+    `doc_kind` filters by kind: "report" = made from the knowledge state, "oracle" = made from a Delphi chat, "note" = written by the user."""
     from app.models import GeneratedDocument
 
     query = db.query(GeneratedDocument).filter(GeneratedDocument.workspace_id == workspace_id)

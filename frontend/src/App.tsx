@@ -5,6 +5,7 @@ import IssuesPage from './pages/IssuesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
 import NotesPage from './pages/NotesPage'
+import OraclesPage from './pages/OraclesPage'
 import PulsePage from './pages/PulsePage'
 import AskPage from './pages/AskPage'
 import WeavePage from './pages/WeavePage'
@@ -20,7 +21,7 @@ import { useTheme } from './theme'
 import { GROUPS_CHANGED, usePulseRunning } from './pulseActivity'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'notes' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
+type Page = 'documents' | 'notes' | 'oracles' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
 /** A small network: three nodes and the lines between them (the icon of Delphi Weave). */
 const WeaveIcon = (
@@ -41,6 +42,7 @@ const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean; s
     sub: [
       { id: 'documents', label: 'Import', icon: '▦' },
       { id: 'notes', label: 'Notities', icon: '◑' },
+      { id: 'oracles', label: 'Oracles', icon: '◎' },
     ],
   },
   { id: 'pulse', label: 'Delphi Pulse', icon: <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" /> },
@@ -58,6 +60,7 @@ const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean; s
 const CONTEXT_TITLES: Record<Page, string> = {
   documents: 'Document details',
   notes: 'Notitie',
+  oracles: 'Oracle',
   search: 'Fragment',
   ask: 'Bronnen',
   pulse: 'Voorstel',
@@ -293,6 +296,7 @@ export default function App() {
       {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
       {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
       {page === 'notes' && <NotesPage workspaceId={activeWorkspaceId} />}
+      {page === 'oracles' && <OraclesPage workspaceId={activeWorkspaceId} />}
       {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'weave' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">

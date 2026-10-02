@@ -13,51 +13,30 @@ function renderMarkdown(text: string): string {
     .replace(/\n{2,}/g, '<br/><br/>')
 }
 
-/** The notes the user writes themselves: generated documents of kind "note", one per note. */
-export default function NotesPage({ workspaceId }: { workspaceId?: number | null }) {
-  const [notes, setNotes] = useState<GeneratedDocument[]>([])
+/** The oracles made of Delphi's answers: generated documents of kind "oracle", one per exchange. */
+export default function OraclesPage({ workspaceId }: { workspaceId?: number | null }) {
+  const [oracles, setOracles] = useState<GeneratedDocument[]>([])
   const [selected, setSelected] = useState<GeneratedDocument | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [saving, setSaving] = useState(false)
 
-  const load = () => {
+  useEffect(() => {
     setSelected(null)
     setError(null)
     api
-      .listGenerated(workspaceId, 'note')
-      .then(setNotes)
-      .catch(() => setError('Could not load the notes'))
+      .listGenerated(workspaceId, 'oracle')
+      .then(setOracles)
+      .catch(() => setError('Could not load the oracles'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }
-
-  useEffect(load, [workspaceId])
-
-  const addNote = async () => {
-    const t = title.trim()
-    if (!t || workspaceId == null || saving) return
-    setSaving(true)
-    try {
-      await api.addNote(workspaceId, t, content)
-      setTitle('')
-      setContent('')
-      load()
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSaving(false)
-    }
-  }
+  }, [workspaceId])
 
   return (
     <SplitView
       initialWidth={320}
       listPane={
         <div className="p-3">
-          <h2 className="font-semibold mb-3 px-1">Notities</h2>
+          <h2 className="font-semibold mb-3 px-1">Oracles</h2>
           <ul className="space-y-1 text-sm">
-            {notes.map((d) => (
+            {oracles.map((d) => (
               <li key={d.id}>
                 <button
                   onClick={() => setSelected(d)}
@@ -73,7 +52,11 @@ export default function NotesPage({ workspaceId }: { workspaceId?: number | null
                 </button>
               </li>
             ))}
-            {notes.length === 0 && <li className="text-slate-400 px-1">Nog geen notities.</li>}
+            {oracles.length === 0 && (
+              <li className="text-slate-400 px-1">
+                Nog geen oracles. Vraag Delphi iets en maak van haar antwoord een oracle.
+              </li>
+            )}
           </ul>
           <ErrorText message={error} />
         </div>
@@ -92,30 +75,10 @@ export default function NotesPage({ workspaceId }: { workspaceId?: number | null
           </Card>
         ) : (
           <Card>
-            <h2 className="text-lg font-semibold">Notitie toevoegen</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Schrijf je eigen notitie voor deze werkmap. Ze verschijnt hier en als bestand onder Notes/.
+            <p className="text-slate-400 text-sm">
+              Oracles ontstaan uit Delphi's antwoorden: vraag haar iets in de chat en maak van het antwoord een
+              oracle. Ze verschijnen hier en in de werkmap onder Oracles/.
             </p>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Titel"
-              className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Je notitie (Markdown)…"
-              rows={8}
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <button
-              onClick={() => void addNote()}
-              disabled={!title.trim() || workspaceId == null || saving}
-              className="mt-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-            >
-              {saving ? 'Opslaan…' : 'Notitie opslaan'}
-            </button>
           </Card>
         )
       }

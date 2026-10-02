@@ -137,8 +137,8 @@ def test_the_chat_is_part_of_the_werkmap_repository(client):
     assert any(l.startswith("Delphi chat:") for l in log), "each exchange is its own commit"
 
 
-def test_a_reply_can_be_made_into_a_note(client):
-    """'Notitie maken': an exchange becomes a document (Generated) and a markdown file in the werkmap."""
+def test_a_reply_can_be_made_into_an_oracle(client):
+    """'Oracle maken': an exchange becomes a document (Oracles) and a markdown file in the werkmap."""
     from pathlib import Path
 
     ws = _ws(client)
@@ -146,14 +146,14 @@ def test_a_reply_can_be_made_into_a_note(client):
     chat = _chat(client, ws, "Wat zegt het document over het budget?").json()
     reply_id = chat["reply"]["id"]
 
-    res = client.post("/api/delphi/note", json={"workspace_id": ws, "reply_id": reply_id})
+    res = client.post("/api/delphi/oracle", json={"workspace_id": ws, "reply_id": reply_id})
     assert res.status_code == 201, res.text
-    note = res.json()
-    assert note["doc_kind"] == "note"
-    assert note["content"].strip()
+    oracle = res.json()
+    assert oracle["doc_kind"] == "oracle"
+    assert oracle["content"].strip()
 
     listed = client.get(f"/api/documents/generated/list?workspace_id={ws}").json()
-    assert any(d["id"] == note["id"] for d in listed), "the note is among the generated documents"
+    assert any(d["id"] == oracle["id"] for d in listed), "the oracle is among the generated documents"
 
     from app.db.session import SessionLocal
 
@@ -162,9 +162,9 @@ def test_a_reply_can_be_made_into_a_note(client):
     db = SessionLocal()
     working_dir = Path(db.get(Workspace, ws).working_dir)
     db.close()
-    notes = sorted((working_dir / "Notes" / "Delphi").glob("*.md"))
-    assert notes, "the note is a file in the werkmap"
-    body = notes[0].read_text(encoding="utf-8")
+    oracles = sorted((working_dir / "Oracles").glob("*.md"))
+    assert oracles, "the oracle is a file in the werkmap"
+    body = oracles[0].read_text(encoding="utf-8")
     assert "budget" in body.lower()
 
     import subprocess
@@ -172,13 +172,43 @@ def test_a_reply_can_be_made_into_a_note(client):
     log = subprocess.run(
         ["git", "-C", str(working_dir), "log", "--format=%s"], capture_output=True, text=True, check=True
     ).stdout.splitlines()
-    assert any(l.startswith("Add note from Delphi chat:") for l in log)
+    assert any(l.startswith("Add oracle from Delphi chat:") for l in log)
 
 
-def test_a_note_of_another_werkmap_is_a_404(client):
+def test_an_oracle_of_another_werkmap_is_a_404(client):
     ws = _ws(client)
     other = _ws(client, "Andere")
     _doc(client, ws, "architectuur/rapport-a.md", BUDGET_A)
     chat = _chat(client, ws, "Wat zegt het document over het budget?").json()
-    res = client.post("/api/delphi/note", json={"workspace_id": other, "reply_id": chat["reply"]["id"]})
+    res = client.post("/api/delphi/oracle", json={"workspace_id": other, "reply_id": chat["reply"]["id"]})
+    assert res.status_code == 404
+
+
+def test_a_user_can_add_their_own_note(client):
+    """'Notitie': the user writes their own note; it becomes a document and a file in the werkmap."""
+    from pathlib import Path
+
+    ws = _ws(client)
+    res = client.post("/api/delphi/note", json={"workspace_id": ws, "title": "Korte termijn", "content": "Eerst deuren vervangen."})
+    assert res.status_code == 201, res.text
+    note = res.json()
+    assert note["doc_kind"] == "note"
+    assert note["title"] == "Korte termijn"
+
+    listed = client.get(f"/api/documents/generated/list?workspace_id={ws}&doc_kind=note").json()
+    assert [d["id"] for d in listed] == [note["id"]], "the note is among the notes of this werkmap"
+
+    from app.db.session import SessionLocal
+    from app.models import Workspace
+
+    db = SessionLocal()
+    working_dir = Path(db.get(Workspace, ws).working_dir)
+    db.close()
+    notes = sorted((working_dir / "Notes").glob("*.md"))
+    assert notes, "the note is a file in the werkmap"
+    assert "deuren" in notes[0].read_text(encoding="utf-8")
+
+
+def test_a_note_of_an_unknown_werkmap_is_a_404(client):
+    res = client.post("/api/delphi/note", json={"workspace_id": 999999, "title": "X"})
     assert res.status_code == 404

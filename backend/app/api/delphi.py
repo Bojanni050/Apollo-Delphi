@@ -11,11 +11,13 @@ from app.schemas.delphi_chat import (
     DelphiChatOut,
     DelphiChatRequest,
     DelphiMessageOut,
-    DelphiNoteRequest,
+    DelphiOracleRequest,
 )
+from app.schemas.notes import NoteCreateRequest
 from app.models.generated_document import GeneratedDocument
 from app.schemas.generated import GeneratedDocumentOut
-from app.services.delphi_chat.note import DelphiNoteService
+from app.services.delphi_chat.oracle import DelphiOracleService
+from app.services.notes.note import NoteService
 from app.services.delphi_chat.service import DelphiChatService
 
 router = APIRouter(prefix="/delphi", tags=["delphi"])
@@ -53,11 +55,22 @@ async def chat(body: DelphiChatRequest, db: Session = Depends(get_session)):
 
 
 @router.post("/note", response_model=GeneratedDocumentOut, status_code=201)
-async def make_note(body: DelphiNoteRequest, db: Session = Depends(get_session)):
-    """Turn an exchange with Delphi into a note: a document of the werkmap (Generated page) and a
-    markdown file in its repository (Notes/Delphi/)."""
+async def add_note(body: NoteCreateRequest, db: Session = Depends(get_session)):
+    """Add a note the user writes themselves: a document of the werkmap (Notities page) and a
+    markdown file in its repository (Notes/)."""
     try:
-        doc = await DelphiNoteService().make_note(db, body.workspace_id, body.reply_id)
+        doc = NoteService().create_note(db, body.workspace_id, body.title, body.content)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return doc
+
+
+@router.post("/oracle", response_model=GeneratedDocumentOut, status_code=201)
+async def make_oracle(body: DelphiOracleRequest, db: Session = Depends(get_session)):
+    """Turn an exchange with Delphi into an oracle: a document of the werkmap (Oracles page) and a
+    markdown file in its repository (Oracles/)."""
+    try:
+        doc = await DelphiOracleService().make_oracle(db, body.workspace_id, body.reply_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except LLMError as exc:
