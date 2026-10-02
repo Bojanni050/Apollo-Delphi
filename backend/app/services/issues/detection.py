@@ -15,6 +15,16 @@ _QUESTION_MARKERS = re.compile(
     re.IGNORECASE,
 )
 
+#: A sentence that tells the reader what to *do* about uncertainty ("record the uncertainty as an open
+#: question", "flag any unknowns") describes a rule, not a fact of the werkmap. Without this check the
+#: detector turns every handbook that explains its own method into a pile of open questions.
+_INSTRUCTIVE_RE = re.compile(
+    r"\b(?:record|not(?:e|ed|ing)|log(?:ged|ging)?|document(?:ed|ing)?|flag(?:ged|ging)?|mark(?:ed|ing)?|list(?:ed|ing)?|register(?:ed|ing)?|captur(?:e|ed|ing)|add(?:ed|ing)?)\b.+"
+    r"\b(?:as|in|to|when|if|where|must|should|shall)\b|"
+    r"\b(?:if|when|where)\b.+\b(?:is insufficient|remains? unclear|is unknown\b)",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class DetectedOpenQuestion:
@@ -40,7 +50,7 @@ def detect_open_questions(text: str) -> list[DetectedOpenQuestion]:
         if not s:
             continue
         m = _QUESTION_MARKERS.search(s)
-        if m:
+        if m and not _INSTRUCTIVE_RE.search(s):
             found.append(DetectedOpenQuestion(question=s, marker=m.group(0), source_quote=s))
     return found
 

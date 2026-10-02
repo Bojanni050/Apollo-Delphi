@@ -47,3 +47,19 @@ def test_open_question_detection():
 
 def test_no_false_open_questions():
     assert detect_open_questions("The budget is 30000 EUR.") == []
+
+
+def test_instructions_about_open_questions_are_not_open_questions():
+    """A sentence that explains the method ("record the uncertainty as an open question") is a rule,
+    not an uncertainty in the documents; flagging it would turn every handbook into a pile of issues."""
+    instructions = [
+        "If the available evidence is insufficient, record the uncertainty as an open question.",
+        "Any open question must be logged in the register.",
+        "Open questions should be added to the issues list.",
+    ]
+    for sentence in instructions:
+        assert detect_open_questions(sentence) == [], sentence
+
+
+def test_real_uncertainty_still_detected():
+    assert detect_open_questions("The owner is to be decided next week. The impact on the budget is unclear.")
