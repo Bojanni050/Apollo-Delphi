@@ -99,3 +99,39 @@ def test_messages_of_another_werkmap_are_not_in_the_history(client):
 
 def test_a_werkmap_that_does_not_exist_is_a_404(client):
     assert _chat(client, 99999, "Hallo").status_code == 404
+
+
+def test_the_chat_is_part_of_the_werkmap_repository(client):
+    """Every exchange with Delphi is appended to Conversations/delphi-chat.jsonl in the werkmap's git
+    repository and committed there, the way human decisions are."""
+    import json as _json
+    from pathlib import Path
+
+    ws = _ws(client)
+    _doc(client, ws, "architectuur/rapport-a.md", BUDGET_A)
+    before = _chat(client, ws, "Wat zegt het document over het budget?").json()
+    follow = _chat(client, ws, "En de planning?", follow_up_of=before["reply"]["id"]).json()
+
+    from app.models import Workspace
+
+    from app.db.session import SessionLocal
+
+    db = SessionLocal()
+    working_dir = Path(db.get(Workspace, ws).working_dir)
+    db.close()
+    assert working_dir is not None and (working_dir / ".git").exists()
+
+    lines = (working_dir / "Conversations" / "delphi-chat.jsonl").read_text(encoding="utf-8").splitlines()
+    entries = [_json.loads(l) for l in lines]
+    assert len(entries) == 4, "two exchanges of two lines each"
+    assert [e["role"] for e in entries] == ["user", "delphi", "user", "delphi"]
+    assert entries[0]["content"] == "Wat zegt het document over het budget?"
+    assert entries[1]["exchange"] == entries[0]["exchange"] == before["user_message"]["id"]
+    assert entries[3]["refusal"] == "out_of_scope", "a refused answer is logged with its refusal"
+
+    import subprocess
+
+    log = subprocess.run(
+        ["git", "-C", str(working_dir), "log", "--format=%s"], capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    assert any(l.startswith("Delphi chat:") for l in log), "each exchange is its own commit"

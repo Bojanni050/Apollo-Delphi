@@ -84,7 +84,9 @@ onthouden). Ze is echt heel erg gefocust: ze antwoordt alleen over de documenten
 Apollo zelf. Ze filosofeert met je mee over wat de documenten zeggen en over hoe je conflicten tussen artikelen
 en documenten het beste kunt oplossen. Over andere dingen gaat ze het gesprek niet aan: dan zegt ze dat vriendelijk.
 Staat er nog niets in de werkmap, dan vraagt ze je eerst om documenten te importeren. Haar antwoorden blijven per
-werkmap bewaard en staan er weer als je haar opnieuw opent.
+werkmap bewaard en staan er weer als je haar opnieuw opent. Elke uitwisseling wordt óók onderdeel van de werkmap
+zelf: in de git-geschiedenis staat hij als eigen commit, en de tekst ervan wordt toegevoegd aan
+`Conversations/delphi-chat.jsonl` — net als de beslissingen bij Delphi Pulse in `Decisions/decisions.jsonl`.
 
 ## Analyse, issues en kennis
 

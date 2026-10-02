@@ -22,6 +22,8 @@ log = get_logger(__name__)
 
 INBOX_DIR = "Inbox"
 DECISIONS_DIR = "Decisions"
+CONVERSATIONS_DIR = "Conversations"
+DELPHI_CHAT_FILE = "delphi-chat.jsonl"
 #: The type folders Delphi Pulse sorts documents into (next to Inbox, which stays the place where new files arrive).
 TYPE_FOLDERS = ("Drafts", "Reports", "Chapters", "Notes", "Specs", "Reference", "Other")
 _RESERVED_FOLDERS = frozenset({"inbox", "decisions", "git"})
@@ -235,6 +237,25 @@ def record_decisions(repo: Path, entries: list[dict], message: str) -> str | Non
         for entry in entries:
             handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
     rel = f"{DECISIONS_DIR}/{DECISIONS_FILE}"
+    _commit_paths(repo, [rel], message)
+    return rel
+
+
+def record_delphi_chat(repo: Path, entries: list[dict], message: str) -> str | None:
+    """Append turns of a conversation with Delphi to ``Conversations/delphi-chat.jsonl`` (one JSON object
+    per line, never rewritten) and commit that file, so a chat with Delphi is part of the werkmap the way
+    human decisions are. Returns the repo-relative path, or None when there was nothing to record.
+    Raises OSError/GitError: the caller decides whether failing to log may stop the chat (it must not).
+    """
+    if not entries:
+        return None
+    directory = repo / CONVERSATIONS_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / DELPHI_CHAT_FILE
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        for entry in entries:
+            handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
+    rel = f"{CONVERSATIONS_DIR}/{DELPHI_CHAT_FILE}"
     _commit_paths(repo, [rel], message)
     return rel
 

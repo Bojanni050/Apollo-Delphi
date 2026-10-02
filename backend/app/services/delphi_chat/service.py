@@ -23,9 +23,11 @@ Apollo or the werkmap itself.
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -33,6 +35,7 @@ from app.core.llm import LLMError, LLMProvider, get_llm_provider
 from app.core.logging import get_logger
 from app.models import Document, Workspace
 from app.models.delphi_chat import DelphiChatMessage
+from app.services import workspace_repo
 from app.services.search.service import SearchService, query_terms
 
 log = get_logger(__name__)
@@ -216,7 +219,43 @@ class DelphiChatService:
         db.commit()
         db.refresh(reply)
         db.refresh(user_message)
+        self._log_to_repo(db, workspace, user_message, reply)
         return ChatResult(user_message=user_message, reply=reply)
+
+    @staticmethod
+    def _log_to_repo(db: Session, workspace: Workspace, user_message: DelphiChatMessage, reply: DelphiChatMessage) -> None:
+        """Make the exchange part of the werkmap's git repository, the way human decisions are.
+        Failing here must never cost a user their answer."""
+        try:
+            if workspace.working_dir is None:  # werkmap created before werkmappen were repositories
+                workspace.working_dir = str(workspace_repo.init_repo(workspace_repo.default_working_dir(workspace.id, workspace.name)))
+                db.commit()
+            now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+            entries = [
+                {
+                    "at": now,
+                    "workspace_id": workspace.id,
+                    "exchange": user_message.id,
+                    "role": "user",
+                    "content": user_message.content,
+                },
+                {
+                    "at": now,
+                    "workspace_id": workspace.id,
+                    "exchange": user_message.id,
+                    "role": "delphi",
+                    "content": reply.content,
+                    "refusal": reply.refusal,
+                },
+            ]
+            summary = user_message.content[:60] + ("..." if len(user_message.content) > 60 else "")
+            workspace_repo.record_delphi_chat(
+                Path(workspace.working_dir),
+                entries,
+                f"Delphi chat: {summary}",
+            )
+        except (OSError, workspace_repo.GitError) as exc:
+            log.warning("Could not record the Delphi chat of werkmap %s in its repository: %s", workspace.id, exc)
 
     async def _compose(
         self, message: str, overview: list[str], fragments: list[str], turns: list[_Turn]
