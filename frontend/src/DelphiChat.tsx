@@ -154,7 +154,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
       </div>
       {open && (
         <div
-          className="pointer-events-auto absolute flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          className="pointer-events-auto absolute flex max-h-[calc(100vh-2rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
           style={{
             left: pos.x,
             top: pos.y + 68,
