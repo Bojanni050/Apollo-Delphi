@@ -2,6 +2,7 @@ from .analysis import AnalysisRun
 from .app_setting import AppSetting
 from .workspace import Workspace
 from .claim import Claim, ClaimEvidence, Evidence
+from .delphi_chat import DelphiChatMessage
 from .document import READY_STATUSES, Document, DocumentChunk
 from .generated_document import GeneratedDocument, VerificationFinding
 from .issue import Issue, IssueClaim, IssueEvidence
@@ -16,6 +17,7 @@ __all__ = [
     "AppSetting",
     "Claim",
     "ClaimEvidence",
+    "DelphiChatMessage",
     "Document",
     "DocumentChunk",
     "Evidence",

@@ -12,6 +12,7 @@ import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
 import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
+import DelphiChat from './DelphiChat'
 import delphiIcon from './icons/delphi.png'
 import { useTheme } from './theme'
 import { GROUPS_CHANGED, usePulseRunning } from './pulseActivity'
@@ -284,6 +285,8 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Delphi floats above every screen: her orb opens her chat, and dragging moves her out of the way */}
+      <DelphiChat workspaceId={activeWorkspaceId} />
     </AppShell>
   )
 }

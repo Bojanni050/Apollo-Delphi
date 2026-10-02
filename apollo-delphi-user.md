@@ -76,6 +76,16 @@ beide) en een fragment met je zoekwoorden gemarkeerd. Documenten die nog niet zi
 ([1], [2]…), met bestand, pagina, sectie en (bij txt/md) regels. Staat het antwoord er niet in, dan zegt Apollo dat.
 Stel daarna een **vervolgvraag**; "Nieuw gesprek" begint opnieuw. Een getal dat niet in de bronnen staat wordt gemeld.
 
+## Delphi, de chatagent
+
+Rechts onderin staat een rond bolletje: **Delphi** — hetzelfde icoon als bij Delphi Pulse. Zij staat los van alle
+schermen. Klik op de bol en haar chat opent; sleep de bol en ze gaat uit de weg van je documenten (de plek wordt
+onthouden). Ze is echt heel erg gefocust: ze antwoordt alleen over de documenten in de actieve werkmap en over
+Apollo zelf. Ze filosofeert met je mee over wat de documenten zeggen en over hoe je conflicten tussen artikelen
+en documenten het beste kunt oplossen. Over andere dingen gaat ze het gesprek niet aan: dan zegt ze dat vriendelijk.
+Staat er nog niets in de werkmap, dan vraagt ze je eerst om documenten te importeren. Haar antwoorden blijven per
+werkmap bewaard en staan er weer als je haar opnieuw opent.
+
 ## Analyse, issues en kennis
 
 **Delphi Pulse** (onder de streep in het menu; bovenaan staat wanneer de laatste run was) doet voorstellen voor thema's en verbanden tussen de documenten. Het leest

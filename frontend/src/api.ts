@@ -211,6 +211,22 @@ export interface Answer {
   created_at: string
 }
 
+export interface DelphiMessage {
+  id: number
+  workspace_id: number
+  parent_id: number | null
+  role: 'user' | 'delphi'
+  content: string
+  /** Why Delphi did not answer: "out_of_scope" or "no_documents". */
+  refusal: string | null
+  created_at: string
+}
+
+export interface DelphiChatResult {
+  user_message: DelphiMessage
+  reply: DelphiMessage
+}
+
 export interface VerificationFinding {
   id: number
   severity: 'info' | 'warning' | 'error'
@@ -583,6 +599,14 @@ export const api = {
     }),
   askHistory: (workspaceId?: number | null) =>
     request<Answer[]>(`/api/ask/history${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
+  delphiChat: (message: string, workspaceId: number, followUpOf?: number | null) =>
+    request<DelphiChatResult>('/api/delphi/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, workspace_id: workspaceId, follow_up_of: followUpOf ?? null }),
+    }),
+  delphiHistory: (workspaceId: number) =>
+    request<DelphiMessage[]>(`/api/delphi/history?workspace_id=${workspaceId}`),
   /** Start an analysis in the background and return at once; follow it with `analysisProgress`. */
   startAnalysis: (workspaceId?: number | null, groups: string[] = []) => {
     const qs = [workspaceId ? `workspace_id=${workspaceId}` : '', 'background=true', ...groups.map((g) => `groups=${encodeURIComponent(g)}`)]
