@@ -20,6 +20,8 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
   // "all" decisions ask for a confirmation first: accepting changes the documents' metadata, and neither can be undone at once
   const [confirmAll, setConfirmAll] = useState<'accepted' | 'dismissed' | null>(null)
   const [deciding, setDeciding] = useState(false)
+  // "Alles opnieuw" looks at every document again: ask first
+  const [confirmRerun, setConfirmRerun] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // documents that are not through indexing yet: unread ones do not take part, the ones still being embedded do
   const [unread, setUnread] = useState(0)
@@ -125,7 +127,7 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
             <Button onClick={() => void runPulse(false)} disabled={busy}>
               {busy ? 'Bezig…' : 'Delphi Pulse draaien'}
             </Button>
-            <Button variant="secondary" onClick={() => void runPulse(true)} disabled={busy}>
+            <Button variant="secondary" onClick={() => setConfirmRerun(true)} disabled={busy}>
               Alles opnieuw
             </Button>
           </div>
@@ -245,6 +247,34 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
           )}
         </Card>
       ))}
+
+      {confirmRerun && (
+        <Modal
+          title="Alles opnieuw analyseren?"
+          onClose={() => setConfirmRerun(false)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmRerun(false)}>
+                Annuleren
+              </Button>
+              <Button
+                onClick={() => {
+                  setConfirmRerun(false)
+                  void runPulse(true)
+                }}
+              >
+                Ja, alles opnieuw
+              </Button>
+            </>
+          }
+        >
+          <p>Weet je het zeker? Delphi Pulse bekijkt dan alle documenten van de werkmap opnieuw, ook de al geanalyseerde en de genegeerde.</p>
+          <p className="mt-2 text-sm text-slate-500">
+            Dat kan even duren en kost bij een echt taalmodel tokens. Elk document krijgt één nieuw voorstel en vervangt wat nog openstond;
+            wat je eerder hebt geaccepteerd of genegeerd blijft zoals het was, maar je krijgt er wel opnieuw een voorstel voor.
+          </p>
+        </Modal>
+      )}
 
       {confirmAll && (
         <Modal

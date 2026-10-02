@@ -176,6 +176,8 @@ POST   /api/documents/folder/file          import one scanned file, named by its
 GET    /api/search?q=...&workspace_id=&mode=   hybrid search (default): meaning + exact words, fused with RRF;
                                            mode=semantic|keyword to use one leg; only that werkmap's documents;
                                            group= limits it to one virtual folder (`__none__` = documents without a group)
+GET    /api/workspaces/{id}/weave          Delphi Weave: documents (group, type folder, tags) and the connections
+                                           accepted in Delphi Pulse; open suggestions are not part of it
 POST   /api/ask                              ask a question in a werkmap: cited answer ([n] -> fragments), checked
 GET    /api/ask/history?workspace_id=       earlier questions and answers of a werkmap
 GET    /api/embeddings/status              active model, dimension, how much of the index is current

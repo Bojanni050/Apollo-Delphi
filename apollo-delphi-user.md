@@ -20,10 +20,17 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
    Pulse (accepteren, negeren, ook alles tegelijk) worden vastgelegd: één commit per beslissing, met per voorstel een
    regel in `Decisions/decisions.jsonl` (wanneer, welk document, wat besloten is, de thema’s en verbanden). Zo kun je
    later terugzien wat je wanneer hebt besloten, en op de Werkmap-pagina staan ze in de geschiedenis.
-- **De werkwijze in de kop**: bovenin staan de stappen in volgorde: **Importeren › Delphi Pulse › Analyse**. Een klik opent die
+- **De werkwijze in de kop**: bovenin links, naast de knop van de zijbalk, staan de stappen in volgorde: **Importeren › Delphi Pulse › Analyse**. Een klik opent die
   pagina; een vinkje betekent dat de stap gedaan is (er zijn documenten, er zijn groepen). **Analyse** is pas te openen als er
   groepen zijn: draai Delphi Pulse en accepteer de voorstellen, dan komen er groepen en wordt de knop actief. (Op een smal
-  venster is de balk verborgen; het menu links werkt altijd.)
+  venster is de balk verborgen.) Het menu links heeft dezelfde volgorde: bovenaan **Importeren, Delphi Pulse, Analyse, Delphi
+  Weave**, dan een streep en de rest (Zoeken, Vragen, Issues, Knowledge, Generated, Werkmap, Instellingen); ook daar is Analyse
+  pas actief als er groepen zijn.
+- **Delphi Weave** laat zien hoe de werkmap aan elkaar hangt: elke groep is een blok met zijn documenten, en een lijn tussen
+  twee documenten is een verbinding die je bij Delphi Pulse hebt geaccepteerd (grijs: hangt samen met, groen: ondersteunt,
+  rood: spreekt tegen, blauw: breidt uit; met de knoppen bovenaan zet je een soort lijnen aan of uit). Wijs een document aan
+  om zijn lijnen te zien en onderaan te lezen waarom het verbonden is; klik erop om het te lezen in het leesvenster. Wat Pulse
+  alleen heeft voorgesteld staat er pas in als je het accepteert.
 - **Documents → Upload documents**: PDF, Word, Markdown en tekst. Bestanden worden geïndexeerd.
 - **Map toevoegen…**: kies een map met de eigen mappenkiezer van de app; alle submappen worden doorlopen. Je ziet
   eerst wat wordt toegevoegd en wat wordt overgeslagen (verborgen/tooling-mappen, niet-ondersteunde, lege en tijdelijke
@@ -82,6 +89,8 @@ naam die al bestaat krijgt een nummer, er wordt nooit iets overschreven). En een
 bijvoorbeeld architectuur, besluiten, gebruik). Een document zit in één groep. Op de Documents-pagina staan de documenten dan
 gegroepeerd, met een filter; bij Zoeken kun je ook in één groep zoeken. De documenten zelf veranderen niet: ze blijven
 leesbaar en doorzoekbaar. Documenten die al eerder zijn geanalyseerd krijgen deze voorstellen pas bij **Alles opnieuw**.
+**Alles opnieuw** laat Pulse alle documenten opnieuw bekijken; daar vraagt de app eerst “weet je het zeker?” voor. Elk document
+krijgt dan één nieuw voorstel dat vervangt wat nog openstond.
 Elk voorstel accepteer of negeer je per document, of allemaal tegelijk met **Alles accepteren** en **Alles negeren** (met
 een bevestiging vooraf: accepteren neemt de thema’s en verbanden op in de documenten). Klik op een voorstel, of op een
 verbonden document daarin, om dat document in het leesvenster te lezen.

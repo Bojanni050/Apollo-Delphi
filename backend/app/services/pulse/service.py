@@ -272,6 +272,12 @@ class PulseService:
                             if results[doc_id]["group"]:
                                 groups.add(results[doc_id]["group"])
             by_id = {d.id: d for d in docs}
+            if results:
+                # a new suggestion replaces the one that was still open for the same document (running everything again must
+                # not leave the old and the new one side by side); decided ones are history and stay
+                db.query(PulseItem).filter(
+                    PulseItem.workspace_id == workspace.id, PulseItem.document_id.in_(list(results)), PulseItem.decision == "pending"
+                ).delete(synchronize_session=False)
             for doc_id, r in results.items():
                 db.add(
                     PulseItem(

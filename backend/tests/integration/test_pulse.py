@@ -396,3 +396,15 @@ def test_search_can_be_limited_to_a_group(client):
     assert set(hits(group="architectuur")) == {"Gaia/architectuur/rapport-haven.md"}
     assert set(hits(group="__none__")) == {"Gaia/foundation/rapport-kade.md"}
     assert hits(group="bestaat-niet") == []
+
+
+def test_running_everything_again_replaces_the_open_suggestions_of_a_document_instead_of_doubling_them(client):
+    ws = _ws(client)
+    _doc(client, ws["id"], "budget_a.txt", BUDGET_A)
+    _doc(client, ws["id"], "budget_b.txt", BUDGET_B)
+    client.post(f"/api/workspaces/{ws['id']}/pulse")
+    again = client.post(f"/api/workspaces/{ws['id']}/pulse", params={"force": True}).json()
+    assert len(again["items"]) == 2
+    open_items = client.get(f"/api/workspaces/{ws['id']}/pulse").json()["items"]
+    assert len(open_items) == 2, "one open suggestion per document, not the old and the new one"
+    assert {i["run_id"] for i in open_items} == {again["run"]["id"]}

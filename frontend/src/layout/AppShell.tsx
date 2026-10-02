@@ -15,8 +15,8 @@ export type FlowStep = {
   title?: string
 }
 
-/** `below`: shown under the divider at the end of the menu. */
-export type NavItem = { id: string; label: string; icon?: ReactNode; below?: boolean; busy?: boolean }
+/** `dividerAfter`: a line under this item. `disabled` items cannot be opened yet; `title` says why. */
+export type NavItem = { id: string; label: string; icon?: ReactNode; dividerAfter?: boolean; busy?: boolean; disabled?: boolean; title?: string }
 
 type AppShellProps = {
   nav: NavItem[]
@@ -119,13 +119,13 @@ function Shell({
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           <nav className="mt-1 space-y-0.5">
-            {[...nav.filter((n) => !n.below), ...nav.filter((n) => n.below)].map((n, i, all) => (
+            {nav.map((n) => (
               <div key={n.id}>
-                {n.below && !all[i - 1]?.below && <hr className="my-2 border-slate-200" />}
                 <button
                   onClick={() => onNavigate(n.id)}
-                  title={leftCollapsed ? n.label : undefined}
-                  className={`flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-sm transition-colors ${
+                  disabled={n.disabled}
+                  title={n.disabled ? n.title : leftCollapsed ? n.label : undefined}
+                  className={`flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent ${
                     active === n.id
                       ? 'border-slate-200 bg-white font-medium text-slate-900 shadow-sm'
                       : 'border-transparent text-slate-600 hover:bg-slate-200'
@@ -134,6 +134,7 @@ function Shell({
                   <span className={`flex w-5 shrink-0 items-center justify-center text-center text-slate-400 ${n.busy ? 'nav-busy' : ''}`}>{n.icon ?? '•'}</span>
                   {!leftCollapsed && <span className={`truncate ${n.busy ? 'nav-busy' : ''}`}>{n.label}</span>}
                 </button>
+                {n.dividerAfter && <hr className="my-2 border-slate-200" />}
               </div>
             ))}
           </nav>
@@ -150,7 +151,6 @@ function Shell({
           >
             {leftCollapsed ? '»' : '«'}
           </button>
-          <div className="min-w-0 flex-1 truncate text-sm text-slate-500">{breadcrumb}</div>
           {flow && flow.length > 0 && (
             <nav aria-label="Werkwijze" className="hidden shrink-0 items-center gap-1 lg:flex">
               {flow.map((step, i) => (
@@ -175,6 +175,7 @@ function Shell({
               ))}
             </nav>
           )}
+          <div className="min-w-0 flex-1 truncate text-sm text-slate-500">{breadcrumb}</div>
           {topActions && <div className="flex shrink-0 items-center gap-2">{topActions}</div>}
           <ThemeToggle />
           <button

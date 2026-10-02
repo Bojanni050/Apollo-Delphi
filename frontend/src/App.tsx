@@ -6,6 +6,7 @@ import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
 import PulsePage from './pages/PulsePage'
 import AskPage from './pages/AskPage'
+import WeavePage from './pages/WeavePage'
 import SearchPage from './pages/SearchPage'
 import WorkspacePage from './pages/WorkspacePage'
 import SettingsPage from './pages/SettingsPage'
@@ -16,19 +17,31 @@ import { useTheme } from './theme'
 import { GROUPS_CHANGED, usePulseRunning } from './pulseActivity'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
+type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
-const NAV: { id: Page; label: string; icon: ReactNode; below?: boolean }[] = [
-  { id: 'documents', label: 'Documents', icon: '▦' },
+/** A small network: three nodes and the lines between them (the icon of Delphi Weave). */
+const WeaveIcon = (
+  <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+    <path d="M5 14 10 5l5 9M5 14h10" strokeLinejoin="round" />
+    <circle cx="5" cy="14" r="2" fill="currentColor" />
+    <circle cx="10" cy="5" r="2" fill="currentColor" />
+    <circle cx="15" cy="14" r="2" fill="currentColor" />
+  </svg>
+)
+
+/** The working order first (Importeren, Delphi Pulse, Analyse, Delphi Weave), then a line, then the rest of the menu. */
+const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean }[] = [
+  { id: 'documents', label: 'Importeren', icon: '▦' },
+  { id: 'pulse', label: 'Delphi Pulse', icon: <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" /> },
+  { id: 'analysis', label: 'Analyse', icon: '◔' },
+  { id: 'weave', label: 'Delphi Weave', icon: WeaveIcon, dividerAfter: true },
   { id: 'search', label: 'Zoeken', icon: '⌕' },
   { id: 'ask', label: 'Vragen', icon: '?' },
-  { id: 'analysis', label: 'Analysis', icon: '◔' },
   { id: 'issues', label: 'Issues', icon: '⚠' },
   { id: 'knowledge', label: 'Knowledge', icon: '❖' },
   { id: 'generated', label: 'Generated', icon: '▤' },
   { id: 'workspace', label: 'Werkmap', icon: '⎇' },
   { id: 'settings', label: 'Instellingen', icon: '⚙' },
-  { id: 'pulse', label: 'Delphi Pulse', icon: <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" />, below: true },
 ]
 
 const CONTEXT_TITLES: Record<Page, string> = {
@@ -36,6 +49,7 @@ const CONTEXT_TITLES: Record<Page, string> = {
   search: 'Fragment',
   ask: 'Bronnen',
   pulse: 'Voorstel',
+  weave: 'Verbinding',
   workspace: 'Repository',
   settings: 'Model',
   analysis: 'Run details',
@@ -235,7 +249,13 @@ export default function App() {
           title: hasGroups ? 'Analyseer de hele werkmap of een of meer groepen' : 'Maak eerst groepen: draai Delphi Pulse en accepteer de voorstellen',
         },
       ]}
-      nav={NAV.map((n) => (n.id === 'pulse' ? { ...n, busy: pulseRunning } : n))}
+      nav={NAV.map((n) =>
+        n.id === 'pulse'
+          ? { ...n, busy: pulseRunning }
+          : n.id === 'analysis'
+            ? { ...n, disabled: !hasGroups, title: 'Maak eerst groepen: draai Delphi Pulse en accepteer de voorstellen' }
+            : n,
+      )}
       active={page}
       onNavigate={(id) => setPage(id as Page)}
       breadcrumb={
@@ -249,13 +269,14 @@ export default function App() {
     >
       {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
       {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
-      {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
+      {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'weave' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
             {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} onChanged={() => void loadWorkspaces()} />}
             {page === 'search' && <SearchPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} />}
             {page === 'ask' && <AskPage workspaceId={activeWorkspaceId} />}
             {page === 'pulse' && <PulsePage workspaceId={activeWorkspaceId} />}
+            {page === 'weave' && <WeavePage workspaceId={activeWorkspaceId} />}
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
             {page === 'settings' && <SettingsPage />}
             {page === 'analysis' && <AnalysisPage workspaceId={activeWorkspaceId} />}

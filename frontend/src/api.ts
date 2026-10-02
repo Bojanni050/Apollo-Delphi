@@ -311,6 +311,27 @@ export interface PulseRun {
   completed_at: string | null
 }
 
+/** Delphi Weave: the groups, documents and connections as accepted in Delphi Pulse. */
+export interface WeaveDocument {
+  id: number
+  filename: string
+  group: string | null
+  folder: string | null
+  tags: string[]
+}
+
+export interface WeaveConnection {
+  source: number
+  target: number
+  relation: 'relates-to' | 'supports' | 'contradicts' | 'extends'
+  why: string
+}
+
+export interface Weave {
+  documents: WeaveDocument[]
+  connections: WeaveConnection[]
+}
+
 export interface PulseResult {
   run: PulseRun | null
   items: PulseItem[]
@@ -611,6 +632,7 @@ export const api = {
   adoptUnassigned: (workspaceId: number) =>
     request<AdoptResult>(`/api/workspaces/${workspaceId}/adopt-unassigned`, { method: 'POST' }),
   workspaceHistory: (id: number) => request<Commit[]>(`/api/workspaces/${id}/history`),
+  weave: (workspaceId: number) => request<Weave>(`/api/workspaces/${workspaceId}/weave`),
   getPulse: (workspaceId: number) => request<PulseResult>(`/api/workspaces/${workspaceId}/pulse`),
   runPulse: (workspaceId: number, force = false) =>
     request<PulseResult>(`/api/workspaces/${workspaceId}/pulse${force ? '?force=true' : ''}`, { method: 'POST' }),
