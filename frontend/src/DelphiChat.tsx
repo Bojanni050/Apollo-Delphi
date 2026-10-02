@@ -35,6 +35,12 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState(loadPos)
   const [drag, setDrag] = useState<DragState>({ kind: 'idle' })
+  // the width of the chat panel, resizable between 25 and 30 rem (remembered like the orb's position)
+  const [width, setWidth] = useState(() => {
+    const raw = localStorage.getItem('apollo.delphiChatWidth')
+    const n = raw ? Number(raw) : NaN
+    return Number.isFinite(n) ? Math.min(Math.max(n, 25), 30) : 25
+  })
   const [messages, setMessages] = useState<DelphiMessage[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -86,6 +92,10 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
   useEffect(() => {
     localStorage.setItem(CLOSED_POS_KEY, JSON.stringify(pos))
   }, [pos])
+
+  useEffect(() => {
+    localStorage.setItem('apollo.delphiChatWidth', String(width))
+  }, [width])
 
   const onOrbMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return
@@ -154,13 +164,36 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
       </div>
       {open && (
         <div
-          className="pointer-events-auto absolute flex max-h-[calc(100vh-2rem)] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+          className="pointer-events-auto absolute flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
           style={{
             left: pos.x,
             top: pos.y + 68,
+            width: `${width}rem`,
+            maxWidth: 'calc(100vw - 2rem)',
             transform: pos.y + 440 > window.innerHeight ? 'translateY(calc(-100% - 68px))' : undefined,
           }}
         >
+          {/* The grip that widens or narrows the chat: drag it, 25 to 30 rem. */}
+          <div
+            onMouseDown={(e) => {
+              if (e.button !== 0) return
+              e.preventDefault()
+              const startX = e.clientX
+              const startWidth = width
+              const onMove = (ev: MouseEvent) => {
+                // dragging the left edge to the left makes the panel wider (the right edge stays where it is)
+                setWidth(Math.min(Math.max(startWidth - (ev.clientX - startX) / 16, 25), 30))
+              }
+              const onUp = () => {
+                window.removeEventListener('mousemove', onMove)
+                window.removeEventListener('mouseup', onUp)
+              }
+              window.addEventListener('mousemove', onMove)
+              window.addEventListener('mouseup', onUp)
+            }}
+            title="Breedte aanpassen"
+            className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-ew-resize hover:bg-slate-300"
+          />
           <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-slate-900 px-3 text-white">
             <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" />
             <div className="min-w-0 flex-1 leading-tight">
