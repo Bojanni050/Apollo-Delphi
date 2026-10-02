@@ -599,6 +599,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision }),
     }),
+  /** Accept or dismiss every suggestion of the werkmap that still awaits a decision. */
+  decideAllPulse: (workspaceId: number, decision: 'accepted' | 'dismissed') =>
+    request<{ decision: string; decided: number }>(`/api/workspaces/${workspaceId}/pulse/decision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    }),
   llmStatus: () => request<LLMStatus>('/api/llm/status'),
   getLlmSettings: () => request<LLMSettings>('/api/llm/settings'),
   updateLlmSettings: (body: LLMSettingsUpdate) =>

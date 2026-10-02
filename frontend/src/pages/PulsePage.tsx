@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, type PulseItem, type PulseRun } from '../api'
 import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
+import Modal from '../components/Modal'
+import { useReader } from '../reader'
 import { trackPulse, usePulseRunning } from '../pulseActivity'
 
 const RELATION_LABELS: Record<string, string> = {
@@ -14,6 +16,10 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
   const [run, setRun] = useState<PulseRun | null>(null)
   const [items, setItems] = useState<PulseItem[]>([])
   const busy = usePulseRunning()
+  const reader = useReader()
+  // "all" decisions ask for a confirmation first: accepting changes the documents' metadata, and neither can be undone at once
+  const [confirmAll, setConfirmAll] = useState<'accepted' | 'dismissed' | null>(null)
+  const [deciding, setDeciding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // documents that are not through indexing yet: unread ones do not take part, the ones still being embedded do
   const [unread, setUnread] = useState(0)
@@ -71,6 +77,22 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
       await load()
     } catch (e) {
       setError((e as Error).message)
+    }
+  }
+
+  const decideAll = async (decision: 'accepted' | 'dismissed') => {
+    if (workspaceId === null) return
+    setDeciding(true)
+    setError(null)
+    try {
+      await api.decideAllPulse(workspaceId, decision)
+      setItems([])
+    } catch (e) {
+      setError((e as Error).message)
+      await load()
+    } finally {
+      setDeciding(false)
+      setConfirmAll(null)
     }
   }
 
@@ -140,14 +162,33 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
         </Card>
       )}
 
+      {items.length > 0 && (
+        <Card className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-slate-600">
+            {items.length} {items.length === 1 ? 'voorstel wacht' : 'voorstellen wachten'} op je beslissing. Klik op een voorstel om het document te lezen.
+          </p>
+          <div className="flex gap-2">
+            <Button onClick={() => setConfirmAll('accepted')} disabled={busy || deciding}>
+              Alles accepteren
+            </Button>
+            <Button variant="secondary" onClick={() => setConfirmAll('dismissed')} disabled={busy || deciding}>
+              Alles negeren
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {items.map((item) => (
-        <Card key={item.id}>
-          <div className="flex items-start justify-between gap-3">
+        <Card
+          key={item.id}
+          className={`cursor-pointer outline-2 outline-slate-400 ${reader.isOpen && reader.target?.documentId === item.document_id ? 'outline' : ''}`}
+        >
+          <div className="flex items-start justify-between gap-3" onClick={() => reader.open({ documentId: item.document_id })} title="Klik om dit document te lezen">
             <div className="min-w-0">
               <h3 className="truncate font-semibold">{item.filename}</h3>
               {item.summary && <p className="mt-1 text-sm text-slate-600">{item.summary}</p>}
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
               <Button onClick={() => void decide(item, 'accepted')}>Accepteren</Button>
               <Button variant="secondary" onClick={() => void decide(item, 'dismissed')}>
                 Negeren
@@ -168,7 +209,14 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
               {item.connections.map((c) => (
                 <li key={c.document_id} className="text-slate-700">
                   <span className="text-slate-500">{RELATION_LABELS[c.relation] ?? c.relation}</span>{' '}
-                  <span className="font-medium">{c.filename ?? `document ${c.document_id}`}</span>
+                  <button
+                    type="button"
+                    onClick={() => reader.open({ documentId: c.document_id })}
+                    title="Lees dit document"
+                    className="font-medium underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                  >
+                    {c.filename ?? `document ${c.document_id}`}
+                  </button>
                   {c.why && <span className="text-slate-500"> — {c.why}</span>}
                 </li>
               ))}
@@ -176,6 +224,29 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
           )}
         </Card>
       ))}
+
+      {confirmAll && (
+        <Modal
+          title={confirmAll === 'accepted' ? `Alle ${items.length} voorstellen accepteren?` : `Alle ${items.length} voorstellen negeren?`}
+          onClose={deciding ? undefined : () => setConfirmAll(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmAll(null)} disabled={deciding}>
+                Annuleren
+              </Button>
+              <Button variant={confirmAll === 'accepted' ? 'primary' : 'danger'} onClick={() => void decideAll(confirmAll)} disabled={deciding}>
+                {deciding ? 'Bezig…' : confirmAll === 'accepted' ? 'Alles accepteren' : 'Alles negeren'}
+              </Button>
+            </>
+          }
+        >
+          <p>
+            {confirmAll === 'accepted'
+              ? 'De thema’s en verbanden van alle voorstellen worden in de documenten opgenomen. Dat kun je niet in één keer terugdraaien.'
+              : 'Alle voorstellen verdwijnen zonder dat er iets in je documenten verandert. Ze komen pas terug als een document verandert of als je “Alles opnieuw” draait.'}
+          </p>
+        </Modal>
+      )}
     </div>
   )
 }

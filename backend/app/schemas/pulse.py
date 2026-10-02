@@ -51,3 +51,8 @@ class PulseResultOut(BaseModel):
 
 class PulseDecision(BaseModel):
     decision: str  # accepted | dismissed
+
+
+class PulseDecideAllOut(BaseModel):
+    decision: str
+    decided: int

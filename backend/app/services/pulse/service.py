@@ -236,8 +236,8 @@ class PulseService:
         db.refresh(run)
         return run
 
-    def decide(self, db: Session, item: PulseItem, decision: str) -> PulseItem:
-        """Record a human decision. Accepting merges tags and connections into the document's metadata."""
+    @staticmethod
+    def _apply(db: Session, item: PulseItem, decision: str) -> None:
         if decision not in ("accepted", "dismissed"):
             raise PulseError(f"Unknown decision: {decision}")
         item.decision = decision
@@ -247,6 +247,29 @@ class PulseService:
             meta["tags"] = json.loads(item.tags)
             meta["connections"] = json.loads(item.connections)
             doc.doc_metadata = json.dumps(meta, ensure_ascii=False)
+
+    def decide(self, db: Session, item: PulseItem, decision: str) -> PulseItem:
+        """Record a human decision. Accepting merges tags and connections into the document's metadata."""
+        self._apply(db, item, decision)
         db.commit()
         db.refresh(item)
         return item
+
+    def decide_all(self, db: Session, workspace_id: int, decision: str) -> int:
+        """Decide every suggestion of the werkmap that still awaits one, in one go (all or nothing). Returns how many."""
+        if decision not in ("accepted", "dismissed"):
+            raise PulseError(f"Unknown decision: {decision}")
+        items = (
+            db.query(PulseItem)
+            .filter(PulseItem.workspace_id == workspace_id, PulseItem.decision == "pending")
+            .order_by(PulseItem.id)
+            .all()
+        )
+        try:
+            for item in items:
+                self._apply(db, item, decision)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        return len(items)

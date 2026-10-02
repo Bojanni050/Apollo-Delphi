@@ -154,3 +154,40 @@ def test_model_failure_marks_run_failed_without_items(client, scripted):
     result = client.post(f"/api/workspaces/{ws['id']}/pulse").json()
     assert result["run"]["status"] == "failed" and result["items"] == []
     assert "invalid JSON" in result["run"]["error_message"]
+
+
+def test_accept_all_applies_every_open_suggestion_of_the_werkmap_only(client, db):
+    ws1, ws2 = _ws(client, "een"), _ws(client, "twee")
+    a = _doc(client, ws1["id"], "budget_a.txt", BUDGET_A)
+    b = _doc(client, ws1["id"], "budget_b.txt", BUDGET_B)
+    other = _doc(client, ws2["id"], "recipes.txt", UNRELATED)
+    client.post(f"/api/workspaces/{ws1['id']}/pulse")
+    client.post(f"/api/workspaces/{ws2['id']}/pulse")
+
+    done = client.post(f"/api/workspaces/{ws1['id']}/pulse/decision", json={"decision": "accepted"}).json()
+    assert done == {"decision": "accepted", "decided": 2}
+    assert client.get(f"/api/workspaces/{ws1['id']}/pulse").json()["items"] == []
+    assert len(client.get(f"/api/workspaces/{ws2['id']}/pulse").json()["items"]) == 1, "another werkmap is left alone"
+    db.expire_all()
+    assert "tags" in json.loads(db.get(Document, a["id"]).doc_metadata or "{}")
+    assert "tags" in json.loads(db.get(Document, b["id"]).doc_metadata or "{}")
+    assert "tags" not in json.loads(db.get(Document, other["id"]).doc_metadata or "{}")
+    again = client.post(f"/api/workspaces/{ws1['id']}/pulse/decision", json={"decision": "accepted"}).json()
+    assert again["decided"] == 0, "nothing left to decide"
+
+
+def test_reject_all_changes_no_metadata_and_clears_the_list(client, db):
+    ws = _ws(client)
+    a = _doc(client, ws["id"], "budget_a.txt", BUDGET_A)
+    _doc(client, ws["id"], "budget_b.txt", BUDGET_B)
+    client.post(f"/api/workspaces/{ws['id']}/pulse")
+    assert client.post(f"/api/workspaces/{ws['id']}/pulse/decision", json={"decision": "dismissed"}).json()["decided"] == 2
+    assert client.get(f"/api/workspaces/{ws['id']}/pulse").json()["items"] == []
+    db.expire_all()
+    assert "tags" not in json.loads(db.get(Document, a["id"]).doc_metadata or "{}")
+
+
+def test_deciding_all_validates_the_decision_and_the_werkmap(client):
+    ws = _ws(client)
+    assert client.post(f"/api/workspaces/{ws['id']}/pulse/decision", json={"decision": "maybe"}).status_code == 400
+    assert client.post("/api/workspaces/99999/pulse/decision", json={"decision": "accepted"}).status_code == 404

@@ -9,7 +9,7 @@ from app.api.deps import get_session
 from app.core.llm import LLMError
 from app.models import Document, Workspace
 from app.models.pulse import PulseItem, PulseRun
-from app.schemas.pulse import PulseDecision, PulseItemOut, PulseResultOut, PulseRunOut
+from app.schemas.pulse import PulseDecideAllOut, PulseDecision, PulseItemOut, PulseResultOut, PulseRunOut
 from app.services.pulse.service import PulseError, PulseService
 
 router = APIRouter(tags=["pulse"])
@@ -66,6 +66,17 @@ def get_pulse(workspace_id: int, db: Session = Depends(get_session)):
     )
     names = _names(db, workspace_id)
     return PulseResultOut(run=PulseRunOut.model_validate(run) if run else None, items=[_item_out(i, names) for i in items])
+
+
+@router.post("/workspaces/{workspace_id}/pulse/decision", response_model=PulseDecideAllOut)
+def decide_all_pulse_items(workspace_id: int, body: PulseDecision, db: Session = Depends(get_session)):
+    """Accept or dismiss every suggestion of this werkmap that still awaits a decision."""
+    _workspace(db, workspace_id)
+    try:
+        decided = PulseService().decide_all(db, workspace_id, body.decision)
+    except PulseError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return PulseDecideAllOut(decision=body.decision, decided=decided)
 
 
 @router.post("/pulse/items/{item_id}/decision", response_model=PulseItemOut)
