@@ -4,6 +4,7 @@ import AnalysisPage from './pages/AnalysisPage'
 import IssuesPage from './pages/IssuesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
+import NotesPage from './pages/NotesPage'
 import PulsePage from './pages/PulsePage'
 import AskPage from './pages/AskPage'
 import WeavePage from './pages/WeavePage'
@@ -19,7 +20,7 @@ import { useTheme } from './theme'
 import { GROUPS_CHANGED, usePulseRunning } from './pulseActivity'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
+type Page = 'documents' | 'notes' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
 /** A small network: three nodes and the lines between them (the icon of Delphi Weave). */
 const WeaveIcon = (
@@ -32,8 +33,16 @@ const WeaveIcon = (
 )
 
 /** The working order first (Importeren, Delphi Pulse, Analyse, Delphi Weave), then a line, then the rest of the menu. */
-const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean }[] = [
-  { id: 'documents', label: 'Importeren', icon: '▦' },
+const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean; sub?: { id: Page; label: string; icon: ReactNode }[] }[] = [
+  {
+    id: 'documents',
+    label: 'Documenten',
+    icon: '▦',
+    sub: [
+      { id: 'documents', label: 'Import', icon: '▦' },
+      { id: 'notes', label: 'Notities', icon: '◑' },
+    ],
+  },
   { id: 'pulse', label: 'Delphi Pulse', icon: <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" /> },
   { id: 'analysis', label: 'Analyse', icon: '◔' },
   { id: 'weave', label: 'Delphi Weave', icon: WeaveIcon, dividerAfter: true },
@@ -48,6 +57,7 @@ const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean }[
 
 const CONTEXT_TITLES: Record<Page, string> = {
   documents: 'Document details',
+  notes: 'Notitie',
   search: 'Fragment',
   ask: 'Bronnen',
   pulse: 'Voorstel',
@@ -253,7 +263,7 @@ export default function App() {
     <LangContext.Provider value={lang}>
     <AppShell
       flow={[
-        { id: 'documents', label: 'Importeren', done: hasDocuments },
+        { id: 'documents', label: 'Import', done: hasDocuments },
         { id: 'pulse', label: 'Delphi Pulse', done: hasGroups },
         {
           id: 'analysis',
@@ -282,6 +292,7 @@ export default function App() {
     >
       {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
       {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
+      {page === 'notes' && <NotesPage workspaceId={activeWorkspaceId} />}
       {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'weave' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">

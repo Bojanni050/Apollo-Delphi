@@ -15,8 +15,18 @@ export type FlowStep = {
   title?: string
 }
 
-/** `dividerAfter`: a line under this item. `disabled` items cannot be opened yet; `title` says why. */
-export type NavItem = { id: string; label: string; icon?: ReactNode; dividerAfter?: boolean; busy?: boolean; disabled?: boolean; title?: string }
+/** `dividerAfter`: a line under this item. `disabled` items cannot be opened yet; `title` says why.
+`sub`: submenu items, shown indented under this one (the group itself does not navigate). */
+export type NavItem = {
+  id: string
+  label: string
+  icon?: ReactNode
+  dividerAfter?: boolean
+  busy?: boolean
+  disabled?: boolean
+  title?: string
+  sub?: NavItem[]
+}
 
 type AppShellProps = {
   nav: NavItem[]
@@ -119,17 +129,26 @@ function Shell({
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           <nav className="mt-1 space-y-0.5">
-            {nav.map((n) => (
-              <div key={n.id}>
+            {nav.flatMap((n) =>
+              n.sub && n.sub.length > 0 ? [n, ...n.sub.map((s) => ({ ...s, inSubmenu: true, parent: n }))] : [n],
+            ).map((n) => (
+              <div key={n.id} className={(n as { inSubmenu?: boolean }).inSubmenu ? 'pl-4' : ''}>
                 <button
-                  onClick={() => onNavigate(n.id)}
+                  onClick={() => {
+                    const item = n as { inSubmenu?: boolean; parent?: { id: string; sub?: NavItem[] } }
+                    if (item.inSubmenu) {
+                      onNavigate(n.id)
+                      return
+                    }
+                    if (item.parent?.sub?.length) onNavigate(item.parent.sub[0].id)
+                  }}
                   disabled={n.disabled}
                   title={n.disabled ? n.title : leftCollapsed ? n.label : undefined}
                   className={`flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent ${
                     active === n.id
                       ? 'border-slate-200 bg-white font-medium text-slate-900 shadow-sm'
                       : 'border-transparent text-slate-600 hover:bg-slate-200'
-                  } ${leftCollapsed ? 'justify-center' : ''}`}
+                  } ${(n as { inSubmenu?: boolean }).inSubmenu ? 'py-1.5 text-[13px]' : ''} ${leftCollapsed ? 'justify-center' : ''}`}
                 >
                   <span className={`flex w-5 shrink-0 items-center justify-center text-center text-slate-400 ${n.busy ? 'nav-busy' : ''}`}>{n.icon ?? '•'}</span>
                   {!leftCollapsed && <span className={`truncate ${n.busy ? 'nav-busy' : ''}`}>{n.label}</span>}

@@ -12,6 +12,12 @@ class DelphiChatRequest(BaseModel):
     follow_up_of: int | None = None
 
 
+class DelphiNoteRequest(BaseModel):
+    """Make a note of the exchange this Delphi reply belongs to."""
+    workspace_id: int
+    reply_id: int
+
+
 class DelphiMessageOut(BaseModel):
     id: int
     workspace_id: int

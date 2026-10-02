@@ -7,7 +7,15 @@ from app.api.deps import get_session
 from app.core.llm import LLMError
 from app.models import Workspace
 from app.models.delphi_chat import DelphiChatMessage
-from app.schemas.delphi_chat import DelphiChatOut, DelphiChatRequest, DelphiMessageOut
+from app.schemas.delphi_chat import (
+    DelphiChatOut,
+    DelphiChatRequest,
+    DelphiMessageOut,
+    DelphiNoteRequest,
+)
+from app.models.generated_document import GeneratedDocument
+from app.schemas.generated import GeneratedDocumentOut
+from app.services.delphi_chat.note import DelphiNoteService
 from app.services.delphi_chat.service import DelphiChatService
 
 router = APIRouter(prefix="/delphi", tags=["delphi"])
@@ -42,6 +50,19 @@ async def chat(body: DelphiChatRequest, db: Session = Depends(get_session)):
     except LLMError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     return DelphiChatOut(user_message=_out(result.user_message), reply=_out(result.reply))
+
+
+@router.post("/note", response_model=GeneratedDocumentOut, status_code=201)
+async def make_note(body: DelphiNoteRequest, db: Session = Depends(get_session)):
+    """Turn an exchange with Delphi into a note: a document of the werkmap (Generated page) and a
+    markdown file in its repository (Notes/Delphi/)."""
+    try:
+        doc = await DelphiNoteService().make_note(db, body.workspace_id, body.reply_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except LLMError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return doc
 
 
 @router.get("/history", response_model=list[DelphiMessageOut])

@@ -45,6 +45,8 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [noting, setNoting] = useState<number | null>(null)
+  const [noted, setNoted] = useState<Set<number>>(new Set())
   const orbRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -127,6 +129,23 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
       window.removeEventListener('mouseup', onUp)
     }
   }, [drag])
+
+  const makeNote = useCallback(
+    async (replyId: number) => {
+      if (workspaceId == null || noting != null) return
+      setNoting(replyId)
+      setError(null)
+      try {
+        await api.delphiNote(workspaceId, replyId)
+        setNoted((n) => new Set(n).add(replyId))
+      } catch (e) {
+        setError((e as Error).message)
+      } finally {
+        setNoting(null)
+      }
+    },
+    [workspaceId, noting],
+  )
 
   const send = useCallback(async () => {
     const text = input.trim()
@@ -211,7 +230,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
           <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
             {messages.length === 0 && <p className="text-sm leading-relaxed text-slate-500">{INTRO}</p>}
             {messages.map((m) => (
-              <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
+              <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : 'flex flex-col items-start'}>
                 <div
                   className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                     m.role === 'user'
@@ -223,6 +242,20 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
                 >
                   {m.content}
                 </div>
+                {m.role === 'delphi' && (
+                  <button
+                    onClick={() => void makeNote(m.id)}
+                    disabled={noting != null || noted.has(m.id)}
+                    title="Van dit antwoord een notitie maken: een document onder Generated, en een bestand in de werkmap"
+                    className={`mt-1 rounded-lg px-2 py-0.5 text-[11.4px] transition-colors ${
+                      noted.has(m.id)
+                        ? 'text-emerald-700'
+                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40'
+                    }`}
+                  >
+                    {noted.has(m.id) ? '✓ notitie gemaakt' : noting === m.id ? 'notitie maken…' : '📝 notitie maken'}
+                  </button>
+                )}
               </div>
             ))}
             {busy && (

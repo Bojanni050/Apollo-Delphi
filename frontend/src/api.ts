@@ -607,6 +607,13 @@ export const api = {
     }),
   delphiHistory: (workspaceId: number) =>
     request<DelphiMessage[]>(`/api/delphi/history?workspace_id=${workspaceId}`),
+  /** Turn an exchange with Delphi into a note: a document (Generated) and a file in the werkmap. */
+  delphiNote: (workspaceId: number, replyId: number) =>
+    request<GeneratedDocument>('/api/delphi/note', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace_id: workspaceId, reply_id: replyId }),
+    }),
   /** Start an analysis in the background and return at once; follow it with `analysisProgress`. */
   startAnalysis: (workspaceId?: number | null, groups: string[] = []) => {
     const qs = [workspaceId ? `workspace_id=${workspaceId}` : '', 'background=true', ...groups.map((g) => `groups=${encodeURIComponent(g)}`)]
@@ -650,8 +657,15 @@ export const api = {
       `/api/documents/generate?title=${encodeURIComponent(title)}${analysisRunId ? `&analysis_run_id=${analysisRunId}` : ''}${workspaceId ? `&workspace_id=${workspaceId}` : ''}`,
       { method: 'POST' },
     ),
-  listGenerated: (workspaceId?: number | null) =>
-    request<GeneratedDocument[]>(`/api/documents/generated/list${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
+  listGenerated: (workspaceId?: number | null, docKind?: 'report' | 'note') =>
+    request<GeneratedDocument[]>(
+      `/api/documents/generated/list?${[
+        workspaceId ? `workspace_id=${workspaceId}` : '',
+        docKind ? `doc_kind=${docKind}` : '',
+      ]
+        .filter(Boolean)
+        .join('&')}`,
+    ),
   getVerification: (id: number) => request<VerificationFinding[]>(`/api/documents/generated/${id}/verification`),
   health: () => request<Record<string, string>>('/api/health'),
   ingestGithub: (repoUrl: string, workspaceId?: number | null) =>

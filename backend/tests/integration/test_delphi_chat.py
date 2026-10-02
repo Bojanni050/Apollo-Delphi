@@ -135,3 +135,50 @@ def test_the_chat_is_part_of_the_werkmap_repository(client):
         ["git", "-C", str(working_dir), "log", "--format=%s"], capture_output=True, text=True, check=True
     ).stdout.splitlines()
     assert any(l.startswith("Delphi chat:") for l in log), "each exchange is its own commit"
+
+
+def test_a_reply_can_be_made_into_a_note(client):
+    """'Notitie maken': an exchange becomes a document (Generated) and a markdown file in the werkmap."""
+    from pathlib import Path
+
+    ws = _ws(client)
+    _doc(client, ws, "architectuur/rapport-a.md", BUDGET_A)
+    chat = _chat(client, ws, "Wat zegt het document over het budget?").json()
+    reply_id = chat["reply"]["id"]
+
+    res = client.post("/api/delphi/note", json={"workspace_id": ws, "reply_id": reply_id})
+    assert res.status_code == 201, res.text
+    note = res.json()
+    assert note["doc_kind"] == "note"
+    assert note["content"].strip()
+
+    listed = client.get(f"/api/documents/generated/list?workspace_id={ws}").json()
+    assert any(d["id"] == note["id"] for d in listed), "the note is among the generated documents"
+
+    from app.db.session import SessionLocal
+
+    from app.models import Workspace
+
+    db = SessionLocal()
+    working_dir = Path(db.get(Workspace, ws).working_dir)
+    db.close()
+    notes = sorted((working_dir / "Notes" / "Delphi").glob("*.md"))
+    assert notes, "the note is a file in the werkmap"
+    body = notes[0].read_text(encoding="utf-8")
+    assert "budget" in body.lower()
+
+    import subprocess
+
+    log = subprocess.run(
+        ["git", "-C", str(working_dir), "log", "--format=%s"], capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    assert any(l.startswith("Add note from Delphi chat:") for l in log)
+
+
+def test_a_note_of_another_werkmap_is_a_404(client):
+    ws = _ws(client)
+    other = _ws(client, "Andere")
+    _doc(client, ws, "architectuur/rapport-a.md", BUDGET_A)
+    chat = _chat(client, ws, "Wat zegt het document over het budget?").json()
+    res = client.post("/api/delphi/note", json={"workspace_id": other, "reply_id": chat["reply"]["id"]})
+    assert res.status_code == 404
