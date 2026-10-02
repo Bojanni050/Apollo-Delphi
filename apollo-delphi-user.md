@@ -41,7 +41,8 @@ standaard open; met **▤ Lezen** rechtsboven sluit of open je het (dat wordt on
 **Klik op een document in de lijst** op de Documents-pagina om het te lezen; bij een zoekresultaat, een bron bij Vragen
 of bewijs bij een issue staat **Lees in het leesvenster**. Je ziet de tekst met regelnummers (bij een PDF met de pagina-overgangen), de plek waar je voor kwam
 gemarkeerd en in beeld gebracht (bij een bron het hele fragment) en je zoekwoorden gemarkeerd. Bovenin kun je in het
-document zoeken (Enter of ▲▼ naar de volgende treffer). Het venster start op 40% van de breedte van het scherm. Sleep de linkerrand
+document zoeken (Enter of ▲▼ naar de volgende treffer). Het venster start op 40% van de breedte van het venster en blijft dat aandeel houden als je het
+venster groter of kleiner maakt. Sleep de linkerrand
 (het streepje) om de pagina en het leesvenster breder of smaller te maken; die breedte wordt onthouden. Bij Markdown, Word en PDF kies je bovenin **Opgemaakt** (zoals het bedoeld is: koppen, lijsten,
 tabellen, of het originele PDF-bestand in de PDF-viewer) of **Tekst** (met regelnummers, markering en zoeken). Open je een
 document zonder specifieke plek, dan zie je het opgemaakt; kom je via een zoekresultaat, bron of bewijs, dan zie je de

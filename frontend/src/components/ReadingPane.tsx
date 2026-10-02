@@ -3,12 +3,13 @@ import { api, type DocumentText } from '../api'
 import { useReader, type ReaderTarget } from '../reader'
 import { RichHtml, RichMarkdown } from './RichText'
 
-// v2: the default became 40% of the screen; a width dragged before (or the old fixed default) must not hide that
-const WIDTH_KEY = 'apollo.reader.width.v2'
+// The width is kept as a share of the window (not in pixels): it stays 40% when the window is made bigger or smaller, also
+// when it only gets its real size after the app started. The key is new: pixel widths saved before must not hide the default.
+const SHARE_KEY = 'apollo.reader.share'
 /** The page next to the reading pane never gets narrower than this when dragging. */
 const MIN_PAGE_WIDTH = 240
 /** The reading pane starts at 40% of the window; dragging the edge changes it and is remembered. */
-const defaultWidth = () => Math.max(MIN_WIDTH, Math.round(window.innerWidth * 0.4))
+const DEFAULT_SHARE = 0.4
 const MIN_WIDTH = 288
 
 type Range = { start: number; end: number }
@@ -102,13 +103,21 @@ export default function ReadingPane() {
   const [chosenView, setChosenView] = useState<'formatted' | 'text' | null>(null)
   const [wordHtml, setWordHtml] = useState<{ id: number; html: string } | null>(null)
   const [wordError, setWordError] = useState<string | null>(null)
-  const [width, setWidth] = useState(() => {
+  const [share, setShare] = useState(() => {
     try {
-      return Number(localStorage.getItem(WIDTH_KEY)) || defaultWidth()
+      const saved = Number(localStorage.getItem(SHARE_KEY))
+      return saved > 0.1 && saved < 0.9 ? saved : DEFAULT_SHARE
     } catch {
-      return defaultWidth()
+      return DEFAULT_SHARE
     }
   })
+  const [viewport, setViewport] = useState(() => window.innerWidth)
+  useEffect(() => {
+    const onResize = () => setViewport(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const width = Math.max(MIN_WIDTH, Math.round(share * viewport))
   const body = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
   // while the edge is dragged the PDF viewer (an iframe) must not catch the mouse, or the page never sees it move or let go
@@ -206,7 +215,8 @@ export default function ReadingPane() {
       // the pane's right edge stays where it is (the context column sits to its right), so the width follows the mouse
       const right = pane.getBoundingClientRect().right
       const beside = container.getBoundingClientRect().right - right // what the context column takes
-      setWidth(Math.min(Math.max(right - e.clientX, MIN_WIDTH), container.clientWidth - beside - MIN_PAGE_WIDTH))
+      const px = Math.min(Math.max(right - e.clientX, MIN_WIDTH), container.clientWidth - beside - MIN_PAGE_WIDTH)
+      setShare(px / window.innerWidth)
     }
     const onUp = () => {
       if (!dragging.current) return
@@ -214,7 +224,7 @@ export default function ReadingPane() {
       setDragActive(false)
       document.body.style.userSelect = ''
       try {
-        localStorage.setItem(WIDTH_KEY, String(width))
+        localStorage.setItem(SHARE_KEY, String(share))
       } catch {
         /* not remembered */
       }
@@ -225,7 +235,7 @@ export default function ReadingPane() {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [width])
+  }, [share])
 
   const blocks: ReactNode[] = []
   for (let from = 0; from < lines.length; from += LINES_PER_BLOCK) {
