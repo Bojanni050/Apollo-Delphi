@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { api, type Weave, type WeaveConnection, type WeaveDocument } from '../api'
 import { Card, ErrorText } from '../components'
+import FoundationChecklist from '../components/FoundationChecklist'
 import { GROUPS_CHANGED } from '../pulseActivity'
 import { useReader } from '../reader'
 
@@ -120,6 +121,7 @@ export default function WeavePage({ workspaceId }: { workspaceId: number | null 
 
   return (
     <div className="space-y-6">
+      <FoundationChecklist />
       <Card>
         <h2 className="text-lg font-semibold">Delphi Weave</h2>
         <p className="mt-1 text-sm text-slate-500">
