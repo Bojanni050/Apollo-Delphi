@@ -97,7 +97,10 @@ verbonden document daarin, om dat document in het leesvenster te lezen.
 
 **Analysis** leest claims uit de documenten, van de hele werkmap of alleen van de groepen die je kiest (bovenaan: Alles, of
 een of meer groepen, bijvoorbeeld twee tegelijk); tegenstrijdigheden worden dan alleen tussen de gekozen documenten gezocht,
-en zo'n analyse is veel kleiner; **Issues** toont tegenstrijdigheden en open vragen met het bewijs
+en zo'n analyse is veel kleiner. Tijdens de analyse zie je live wat er gebeurt: de fase, het document en fragment waar ze mee bezig
+is met een voortgangsbalk, hoeveel claims, open vragen en tegenstrijdigheden er al zijn gevonden, en een lijst die meeloopt
+met wat er wordt gevonden. Je kunt naar een andere pagina gaan en terugkomen: de analyse loopt door en het paneel pakt haar
+weer op. Stopt de app midden in een analyse, dan staat die daarna als mislukt; **Issues** toont tegenstrijdigheden en open vragen met het bewijs
 (bestand, pagina, regels); een onderzoek kan ze oplossen, waarna jij accepteert of afwijst. **Knowledge** toont wat
 vaststaat; **Generated** maakt en controleert een samenvattend document.
 

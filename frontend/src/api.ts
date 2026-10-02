@@ -53,6 +53,34 @@ export interface AnalysisStats {
   groups?: string[] | null
 }
 
+/** A line in the feed of a running analysis: a document being read, a claim, an open question, a contradiction or a step. */
+export interface AnalysisFeedLine {
+  n: number
+  at: string
+  kind: 'document' | 'claim' | 'question' | 'contradiction' | 'stage'
+  text: string
+}
+
+/** What an analysis is doing right now (also after it finished, for as long as the app has not been restarted). */
+export interface AnalysisProgress {
+  run_id: number
+  stage: 'start' | 'lezen' | 'opslaan' | 'vergelijken' | 'klaar' | 'mislukt'
+  finished: boolean
+  documents_total: number
+  documents_done: number
+  chunks_total: number
+  chunks_done: number
+  current_document: string | null
+  claims: number
+  open_questions: number
+  contradictions: number
+  error: string | null
+  started_at: string
+  feed: AnalysisFeedLine[]
+  /** The number of the last line: ask for what comes after it next time. */
+  last: number
+}
+
 export interface AnalysisRun {
   id: number
   status: string
@@ -555,6 +583,16 @@ export const api = {
     }),
   askHistory: (workspaceId?: number | null) =>
     request<Answer[]>(`/api/ask/history${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
+  /** Start an analysis in the background and return at once; follow it with `analysisProgress`. */
+  startAnalysis: (workspaceId?: number | null, groups: string[] = []) => {
+    const qs = [workspaceId ? `workspace_id=${workspaceId}` : '', 'background=true', ...groups.map((g) => `groups=${encodeURIComponent(g)}`)]
+      .filter(Boolean)
+      .join('&')
+    return request<AnalysisRun>(`/api/analysis?${qs}`, { method: 'POST' })
+  },
+  analysisProgress: (runId: number, since = 0) => request<AnalysisProgress>(`/api/analysis/${runId}/progress?since=${since}`),
+  /** The analysis that is running in this werkmap right now, or null. */
+  runningAnalysis: (workspaceId?: number | null) => request<AnalysisProgress | null>(`/api/analysis/running${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
   /** Analyse the werkmap, or only the documents of the given groups ("__none__" = those without a group). */
   runAnalysis: (workspaceId?: number | null, groups: string[] = []) => {
     const qs = [workspaceId ? `workspace_id=${workspaceId}` : '', ...groups.map((g) => `groups=${encodeURIComponent(g)}`)].filter(Boolean).join('&')

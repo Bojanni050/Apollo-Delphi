@@ -67,6 +67,13 @@ def startup() -> None:
             log.info("Documents left half-indexed by a stopped app are pending again")
     except Exception as exc:  # the table may not exist yet (before migrations)
         log.warning("Could not recover interrupted indexing: %s", exc)
+    try:
+        from app.services.analysis.service import recover_interrupted_analyses
+
+        if recover_interrupted_analyses():
+            log.info("Analyses that were running when the app stopped are marked as failed")
+    except Exception as exc:
+        log.warning("Could not recover interrupted analyses: %s", exc)
     log.info("Apollo started (environment=%s, llm=%s/%s, embeddings=%s/%s)", settings.environment, settings.llm_provider, settings.llm_model, settings.embedding_provider, settings.embedding_model)
 
 

@@ -187,7 +187,10 @@ POST   /api/embeddings/reindex             re-embed stale documents (?everything
 GET    /api/embeddings/catalog             recommended local models per runtime (ollama | llamacpp)
 GET/POST /api/embeddings/models/pull       download a recommended model to a local runtime, with progress
 POST   /api/analysis                       run analysis over the collection; `groups=` (repeatable) limits it to the
-                                           documents of those groups (`__none__` = no group)
+                                           documents of those groups (`__none__` = no group); `background=true` returns at
+                                           once (409 while one runs in that werkmap)
+GET    /api/analysis/{id}/progress?since=  what a run is doing: stage, document, counters and the new lines of the feed
+GET    /api/analysis/running?workspace_id= the run that is going in this werkmap right now (null when none)
 GET    /api/analysis/{id}
 GET    /api/analysis/{id}/claims
 GET    /api/analysis/{id}/issues

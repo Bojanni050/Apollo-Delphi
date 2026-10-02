@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, type AnalysisRun, type Claim, type Issue } from '../api'
+import { api, type AnalysisFeedLine, type AnalysisProgress, type AnalysisRun, type Claim, type Issue } from '../api'
+import AnalysisLive from '../components/AnalysisLive'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 
 /** The value the API takes for "the documents without a group". */
@@ -17,8 +18,12 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
   const [run, setRun] = useState<AnalysisRun | null>(null)
   const [claims, setClaims] = useState<Claim[]>([])
   const [issues, setIssues] = useState<Issue[]>([])
-  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The analysis that is running (or has just finished) and what it is doing: followed while the page is open
+  const [runId, setRunId] = useState<number | null>(null)
+  const [progress, setProgress] = useState<AnalysisProgress | null>(null)
+  const [feed, setFeed] = useState<AnalysisFeedLine[]>([])
+  const busy = runId !== null
   // Analyse everything, or only the documents of the chosen groups (one, two, more): conflicts are then looked for among those
   const [choices, setChoices] = useState<GroupChoice[]>([])
   const [selected, setSelected] = useState<string[]>([])
@@ -35,6 +40,16 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
     setIssues([])
     setChoices([])
     setSelected([])
+    setRunId(null)
+    setProgress(null)
+    setFeed([])
+    // an analysis that is already running in this werkmap (started before, on another page): pick it up again
+    void api
+      .runningAnalysis(workspaceId)
+      .then((p) => {
+        if (p) setRunId(p.run_id)
+      })
+      .catch(() => undefined)
     void (async () => {
       try {
         const docs = (await api.listDocuments(workspaceId)).filter((d) => d.indexing_status === 'parsed' || d.indexing_status === 'indexed')
@@ -67,19 +82,53 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
   }, [workspaceId])
 
   const analyze = async () => {
-    setBusy(true)
     setError(null)
+    setProgress(null)
+    setFeed([])
     try {
-      const newRun = await api.runAnalysis(workspaceId, selected)
-      setRun(newRun)
-      setClaims(await fetchJson<Claim[]>(`/api/analysis/${newRun.id}/claims`))
-      await loadIssues()
+      const started = await api.startAnalysis(workspaceId, selected)
+      setRunId(started.id)
     } catch (e) {
       setError((e as Error).message)
-    } finally {
-      setBusy(false)
     }
   }
+
+  // follow the run: every second what it is doing and the new lines of the feed, until it is finished
+  useEffect(() => {
+    if (runId === null) return
+    let cancelled = false
+    let timer: number | undefined
+    let since = 0
+    const tick = async () => {
+      try {
+        const p = await api.analysisProgress(runId, since)
+        if (cancelled) return
+        since = p.last
+        setProgress(p)
+        if (p.feed.length > 0) setFeed((cur) => [...cur, ...p.feed].slice(-300))
+        if (p.finished) {
+          if (p.stage === 'mislukt') setError(p.error ?? 'De analyse is mislukt')
+          else {
+            const finished = await fetchJson<AnalysisRun>(`/api/analysis/${runId}`)
+            setRun(finished)
+            setClaims(await fetchJson<Claim[]>(`/api/analysis/${runId}/claims`))
+            await loadIssues()
+          }
+          if (!cancelled) setRunId(null)
+          return
+        }
+      } catch {
+        /* a hiccup: look again */
+      }
+      if (!cancelled) timer = window.setTimeout(() => void tick(), 1000)
+    }
+    void tick()
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId])
 
   const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((g) => g !== id) : [...cur, id]))
   const chosenDocs = selected.length === 0 ? null : choices.filter((c) => selected.includes(c.id)).reduce((n, c) => n + c.count, 0)
@@ -95,7 +144,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Collection analysis</h2>
           <Button onClick={() => void analyze()} disabled={busy}>
-            {busy ? 'Analyzing…' : 'Run analysis'}
+            {busy ? 'Bezig…' : 'Run analysis'}
           </Button>
         </div>
         {choices.length > 0 && (
@@ -105,6 +154,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
               <button
                 type="button"
                 onClick={() => setSelected([])}
+                disabled={busy}
                 aria-pressed={selected.length === 0}
                 className={`rounded-full border px-3 py-1 text-sm ${
                   selected.length === 0 ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -117,6 +167,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
                   key={c.id}
                   type="button"
                   onClick={() => toggle(c.id)}
+                  disabled={busy}
                   aria-pressed={selected.includes(c.id)}
                   className={`rounded-full border px-3 py-1 text-sm ${
                     selected.includes(c.id) ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -161,6 +212,8 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
         {!run && <p className="text-sm text-slate-400">No analysis yet. Index documents, then run an analysis.</p>}
         <ErrorText message={error} />
       </Card>
+
+      {progress && <AnalysisLive progress={progress} feed={feed} />}
 
       <div className="grid grid-cols-2 gap-6">
         <Card>
