@@ -11,7 +11,7 @@ export function Badge({ kind, children }: { kind: 'ok' | 'warn' | 'err' | 'neutr
     err: 'bg-red-100 text-red-800',
     neutral: 'bg-slate-200 text-slate-700',
   } as const
-  return <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[kind]}`}>{children}</span>
+  return <span className={`inline-flex shrink-0 self-center items-center justify-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium leading-5 ${styles[kind]}`}>{children}</span>
 }
 
 export function StatusBadge({ status }: { status: string }) {

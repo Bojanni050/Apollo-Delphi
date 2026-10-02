@@ -389,6 +389,9 @@ pub fn run() {
                     // rather than in tauri.conf.json because the port is only
                     // known at runtime.
                     if let Some(window) = app.get_webview_window("main") {
+                        // Start gemaximaliseerd: de config doet dit ook, dit dekt paden
+                        // waar het venster al bestond (dev, herstart).
+                        let _ = window.maximize();
                         if let Err(error) = window.navigate(tauri::Url::parse(&url).map_err(
                             |e| format!("Invalid server URL {url}: {e}"),
                         )?) {

@@ -250,3 +250,15 @@ achteraf ingevuld voor het werk van 2026-10-01 (commits tussen haakjes).
 - Findings: De pagina toonde 40 open vragen boven (stats van de laatste run, hier governance) en in het live-paneel, maar 45 bij Issues. Claims klopten wel (3), omdat die per run geladen worden.
 - Conclusions: `GET /api/issues` geeft alle issues van de werkmap over alle runs heen, terwijl `run.stats`, claims en het live-paneel over één run gaan. Na meerdere runs telt het Issues-blok dus oud werk mee. Het blok hoort bij de getoonde run (alle issues staan nog op de Issues-pagina); de laatste run wordt via de werkmap gezocht zodat ook een run met 0 issues de juiste is.
 - Actions: `frontend/src/pages/AnalysisPage.tsx` (issues, contradicties, open vragen, resolved/unresolved en de lijst gefilterd op `run.id`; laatste run via `GET /api/workspaces/{id}` met val-terug op de nieuwste issue); validated met `npm run build` en `test_analysis_groups.py` (6 passed).
+
+## 2026-10-02 (App start gemaximaliseerd)
+
+- Findings: Het venster opende op 1440x900 gecentreerd, terwijl gewenst is dat de app het scherm vult bij het starten.
+- Conclusions: Gemaximaliseerd (`maximized`) in plaats van echte exclusieve fullscreen: het venster vult het scherm maar houdt titel- en taakbalk, en blijft met één klik te herstellen. Echte fullscreen (`fullscreen: true`, F11-stijl zonder chroom) is een andere instelling en is nu bewust niet gekozen.
+- Actions: `src-tauri/tauri.conf.json` (`maximized: true` bij het hoofdvenster), `src-tauri/src/lib.rs` (`window.maximize()` in `setup` als vangnet voor paden waar het venster al bestond); validated met `npm run build`, JSON-parse en `cargo check`.
+
+## 2026-10-02 (Badges: tekst gecentreerd, altijd even groot)
+
+- Findings: Op de Analyse-pagina stonden de statusbolletjes (`unresolved`, `open`) als hoge vlekken met de tekst bovenaan, en ze verschilden onderling in grootte.
+- Conclusions: De badge is een flex-item in een `flex justify-between`-rij en kreeg daardoor de standaard `align-items: stretch`: bij een omgebogen regel van meerdere regels rekte de pil mee tot de volle rijhoogte en leek `rounded-full` op een cirkel. Opgelost in de gedeelde bouwsteen, zodat het op alle pagina's klopt.
+- Actions: `frontend/src/components.tsx` (`Badge`: `inline-flex items-center justify-center` voor gecentreerde tekst, `self-center` tegen uitrekken, `shrink-0` tegen krimpen, `whitespace-nowrap leading-5` voor gelijke hoogte op één regel); validated met `npm run build`.
