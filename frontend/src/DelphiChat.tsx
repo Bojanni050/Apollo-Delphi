@@ -16,7 +16,7 @@ type DragState =
   | { kind: 'press'; startX: number; startY: number; orbX: number; orbY: number; moved: boolean }
   | { kind: 'drag'; dx: number; dy: number }
 
-const CLOSED_POS_KEY = 'apollo.delphiOrbPos'
+const CLOSED_POS_KEY = 'apollo.delphiOrbPos.v2'  // v2: v1 stored right/bottom offsets, which dragged the wrong way
 
 function loadPos(): { x: number; y: number } {
   try {
@@ -28,7 +28,7 @@ function loadPos(): { x: number; y: number } {
   } catch {
     /* fall through to the default */
   }
-  return { x: 0, y: 0 }
+  return { x: Math.max(8, window.innerWidth - 72), y: Math.max(8, window.innerHeight - 72) }
 }
 
 export default function DelphiChat({ workspaceId }: { workspaceId: number | null }) {
@@ -146,7 +146,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
         className={`pointer-events-auto absolute flex h-14 w-14 cursor-grab select-none items-center justify-center rounded-full border-2 border-slate-200 bg-white shadow-lg transition-transform hover:scale-105 active:cursor-grabbing ${
           open ? 'ring-2 ring-slate-900 ring-offset-2' : ''
         }`}
-        style={{ right: pos.x, bottom: pos.y }}
+        style={{ left: pos.x, top: pos.y }}
         role="button"
         aria-pressed={open}
       >
@@ -155,7 +155,11 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
       {open && (
         <div
           className="pointer-events-auto absolute flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-          style={{ right: pos.x, bottom: pos.y + 68 }}
+          style={{
+            left: pos.x,
+            top: pos.y + 68,
+            transform: pos.y + 440 > window.innerHeight ? 'translateY(calc(-100% - 68px))' : undefined,
+          }}
         >
           <div className="flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-slate-900 px-3 text-white">
             <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" />
