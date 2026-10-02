@@ -12,8 +12,8 @@ class DelphiChatRequest(BaseModel):
     follow_up_of: int | None = None
 
 
-class DelphiNoteRequest(BaseModel):
-    """Make a note of the exchange this Delphi reply belongs to."""
+class DelphiOracleRequest(BaseModel):
+    """Make an oracle of the exchange this Delphi reply belongs to."""
     workspace_id: int
     reply_id: int
 

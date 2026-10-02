@@ -29,7 +29,7 @@ const STEPS: { title: string; detail: string }[] = [
   {
     title: 'Laat Delphi het document schrijven',
     detail:
-      'Snelst: laat haar het fundament uitleggen en zeg \u201cJa\u201d op haar aanbod om er een notitie van te maken (komt in Notes/Delphi/). Grondigst: Generate from knowledge state op de Generated-pagina \u2014 gebaseerd op alle uitgelezen claims, met verificatie eroverheen.',
+      'Snelst: laat haar het fundament uitleggen en zeg \u201cJa\u201d op haar aanbod om er een oracle van te maken (komt in Oracles/). Grondigst: Generate from knowledge state op de Generated-pagina \u2014 gebaseerd op alle uitgelezen claims, met verificatie eroverheen.',
   },
   {
     title: 'Zet het resultaat terug als nieuwe versie',

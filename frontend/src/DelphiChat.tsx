@@ -47,7 +47,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
   const [error, setError] = useState<string | null>(null)
   const [noting, setNoting] = useState<number | null>(null)
   const [noted, setNoted] = useState<Set<number>>(new Set())
-  /** The reply Delphi just gave and offers to turn into a note (she asks herself, you only answer). */
+  /** The reply Delphi just gave and offers to turn into an oracle (she asks herself, you only answer). */
   const [offerNote, setOfferNote] = useState<number | null>(null)
   const orbRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -138,7 +138,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
       setNoting(replyId)
       setError(null)
       try {
-        await api.delphiNote(workspaceId, replyId)
+        await api.delphiOracle(workspaceId, replyId)
         setNoted((n) => new Set(n).add(replyId))
         setOfferNote((id) => (id === replyId ? null : id))
       } catch (e) {
@@ -160,7 +160,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
     try {
       const result = await api.delphiChat(text, workspaceId, followUpOf)
       setMessages((m) => [...m, result.user_message, result.reply])
-      // An answer with substance is worth keeping: Delphi offers a note herself. A refusal is not.
+      // An answer with substance is worth keeping: Delphi offers an oracle herself. A refusal is not.
       setOfferNote(result.reply.refusal ? null : result.reply.id)
     } catch (e) {
       setError((e as Error).message)
@@ -251,14 +251,14 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
                   <button
                     onClick={() => void makeNote(m.id)}
                     disabled={noting != null || noted.has(m.id)}
-                    title="Van dit antwoord een notitie maken: een document onder Generated, en een bestand in de werkmap"
+                    title="Van dit antwoord een oracle maken: een document onder Oracles, en een bestand in de werkmap"
                     className={`mt-1 rounded-lg px-2 py-0.5 text-[11.4px] transition-colors ${
                       noted.has(m.id)
                         ? 'text-emerald-700'
                         : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40'
                     }`}
                   >
-                    {noted.has(m.id) ? '✓ notitie gemaakt' : noting === m.id ? 'notitie maken…' : '📝 notitie maken'}
+                    {noted.has(m.id) ? '✓ oracle gemaakt' : noting === m.id ? 'oracle maken…' : '📝 oracle maken'}
                   </button>
                 )}
               </div>
@@ -266,7 +266,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
             {offerNote != null && !noted.has(offerNote) && !busy && (
               <div className="flex flex-col items-start">
                 <div className="max-w-[85%] rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm italic text-slate-600">
-                  Zal ik van dit antwoord een notitie maken? Dan komt het bij de documenten van deze werkmap te
+                  Zal ik van dit antwoord een oracle maken? Dan komt het bij de documenten van deze werkmap te
                   staan.
                 </div>
                 <div className="mt-1 flex gap-1.5">
@@ -275,7 +275,7 @@ export default function DelphiChat({ workspaceId }: { workspaceId: number | null
                     disabled={noting != null}
                     className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11.4px] font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-40"
                   >
-                    {noting === offerNote ? 'notitie maken…' : 'Ja, maak er een notitie van'}
+                    {noting === offerNote ? 'oracle maken…' : 'Ja, maak er een oracle van'}
                   </button>
                   <button
                     onClick={() => setOfferNote(null)}

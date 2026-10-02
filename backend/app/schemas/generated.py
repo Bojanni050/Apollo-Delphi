@@ -29,6 +29,6 @@ class GeneratedDocumentOut(BaseModel):
     verification_status: str
     revision: int
     generation_metadata: str | None
-    #: "report" = made from the knowledge state; "note" = made from a Delphi chat.
+    #: "report" = made from the knowledge state; "oracle" = made from a Delphi chat; "note" = written by the user.
     doc_kind: str = "report"
     created_at: dt.datetime
