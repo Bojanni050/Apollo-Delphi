@@ -247,15 +247,15 @@ export default function ReadingPane() {
       rows.push(
         <Fragment key={n}>
           {page != null && (
-            <div className="my-2 flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
+            <div className="my-2 flex items-center gap-2 text-[12.6px] uppercase tracking-wide text-slate-400">
               <span className="h-px flex-1 bg-slate-200" />
               pagina {page}
               <span className="h-px flex-1 bg-slate-200" />
             </div>
           )}
           <div data-line={n} className={`flex gap-3 border-l-2 px-2 ${inRange ? 'border-amber-200 bg-amber-50' : 'border-transparent'}`}>
-            <span className="w-9 shrink-0 select-none pt-0.5 text-right text-[11px] leading-5 text-slate-400">{n}</span>
-            <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-5">
+            <span className="w-9 shrink-0 select-none pt-0.5 text-right text-[12.6px] leading-5 text-slate-400">{n}</span>
+            <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[14.9px] leading-5">
               <Marked text={lines[i]} words={words} find={find.trim()} current={current && current[0] === n ? current[1] : null} />
             </span>
           </div>
@@ -321,7 +321,7 @@ export default function ReadingPane() {
                 </button>
               ))}
               {view === 'formatted' && (
-                <span className="ml-1 text-[11px] text-slate-400">
+                <span className="ml-1 text-[12.6px] text-slate-400">
                   {doc.file_type === 'pdf' ? 'Het originele PDF-bestand.' : 'Zoeken en markeren: in de tekstweergave.'}
                 </span>
               )}

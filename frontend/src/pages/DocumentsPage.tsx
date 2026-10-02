@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { api, type DocumentRecord } from '../api'
+import { api, serverDate, type DocumentRecord } from '../api'
 import { Button, Card, ErrorText, StatusBadge } from '../components'
 import FolderUpload from './FolderUpload'
 import IndexProgress from './IndexProgress'
@@ -254,7 +254,7 @@ export default function DocumentsPage({
                     <td className="uppercase">{d.file_type}</td>
                     <td>{formatSize(d.file_size)}</td>
                     <td><StatusBadge status={d.indexing_status} /></td>
-                    <td className="text-slate-500">{new Date(d.created_at).toLocaleString()}</td>
+                    <td className="text-slate-500">{serverDate(d.created_at).toLocaleString()}</td>
                     <td className="text-right space-x-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Button variant="secondary" onClick={() => void indexDoc(d.id)} disabled={busy}>
                         Index

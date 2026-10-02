@@ -156,7 +156,7 @@ export default function ModelPicker({
             aria-label="Zoek een model"
             className="w-full border-b border-slate-200 px-3 py-2 text-sm outline-none"
           />
-          {priced && <p className="border-b border-slate-100 bg-slate-50 px-3 py-1 text-[11px] text-slate-500">Prijzen in USD per 1 miljoen tokens</p>}
+          {priced && <p className="border-b border-slate-100 bg-slate-50 px-3 py-1 text-[12.6px] text-slate-500">Prijzen in USD per 1 miljoen tokens</p>}
           <div role="listbox" className="max-h-96 overflow-y-auto">
             {!term && (
               <div

@@ -4,6 +4,9 @@ import { useSyncExternalStore } from 'react'
  * Whether Delphi Pulse is running, known app-wide: the menu item pulses while it does, also when you are on another page
  * (the run goes on in the backend; the request is awaited here, not in the page that started it).
  */
+/** Sent when Delphi Pulse has accepted suggestions (documents got groups): the top bar looks again at what can be opened. */
+export const GROUPS_CHANGED = 'apollo:groups-changed'
+
 let running = 0
 const listeners = new Set<() => void>()
 

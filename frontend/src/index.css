@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-100 text-slate-800;
+  @apply bg-slate-100 text-base text-slate-800;
 }
 
 /* The formatted view of the reading pane (Markdown, Word). Colours are inherited so both themes just work. */
-.reader-prose { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.reader-prose { font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .reader-prose > :first-child { margin-top: 0; }
 .reader-prose h1, .reader-prose h2, .reader-prose h3, .reader-prose h4 { font-weight: 600; line-height: 1.3; margin: 1.2em 0 0.4em; }
 .reader-prose h1 { font-size: 1.5em; }

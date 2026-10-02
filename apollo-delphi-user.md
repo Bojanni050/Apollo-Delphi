@@ -20,6 +20,10 @@ Zonder werkmap opent een wizard in drie stappen: een **naam**, de **map** waar d
    Pulse (accepteren, negeren, ook alles tegelijk) worden vastgelegd: één commit per beslissing, met per voorstel een
    regel in `Decisions/decisions.jsonl` (wanneer, welk document, wat besloten is, de thema’s en verbanden). Zo kun je
    later terugzien wat je wanneer hebt besloten, en op de Werkmap-pagina staan ze in de geschiedenis.
+- **De werkwijze in de kop**: bovenin staan de stappen in volgorde: **Importeren › Delphi Pulse › Analyse**. Een klik opent die
+  pagina; een vinkje betekent dat de stap gedaan is (er zijn documenten, er zijn groepen). **Analyse** is pas te openen als er
+  groepen zijn: draai Delphi Pulse en accepteer de voorstellen, dan komen er groepen en wordt de knop actief. (Op een smal
+  venster is de balk verborgen; het menu links werkt altijd.)
 - **Documents → Upload documents**: PDF, Word, Markdown en tekst. Bestanden worden geïndexeerd.
 - **Map toevoegen…**: kies een map met de eigen mappenkiezer van de app; alle submappen worden doorlopen. Je ziet
   eerst wat wordt toegevoegd en wat wordt overgeslagen (verborgen/tooling-mappen, niet-ondersteunde, lege en tijdelijke
@@ -67,7 +71,7 @@ Stel daarna een **vervolgvraag**; "Nieuw gesprek" begint opnieuw. Een getal dat 
 
 ## Analyse, issues en kennis
 
-**Delphi Pulse** (onder de streep in het menu) doet voorstellen voor thema's en verbanden tussen de documenten. Het leest
+**Delphi Pulse** (onder de streep in het menu; bovenaan staat wanneer de laatste run was) doet voorstellen voor thema's en verbanden tussen de documenten. Het leest
 de tekst zelf, dus het werkt ook terwijl het embedden nog loopt. Documenten die nog niet zijn gelezen doen niet mee: daarvoor
 toont de pagina een waarschuwing; terwijl Pulse draait pulseren het icoon en de naam in het menu zacht, ook als je naar een andere
 pagina gaat; draai Pulse dan opnieuw als ze klaar zijn (wat al is geanalyseerd wordt overgeslagen).

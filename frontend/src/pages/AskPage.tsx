@@ -15,7 +15,7 @@ function AnswerText({ text, onCite }: { text: string; onCite: (n: number) => voi
           <button
             key={i}
             onClick={() => onCite(n)}
-            className="mx-0.5 rounded-lg bg-slate-200 px-1 align-super text-[10px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white"
+            className="mx-0.5 rounded-lg bg-slate-200 px-1 align-super text-[11.4px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white"
             title={`Naar bron ${n}`}
           >
             {n}

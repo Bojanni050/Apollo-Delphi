@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, type PulseItem, type PulseRun } from '../api'
+import { api, serverDate, type PulseItem, type PulseRun } from '../api'
 import { Badge, Button, Card, ErrorText, StatusBadge } from '../components'
 import Modal from '../components/Modal'
 import { useReader } from '../reader'
-import { trackPulse, usePulseRunning } from '../pulseActivity'
+import { GROUPS_CHANGED, trackPulse, usePulseRunning } from '../pulseActivity'
 
 const RELATION_LABELS: Record<string, string> = {
   'relates-to': 'hangt samen met',
@@ -87,6 +87,7 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
     try {
       await api.decideAllPulse(workspaceId, decision)
       setItems([])
+      window.dispatchEvent(new Event(GROUPS_CHANGED))
     } catch (e) {
       setError((e as Error).message)
       await load()
@@ -100,6 +101,7 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
     try {
       await api.decidePulseItem(item.id, decision)
       setItems((prev) => prev.filter((i) => i.id !== item.id))
+      window.dispatchEvent(new Event(GROUPS_CHANGED))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -141,7 +143,11 @@ export default function PulsePage({ workspaceId }: { workspaceId: number | null 
         )}
         {run && (
           <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            Laatste run <StatusBadge status={run.status} />
+            Laatste run
+            <time dateTime={run.completed_at ?? run.started_at} title={run.completed_at ? 'Afgerond' : 'Gestart'} className="font-medium text-slate-700">
+              {serverDate(run.completed_at ?? run.started_at).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' })}
+            </time>
+            <StatusBadge status={run.status} />
             <span>
               {run.provider}/{run.model}
             </span>

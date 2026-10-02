@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import DocumentsPage from './pages/DocumentsPage'
 import AnalysisPage from './pages/AnalysisPage'
 import IssuesPage from './pages/IssuesPage'
@@ -13,7 +13,7 @@ import SetupWizard, { type AfterSetup } from './pages/SetupWizard'
 import AppShell from './layout/AppShell'
 import delphiIcon from './icons/delphi.png'
 import { useTheme } from './theme'
-import { usePulseRunning } from './pulseActivity'
+import { GROUPS_CHANGED, usePulseRunning } from './pulseActivity'
 import { api, type Workspace } from './api'
 
 type Page = 'documents' | 'search' | 'ask' | 'pulse' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
@@ -58,6 +58,9 @@ export default function App() {
   const [newDir, setNewDir] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // What the working order in the top bar depends on: are there documents, and are there groups (Analyse needs them)
+  const [hasDocuments, setHasDocuments] = useState(false)
+  const [hasGroups, setHasGroups] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const loadWorkspaces = async (preserveActive = true) => {
@@ -115,6 +118,29 @@ export default function App() {
   }
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null
+
+  const refreshFlow = useCallback(async () => {
+    if (activeWorkspaceId === null) {
+      setHasDocuments(false)
+      setHasGroups(false)
+      return
+    }
+    try {
+      const docs = await api.listDocuments(activeWorkspaceId)
+      setHasDocuments(docs.length > 0)
+      setHasGroups(docs.some((d) => !!d.group_name))
+    } catch {
+      /* the next look tries again */
+    }
+  }, [activeWorkspaceId])
+  // look again when the werkmap or the page changes, and when Delphi Pulse has accepted something (that is what creates groups)
+  useEffect(() => {
+    void refreshFlow()
+  }, [refreshFlow, page])
+  useEffect(() => {
+    window.addEventListener(GROUPS_CHANGED, refreshFlow)
+    return () => window.removeEventListener(GROUPS_CHANGED, refreshFlow)
+  }, [refreshFlow])
   const activeLabel = NAV.find((n) => n.id === page)?.label ?? page
 
   const workspaceBar = (
@@ -199,6 +225,16 @@ export default function App() {
 
   return (
     <AppShell
+      flow={[
+        { id: 'documents', label: 'Importeren', done: hasDocuments },
+        { id: 'pulse', label: 'Delphi Pulse', done: hasGroups },
+        {
+          id: 'analysis',
+          label: 'Analyse',
+          disabled: !hasGroups,
+          title: hasGroups ? 'Analyseer de hele werkmap of een of meer groepen' : 'Maak eerst groepen: draai Delphi Pulse en accepteer de voorstellen',
+        },
+      ]}
       nav={NAV.map((n) => (n.id === 'pulse' ? { ...n, busy: pulseRunning } : n))}
       active={page}
       onNavigate={(id) => setPage(id as Page)}

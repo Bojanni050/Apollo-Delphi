@@ -1,8 +1,19 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import ReadingPane from '../components/ReadingPane'
 import ThemeToggle from '../components/ThemeToggle'
 import { ReaderProvider, useReader } from '../reader'
 import { BUILD_TIME, BUILD_VERSION } from '../version'
+
+/** One step of the working order shown in the top bar (Importeren, Delphi Pulse, Analyse). */
+export type FlowStep = {
+  id: string
+  label: string
+  /** The step has been taken: a check mark in front of it. */
+  done?: boolean
+  /** Cannot be opened yet; `title` says why. */
+  disabled?: boolean
+  title?: string
+}
 
 /** `below`: shown under the divider at the end of the menu. */
 export type NavItem = { id: string; label: string; icon?: ReactNode; below?: boolean; busy?: boolean }
@@ -13,6 +24,8 @@ type AppShellProps = {
   onNavigate: (id: string) => void
   breadcrumb: ReactNode
   topActions?: ReactNode
+  /** The steps in the order the work is done; a click on one opens that page. */
+  flow?: FlowStep[]
   contextTitle?: string
   contextPane?: ReactNode
   workspaceBar?: ReactNode
@@ -34,6 +47,7 @@ function Shell({
   onNavigate,
   breadcrumb,
   topActions,
+  flow,
   contextTitle,
   contextPane,
   workspaceBar,
@@ -74,7 +88,7 @@ function Shell({
             <>
               <div className="min-w-0 leading-tight">
                 <div className="truncate text-sm font-semibold">Apollo</div>
-                <div className="truncate text-[10px] text-slate-400" title={`Build ${BUILD_VERSION}, ${BUILD_TIME}`}>
+                <div className="truncate text-[11.4px] text-slate-400" title={`Build ${BUILD_VERSION}, ${BUILD_TIME}`}>
                   build {BUILD_VERSION} · {BUILD_TIME}
                 </div>
               </div>
@@ -137,6 +151,30 @@ function Shell({
             {leftCollapsed ? '»' : '«'}
           </button>
           <div className="min-w-0 flex-1 truncate text-sm text-slate-500">{breadcrumb}</div>
+          {flow && flow.length > 0 && (
+            <nav aria-label="Werkwijze" className="hidden shrink-0 items-center gap-1 lg:flex">
+              {flow.map((step, i) => (
+                <Fragment key={step.id}>
+                  {i > 0 && <span aria-hidden="true" className="text-slate-300">›</span>}
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(step.id)}
+                    disabled={step.disabled}
+                    title={step.title}
+                    aria-current={active === step.id ? 'step' : undefined}
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                      active === step.id
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50 disabled:hover:bg-transparent'
+                    }`}
+                  >
+                    <span className="text-xs opacity-70">{step.done ? '✓' : i + 1}</span>
+                    {step.label}
+                  </button>
+                </Fragment>
+              ))}
+            </nav>
+          )}
           {topActions && <div className="flex shrink-0 items-center gap-2">{topActions}</div>}
           <ThemeToggle />
           <button
@@ -200,7 +238,7 @@ function Shell({
               className="flex w-8 shrink-0 cursor-pointer flex-col items-center border-l border-slate-200 bg-white py-3 text-slate-300 hover:bg-slate-50 hover:text-slate-500"
             >
               <span className="text-sm">{rightOpen ? '›' : '‹'}</span>
-              <span className="mt-2 text-[11px] font-medium [writing-mode:vertical-rl]">{contextTitle ?? 'Context'}</span>
+              <span className="mt-2 text-[12.6px] font-medium [writing-mode:vertical-rl]">{contextTitle ?? 'Context'}</span>
             </button>
           </div>
         </div>
@@ -301,7 +339,7 @@ export function SplitView({
               setListCollapsed(true)
             }}
             title="Collapse list column"
-            className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-300 bg-white px-1 text-[10px] text-slate-500 group-hover:block"
+            className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-300 bg-white px-1 text-[11.4px] text-slate-500 group-hover:block"
           >
             «
           </button>

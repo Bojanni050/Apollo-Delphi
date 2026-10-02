@@ -1,5 +1,11 @@
 export const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
 
+/**
+ * A date from the API as a Date. The server stores UTC; SQLite hands it back without a time zone ("2026-10-02T00:59:25"),
+ * which the browser would read as local time and show hours off. Without a zone it is UTC.
+ */
+export const serverDate = (iso: string): Date => new Date(/([zZ]|[+-]\d\d:?\d\d)$/.test(iso) ? iso : `${iso}Z`)
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, init)
   if (!res.ok) {
