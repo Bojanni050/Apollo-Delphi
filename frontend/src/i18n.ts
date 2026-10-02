@@ -57,6 +57,13 @@ const DICT: Record<Exclude<string, '_'>, { nl: string; en: string }> = {
   'issues.accept': { nl: 'Accepteren', en: 'Accept' },
   'issues.reject': { nl: 'Afwijzen', en: 'Reject' },
   'issues.markUnresolved': { nl: 'Onopgelost laten', en: 'Mark unresolved' },
+  'issues.filterGroup': { nl: 'Filter op groep', en: 'Filter by group' },
+  'issues.filterGroupHint': {
+    nl: 'Toon alleen de issues waarvan de documenten in deze groep horen',
+    en: 'Show only the issues whose documents belong to this group',
+  },
+  'issues.allGroups': { nl: 'Alle groepen', en: 'All groups' },
+  'issues.noGroup': { nl: 'Zonder groep', en: 'Without group' },
   'issues.document': { nl: 'document', en: 'document' },
   'issues.value': { nl: 'waarde', en: 'value' },
   'issues.page': { nl: 'pagina', en: 'page' },

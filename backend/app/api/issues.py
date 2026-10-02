@@ -12,11 +12,41 @@ router = APIRouter(prefix="/issues", tags=["issues"])
 
 
 @router.get("", response_model=list[IssueOut])
-def list_issues(status: str | None = None, workspace_id: int | None = None, db: Session = Depends(get_session)):
-    """Issues of one werkmap (those whose analysis ran on it); omitted = analyses that belong to no werkmap."""
+def list_issues(
+    status: str | None = None,
+    workspace_id: int | None = None,
+    #: Only issues whose documents belong to this group (a virtual folder, accepted from Delphi Pulse).
+    group: str | None = None,
+    db: Session = Depends(get_session),
+):
+    """Issues of one werkmap (those whose analysis ran on it); omitted = analyses that belong to no werkmap.
+
+    With ``group`` only the issues are returned whose evidence or claims point at documents of that group,
+    and ``__none__`` means: documents without a group.
+    """
     q = db.query(Issue).join(AnalysisRun, AnalysisRun.id == Issue.analysis_run_id).filter(AnalysisRun.workspace_id == workspace_id)
     if status:
         q = q.filter(Issue.status == status)
+    if group is not None:
+        from app.models import Document
+
+        doc_filter = Document.group_name == ("__none__" if group == "__none__" else group)
+        if group == "__none__":
+            doc_filter = Document.group_name.is_(None)
+        doc_ids = db.query(Document.id).filter(Document.workspace_id == workspace_id, doc_filter).subquery()
+        evidence_ids = (
+            db.query(IssueEvidence.issue_id)
+            .join(Evidence, Evidence.id == IssueEvidence.evidence_id)
+            .filter(Evidence.document_id.in_(doc_ids))
+        )
+        claim_ids = (
+            db.query(IssueClaim.issue_id)
+            .join(Claim, Claim.id == IssueClaim.claim_id)
+            .filter(Claim.document_id.in_(doc_ids))
+        )
+        from sqlalchemy import or_
+
+        q = q.filter(or_(Issue.id.in_(evidence_ids), Issue.id.in_(claim_ids)))
     return q.order_by(Issue.created_at.desc()).all()
 
 

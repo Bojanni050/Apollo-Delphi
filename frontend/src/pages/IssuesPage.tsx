@@ -5,6 +5,8 @@ import { SplitView } from '../layout/AppShell'
 import { useReader } from '../reader'
 import { useT } from '../i18n'
 
+const NO_GROUP = '__none__'
+
 export default function IssuesPage({ workspaceId }: { workspaceId?: number | null }) {
   const t = useT()
   const reader = useReader()
@@ -14,8 +16,11 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const loadIssues = async () => {
-    const all = await api.listIssues(undefined, workspaceId)
+  // show only the issues of one group (virtual folder): '' = every group, NO_GROUP = documents without one
+  const [group, setGroup] = useState('')
+  const [groups, setGroups] = useState<{ names: string[]; hasUngrouped: boolean }>({ names: [], hasUngrouped: false })
+  const loadIssues = async (g: string | null = null) => {
+    const all = await api.listIssues(undefined, workspaceId, g)
     setIssues(all)
     return all
   }
@@ -23,9 +28,34 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
   useEffect(() => {
     setSelected(null)
     setError(null)
-    void loadIssues().catch((e) => setError((e as Error).message))
+    setGroup('')
+    setGroups({ names: [], hasUngrouped: false })
+    void loadIssues(null).catch((e) => setError((e as Error).message))
+    if (workspaceId === null) return
+    let cancelled = false
+    api
+      .listDocuments(workspaceId)
+      .then((docs) => {
+        if (cancelled) return
+        const names = [...new Set(docs.map((d) => d.group_name).filter((g): g is string => !!g))].sort()
+        setGroups({ names, hasUngrouped: docs.some((d) => !d.group_name) })
+      })
+      .catch(() => {
+        /* the filter simply stays empty */
+      })
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId])
+
+  useEffect(() => {
+    // refetch when the chosen group changes (skipped on the first render: that load belongs to the effect above)
+    if (group === '' && groups.names.length === 0 && !groups.hasUngrouped) return
+    setSelected(null)
+    void loadIssues(group || null).catch((e) => setError((e as Error).message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group])
 
   const select = async (id: number) => {
     setError(null)
@@ -42,7 +72,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
     setError(null)
     try {
       setSelected(await api.investigateIssue(id))
-      await loadIssues()
+      await loadIssues(group || null)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -56,7 +86,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
     try {
       await api.resolveIssue(id, decision, note || undefined)
       setSelected(await api.getIssue(id))
-      await loadIssues()
+      await loadIssues(group || null)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -69,7 +99,24 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
       initialWidth={320}
       listPane={
         <div className="p-3">
-          <h2 className="font-semibold mb-3 px-1">Issues</h2>
+          <h2 className="font-semibold mb-3 px-1">{t('issues.title')}</h2>
+          {(groups.names.length > 0 || groups.hasUngrouped) && (
+            <select
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
+              aria-label={t('issues.filterGroup')}
+              title={t('issues.filterGroupHint')}
+              className="mb-3 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm"
+            >
+              <option value="">{t('issues.allGroups')}</option>
+              {groups.names.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+              {groups.hasUngrouped && <option value={NO_GROUP}>{t('issues.noGroup')}</option>}
+            </select>
+          )}
           <ul className="space-y-2 text-sm">
             {issues.map((i) => (
               <li key={i.id}>
@@ -87,13 +134,13 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                 </button>
               </li>
             ))}
-            {issues.length === 0 && <li className="text-slate-400">No issues. Run an analysis first.</li>}
+            {issues.length === 0 && <li className="text-slate-400">{t('issues.empty')}</li>}
           </ul>
         </div>
       }
       detailPane={
         <div className="space-y-4">
-          {!selected && <Card><p className="text-slate-400 text-sm">Select an issue to inspect it.</p></Card>}
+          {!selected && <Card><p className="text-slate-400 text-sm">{t('issues.select')}</p></Card>}
           {selected && (
             <>
               <Card>
@@ -106,34 +153,34 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                 </div>
                 <div className="mt-3 flex gap-2">
                   <Button onClick={() => void investigate(selected.id)} disabled={busy}>
-                    {busy ? 'Investigating…' : 'Investigate'}
+                    {busy ? t('issues.investigating') : t('issues.investigate')}
                   </Button>
                 </div>
                 <ErrorText message={error} />
               </Card>
 
               <Card>
-                <h3 className="font-semibold mb-2">Conflicting claims</h3>
+                <h3 className="font-semibold mb-2">{t('issues.conflictingClaims')}</h3>
                 <ul className="space-y-2 text-sm">
                   {selected.claims.map((c) => (
                     <li key={c.id} className="border-b last:border-0 pb-2">
                       <p>{c.statement}</p>
                       <span className="text-xs text-slate-400">
-                        document #{c.document_id} · value {c.value ?? '—'} {c.unit ?? ''} · <StatusBadge status={c.status} />
+                        {t('issues.document')} #{c.document_id} · {t('issues.value')} {c.value ?? '—'} {c.unit ?? ''} · <StatusBadge status={c.status} />
                       </span>
                     </li>
                   ))}
-                  {selected.claims.length === 0 && <li className="text-slate-400">No linked claims.</li>}
+                  {selected.claims.length === 0 && <li className="text-slate-400">{t('issues.noClaims')}</li>}
                 </ul>
               </Card>
 
               <Card>
-                <h3 className="font-semibold mb-2">Evidence</h3>
+                <h3 className="font-semibold mb-2">{t('issues.evidence')}</h3>
                 <ul className="space-y-2 text-sm">
                   {selected.evidence.map((e) => (
                     <li key={e.id} className="border rounded-lg p-2">
                       <div className="text-xs text-slate-400 mb-1">
-                        document #{e.document_id} {e.page_number ? `· page ${e.page_number}` : ''} {e.section ? `· ${e.section}` : ''} {e.line_start != null ? `· ${formatLines(e.line_start, e.line_end)}` : ''} · {e.evidence_type}
+                        document #{e.document_id} {e.page_number ? `· ${t('issues.page')} ${e.page_number}` : ''} {e.section ? `· ${e.section}` : ''} {e.line_start != null ? `· ${formatLines(e.line_start, e.line_end)}` : ''} · {e.evidence_type}
                       </div>
                       <p className="text-slate-600">{e.original_text}</p>
                       <button
@@ -146,31 +193,31 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                       </button>
                     </li>
                   ))}
-                  {selected.evidence.length === 0 && <li className="text-slate-400">No linked evidence.</li>}
+                  {selected.evidence.length === 0 && <li className="text-slate-400">{t('issues.noEvidence')}</li>}
                 </ul>
               </Card>
 
               {selected.resolution && (
                 <Card>
-                  <h3 className="font-semibold mb-2">Proposed resolution</h3>
+                  <h3 className="font-semibold mb-2">{t('issues.resolution')}</h3>
                   <p className="text-sm">
-                    <span className="font-medium">Conclusion: </span>
+                    <span className="font-medium">{t('issues.conclusion')}: </span>
                     {selected.resolution.conclusion ?? '—'}
                   </p>
                   <p className="text-sm mt-1">
-                    <span className="font-medium">Reasoning: </span>
+                    <span className="font-medium">{t('issues.reasoning')}: </span>
                     {selected.resolution.reasoning ?? '—'}
                   </p>
                   <p className="text-sm mt-1">
-                    <span className="font-medium">Status: </span>
+                    <span className="font-medium">{t('issues.status')}: </span>
                     <StatusBadge status={selected.resolution.status} />
                     <span className="ml-2 text-slate-400">
-                      confidence {selected.resolution.confidence.toFixed(2)} · {selected.resolution.explanation_type ?? '—'}
+                      {t('issues.confidence')} {selected.resolution.confidence.toFixed(2)} · {selected.resolution.explanation_type ?? '—'}
                     </span>
                   </p>
                   {selected.resolution.unresolved_uncertainty && (
                     <p className="text-sm mt-1 text-amber-700">
-                      <span className="font-medium">Unresolved uncertainty: </span>
+                      <span className="font-medium">{t('issues.unresolvedUncertainty')}: </span>
                       {selected.resolution.unresolved_uncertainty}
                     </p>
                   )}
@@ -178,7 +225,7 @@ export default function IssuesPage({ workspaceId }: { workspaceId?: number | nul
                     <textarea
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="Optional note / additional information"
+                      placeholder={t('issues.note')}
                       className="w-full border rounded-lg px-2 py-1.5 text-sm"
                       rows={2}
                     />

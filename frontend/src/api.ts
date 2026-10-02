@@ -622,8 +622,15 @@ export const api = {
     const qs = [workspaceId ? `workspace_id=${workspaceId}` : '', ...groups.map((g) => `groups=${encodeURIComponent(g)}`)].filter(Boolean).join('&')
     return request<AnalysisRun>(`/api/analysis${qs ? `?${qs}` : ''}`, { method: 'POST' })
   },
-  listIssues: (status?: string, workspaceId?: number | null) => {
-    const qs = [status ? `status=${status}` : '', workspaceId ? `workspace_id=${workspaceId}` : ''].filter(Boolean).join('&')
+  /** `group`: only issues of documents in that group; "__none__" = documents without a group. */
+  listIssues: (status?: string, workspaceId?: number | null, group?: string | null) => {
+    const qs = [
+      status ? `status=${status}` : '',
+      workspaceId ? `workspace_id=${workspaceId}` : '',
+      group ? `group=${encodeURIComponent(group)}` : '',
+    ]
+      .filter(Boolean)
+      .join('&')
     return request<Issue[]>(`/api/issues${qs ? `?${qs}` : ''}`)
   },
   getIssue: (id: number) => request<IssueDetail>(`/api/issues/${id}`),
