@@ -96,3 +96,11 @@ def test_status_endpoint_never_leaks_keys(client):
     body = client.get("/api/llm/status").json()
     assert all(t["provider"] == "mock" and t["configured"] for t in body["tiers"])
     assert client.post("/api/llm/test").json()["ok"] is True
+
+
+async def test_complete_json_tolerates_dotted_keys(fake_http):
+    """Regression: a model returning {".value": ...} must validate, not raise."""
+    fake_http.responses.append(httpx.Response(200, json={"choices": [{"message": {"content": '{".value": 3}'}}]}))
+    p = llm.OpenAICompatibleLLMProvider("llama3", base_url="http://localhost:11434/v1/")
+    out = await p.complete_json("sys", "user", Answer)
+    assert out.value == 3

@@ -26,6 +26,26 @@ class LLMError(Exception):
     pass
 
 
+def _normalize_keys(data: Any) -> Any:
+    """Strip model glitches from JSON object keys, recursively.
+
+    Models occasionally return keys with a leading dot or stray whitespace
+    (e.g. ``".status"`` instead of ``"status"``), which would otherwise fail
+    strict schema validation and surface a raw error to the user.
+    """
+    if isinstance(data, dict):
+        return {_normalize_key(k): _normalize_keys(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_normalize_keys(v) for v in data]
+    return data
+
+
+def _normalize_key(key: Any) -> Any:
+    if isinstance(key, str):
+        return key.strip().lstrip(".").strip()
+    return key
+
+
 class LLMProvider(ABC):
     name: str = "base"
 
@@ -41,7 +61,7 @@ class LLMProvider(ABC):
             data = json.loads(self._extract_json(raw))
         except json.JSONDecodeError as exc:
             raise LLMError(f"LLM returned invalid JSON: {exc}") from exc
-        return schema.model_validate(data)
+        return schema.model_validate(_normalize_keys(data))
 
     @staticmethod
     def _extract_json(raw: str) -> str:

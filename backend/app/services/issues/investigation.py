@@ -159,7 +159,7 @@ class InvestigationEngine:
                 log.warning("Investigation LLM failed for issue %s: %s", issue.id, exc)
                 proposal = ProposedResolution(
                     status="unresolved",
-                    unresolved_uncertainty=f"Investigation could not be completed: {exc}",
+                    unresolved_uncertainty="The investigation model returned an unusable answer, so this issue remains unresolved.",
                 )
 
         return {
