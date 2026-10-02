@@ -69,8 +69,18 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
     void (async () => {
       try {
         const allIssues = await loadIssues()
-        if (allIssues.length > 0) {
-          const runId = allIssues[0].analysis_run_id
+        let runId: number | null = null
+        // De laatste run via de werkmap: zo klopt het ook als die run 0 issues heeft.
+        if (workspaceId) {
+          try {
+            const detail = await fetchJson<{ latest_analysis_run_id: number | null }>(`/api/workspaces/${workspaceId}`)
+            runId = detail.latest_analysis_run_id
+          } catch {
+            // val terug op de nieuwste issue
+          }
+        }
+        if (runId === null && allIssues.length > 0) runId = allIssues[0].analysis_run_id
+        if (runId !== null) {
           setRun(await fetchJson<AnalysisRun>(`/api/analysis/${runId}`))
           setClaims(await fetchJson<Claim[]>(`/api/analysis/${runId}/claims`))
         }
@@ -133,10 +143,11 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
   const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((g) => g !== id) : [...cur, id]))
   const chosenDocs = selected.length === 0 ? null : choices.filter((c) => selected.includes(c.id)).reduce((n, c) => n + c.count, 0)
 
-  const contradictions = issues.filter((i) => i.issue_type === 'contradiction')
-  const openQuestions = issues.filter((i) => i.issue_type === 'open_question')
-  const resolved = issues.filter((i) => i.status === 'resolved')
-  const unresolved = issues.filter((i) => i.status !== 'resolved')
+  const contradictions = issues.filter((i) => i.issue_type === 'contradiction' && (!run || i.analysis_run_id === run.id))
+  const openQuestions = issues.filter((i) => i.issue_type === 'open_question' && (!run || i.analysis_run_id === run.id))
+  const runIssues = run ? issues.filter((i) => i.analysis_run_id === run.id) : issues
+  const resolved = runIssues.filter((i) => i.status === 'resolved')
+  const unresolved = runIssues.filter((i) => i.status !== 'resolved')
 
   return (
     <div className="space-y-6">
@@ -240,7 +251,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
             <div className="bg-slate-50 rounded-lg p-2">{unresolved.length} unresolved</div>
           </div>
           <ul className="space-y-2 text-sm max-h-72 overflow-auto">
-            {issues.map((i) => (
+            {runIssues.map((i) => (
               <li key={i.id} className="border-b last:border-0 pb-2">
                 <div className="flex justify-between gap-2">
                   <span>{i.title}</span>
@@ -249,7 +260,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
                 <span className="text-xs text-slate-400">{i.issue_type}</span>
               </li>
             ))}
-            {issues.length === 0 && <li className="text-slate-400">No issues detected.</li>}
+            {runIssues.length === 0 && <li className="text-slate-400">No issues detected.</li>}
           </ul>
         </Card>
       </div>
