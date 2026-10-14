@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analysis, ask, delphi, documents, embeddings, github, issues, knowledge, llm, pulse, retrieval, search, system, weave, workspaces
+from app.api import analysis, ask, codecheck, delphi, documents, embeddings, github, issues, knowledge, llm, pulse, retrieval, search, system, weave, workspaces
 from app.core.config import get_settings
 from app.core.logging import get_logger
 
@@ -37,6 +37,7 @@ app.include_router(system.router, prefix=settings.api_prefix)
 app.include_router(llm.router, prefix=settings.api_prefix)
 app.include_router(workspaces.router, prefix=settings.api_prefix)
 app.include_router(github.router, prefix=settings.api_prefix)
+app.include_router(codecheck.router, prefix=settings.api_prefix)
 
 
 def _load_runtime_settings() -> None:
