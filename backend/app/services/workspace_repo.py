@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import time
 from pathlib import Path
 
 from app.core.config import get_settings
@@ -39,19 +40,31 @@ class GitError(RuntimeError):
     pass
 
 
+#: Windows (virus scanner, indexer) can lock a file in .git for a moment; these messages mean "try again".
+_TRANSIENT_GIT_ERRORS = ("failed to write", "failed to insert", "adding files failed", "index.lock", "unable to create", "unable to write")
+GIT_ATTEMPTS = 3
+GIT_RETRY_DELAY = 0.3
+
+
 def _git(repo: Path, *args: str) -> str:
     cmd = ["git", "-C", str(repo), *_IDENTITY, *args]
-    try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=TIMEOUT_SECONDS, check=False
-        )
-    except FileNotFoundError as exc:
-        raise GitError("git executable not found on PATH") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise GitError("git command timed out") from exc
-    if proc.returncode != 0:
-        raise GitError((proc.stderr or proc.stdout).strip() or "git command failed")
-    return proc.stdout
+    for attempt in range(1, GIT_ATTEMPTS + 1):
+        try:
+            proc = subprocess.run(
+                cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=TIMEOUT_SECONDS, check=False
+            )
+        except FileNotFoundError as exc:
+            raise GitError("git executable not found on PATH") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise GitError("git command timed out") from exc
+        if proc.returncode == 0:
+            return proc.stdout
+        message = (proc.stderr or proc.stdout).strip() or "git command failed"
+        if attempt < GIT_ATTEMPTS and any(t in message.lower() for t in _TRANSIENT_GIT_ERRORS):
+            time.sleep(GIT_RETRY_DELAY * attempt)
+            continue
+        raise GitError(message)
+    raise GitError("git command failed")  # unreachable
 
 
 def default_working_dir(workspace_id: int, name: str) -> Path:
