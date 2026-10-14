@@ -274,3 +274,9 @@ achteraf ingevuld voor het werk van 2026-10-01 (commits tussen haakjes).
 - Findings: Nieuwe functie (gevraagd door Bo): kies een GitHub-repo en enkele geïmporteerde documenten, en bekijk of de code overeenkomt met de vastgelegde gegevens in de docs. Aparte Codecheck-flow; repo-keuze uit al geïmporteerde repo's én via direct een URL intypen (max 4 repo's). De importdigest mengt docs en code in één document (`## FILE: pad`-secties), dus voor een docs-vs-code-oordeel moeten ze eerst gesplitst worden.
 - Conclusions: In drie slices bouwen. Slice 1: backend-service die een repo oplost (`document_id` uit de werkmap of `url` die meteen geïmporteerd wordt, zodat codecheck hem daarna aanbiedt) en de digest splitst in docs-/code-secties met dezelfde extensieregels als de import. Slice 2: oordeel-engine + API. Slice 3: Codecheck-pagina.
 - Actions: `backend/app/services/codecheck/__init__.py` + `service.py` (nieuw: `MAX_REPOS = 4`, `classify_path`, `split_digest`, `resolve_repo_digest`, `CodecheckError`), `backend/tests/unit/test_codecheck_sections.py` (3 tests); validated met pytest (3 passed).
+
+## 2026-10-14 (Menu-items werkten niet: klik-handler zijbalk)
+
+- Findings: In `AppShell.tsx` navigeerde een klik alleen voor submenu-items (`inSubmenu`); voor gewone items (alles onder de divider, maar ook Pulse/Analyse/Weave) viel de handler door zonder `onNavigate`. Verder: dubbele React-key `documents` (groep + sub-item Import), groep "Documenten" werd altijd mee gemarkeerd, en de breadcrumb toonde `notes` i.p.v. "Notities" (NAV.find zocht niet in submenu's).
+- Conclusions: Eén eenvoudige regel: een groep opent zijn eerste sub-item, elk ander item opent zichzelf. Keys en actieve markering uit elkaar gehaald; label-lookup doorzoekt ook sub-items.
+- Actions: `frontend/src/layout/AppShell.tsx` (onClick, key `sub-<id>`, actieve stijl niet op groepen), `frontend/src/App.tsx` (activeLabel incl. sub-items); validated met `npm run build`.

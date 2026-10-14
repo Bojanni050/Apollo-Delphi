@@ -173,7 +173,7 @@ export default function App() {
     window.addEventListener(GROUPS_CHANGED, refreshFlow)
     return () => window.removeEventListener(GROUPS_CHANGED, refreshFlow)
   }, [refreshFlow])
-  const activeLabel = NAV.find((n) => n.id === page)?.label ?? page
+  const activeLabel = NAV.flatMap((n) => [...(n.sub ?? []), n]).find((n) => n.id === page)?.label ?? page
 
   const workspaceBar = (
     <div className="relative">

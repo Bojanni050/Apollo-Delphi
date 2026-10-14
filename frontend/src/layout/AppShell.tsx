@@ -132,20 +132,17 @@ function Shell({
             {nav.flatMap((n) =>
               n.sub && n.sub.length > 0 ? [n, ...n.sub.map((s) => ({ ...s, inSubmenu: true, parent: n }))] : [n],
             ).map((n) => (
-              <div key={n.id} className={(n as { inSubmenu?: boolean }).inSubmenu ? 'pl-4' : ''}>
+              <div key={(n as { inSubmenu?: boolean }).inSubmenu ? `sub-${n.id}` : n.id} className={(n as { inSubmenu?: boolean }).inSubmenu ? 'pl-4' : ''}>
                 <button
                   onClick={() => {
-                    const item = n as { inSubmenu?: boolean; parent?: { id: string; sub?: NavItem[] } }
-                    if (item.inSubmenu) {
-                      onNavigate(n.id)
-                      return
-                    }
-                    if (item.parent?.sub?.length) onNavigate(item.parent.sub[0].id)
+                    // a group opens its first submenu item; every other item opens itself
+                    const firstSub = (n as NavItem).sub?.[0]
+                    onNavigate(firstSub ? firstSub.id : n.id)
                   }}
                   disabled={n.disabled}
                   title={n.disabled ? n.title : leftCollapsed ? n.label : undefined}
                   className={`flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent ${
-                    active === n.id
+                    active === n.id && !((n as NavItem).sub?.length)
                       ? 'border-slate-200 bg-white font-medium text-slate-900 shadow-sm'
                       : 'border-transparent text-slate-600 hover:bg-slate-200'
                   } ${(n as { inSubmenu?: boolean }).inSubmenu ? 'py-1.5 text-[13px]' : ''} ${leftCollapsed ? 'justify-center' : ''}`}
