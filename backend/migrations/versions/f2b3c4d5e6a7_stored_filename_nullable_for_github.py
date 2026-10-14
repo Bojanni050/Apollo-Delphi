@@ -22,10 +22,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Free the single "-" slot so more than one digest can exist.
-    op.execute("UPDATE documents SET stored_filename = NULL WHERE source_type = 'github'")
+    # First make the column nullable (PostgreSQL still enforces NOT NULL on the UPDATE otherwise), then free the
+    # single "-" slot so more than one digest can exist.
     with op.batch_alter_table("documents") as batch:  # batch: SQLite cannot ALTER a column in place
         batch.alter_column("stored_filename", existing_type=sa.String(length=128), nullable=True)
+    op.execute("UPDATE documents SET stored_filename = NULL WHERE source_type = 'github'")
 
 
 def downgrade() -> None:
