@@ -572,6 +572,56 @@ export interface WorkspaceDetail extends Workspace {
   latest_analysis_run_id: number | null
 }
 
+/** Codecheck: documenten naast repositories leggen (POST /codecheck/run). */
+export type CodecheckVerdict = 'bevestigd' | 'tegengesproken' | 'niet_gevonden'
+
+export interface CodecheckRepoRef {
+  document_id?: number | null
+  url?: string | null
+}
+
+export interface CodeEvidence {
+  repo: string
+  path: string
+  snippet: string
+  score: number
+}
+
+export interface CheckedClaim {
+  document_id: number
+  filename: string
+  statement: string
+  quote: string
+  verdict: CodecheckVerdict
+  confidence: number
+  reasoning: string | null
+  method: 'llm' | 'heuristic'
+  evidence: CodeEvidence[]
+}
+
+export interface SkippedDocument {
+  document_id: number
+  filename: string
+  reason: string
+}
+
+export interface CodecheckSummary {
+  documents: number
+  repos: number
+  claims: number
+  bevestigd: number
+  tegengesproken: number
+  niet_gevonden: number
+  truncated: boolean
+}
+
+export interface CodecheckResult {
+  repos: string[]
+  checked: CheckedClaim[]
+  skipped_documents: SkippedDocument[]
+  summary: CodecheckSummary
+}
+
 export const api = {
   listDocuments: (workspaceId?: number | null) =>
     request<DocumentRecord[]>(`/api/documents${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
@@ -677,6 +727,13 @@ export const api = {
         body: JSON.stringify({ repo_url: repoUrl, workspace_id: workspaceId ?? null }),
       },
     ),
+  /** Leg documenten naast repositories: per bewering uit de docs een oordeel met codebewijs. */
+  runCodecheck: (workspaceId: number | null, document_ids: number[], repos: CodecheckRepoRef[]) =>
+    request<CodecheckResult>('/api/codecheck/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace_id: workspaceId ?? null, document_ids, repos }),
+    }),
   listWorkspaces: () => request<Workspace[]>('/api/workspaces'),
   createWorkspace: (name: string, workingDir?: string) =>
     request<Workspace>('/api/workspaces', {

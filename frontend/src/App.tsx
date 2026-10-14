@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import DocumentsPage from './pages/DocumentsPage'
 import AnalysisPage from './pages/AnalysisPage'
+import CodecheckPage from './pages/CodecheckPage'
 import IssuesPage from './pages/IssuesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import GeneratedPage from './pages/GeneratedPage'
@@ -20,7 +21,7 @@ import { useTheme } from './theme'
 import { GROUPS_CHANGED, usePulseRunning } from './pulseActivity'
 import { api, type Workspace } from './api'
 
-type Page = 'documents' | 'notes' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
+type Page = 'documents' | 'notes' | 'search' | 'ask' | 'pulse' | 'weave' | 'analysis' | 'codecheck' | 'issues' | 'knowledge' | 'generated' | 'workspace' | 'settings'
 
 /** A small network: three nodes and the lines between them (the icon of Delphi Weave). */
 const WeaveIcon = (
@@ -45,6 +46,7 @@ const NAV: { id: Page; label: string; icon: ReactNode; dividerAfter?: boolean; s
   },
   { id: 'pulse', label: 'Delphi Pulse', icon: <img src={delphiIcon} alt="" className="h-5 w-5 object-contain" /> },
   { id: 'analysis', label: 'Analyse', icon: '◔' },
+  { id: 'codecheck', label: 'Codecheck', icon: '≋' },
   { id: 'weave', label: 'Delphi Weave', icon: WeaveIcon, dividerAfter: true },
   { id: 'search', label: 'Zoeken', icon: '⌕' },
   { id: 'ask', label: 'Vragen', icon: '?' },
@@ -65,6 +67,7 @@ const CONTEXT_TITLES: Record<Page, string> = {
   workspace: 'Repository',
   settings: 'Model',
   analysis: 'Run details',
+  codecheck: 'Oordeel',
   issues: 'Issue context',
   knowledge: 'Provenance',
   generated: 'Verification',
@@ -293,7 +296,7 @@ export default function App() {
       {page === 'issues' && <IssuesPage workspaceId={activeWorkspaceId} />}
       {page === 'generated' && <GeneratedPage workspaceId={activeWorkspaceId} />}
       {page === 'notes' && <NotesPage workspaceId={activeWorkspaceId} />}
-      {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'weave' || page === 'analysis' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
+      {(page === 'documents' || page === 'search' || page === 'ask' || page === 'pulse' || page === 'weave' || page === 'analysis' || page === 'codecheck' || page === 'knowledge' || page === 'workspace' || page === 'settings') && (
         <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6">
           <div className="mx-auto max-w-5xl">
             {page === 'documents' && <DocumentsPage workspaceId={activeWorkspaceId} workspaceName={activeWorkspace?.name} onChanged={() => void loadWorkspaces()} />}
@@ -304,6 +307,7 @@ export default function App() {
             {page === 'workspace' && <WorkspacePage workspace={activeWorkspace} />}
             {page === 'settings' && <SettingsPage onChooseLang={chooseLang} />}
             {page === 'analysis' && <AnalysisPage workspaceId={activeWorkspaceId} />}
+            {page === 'codecheck' && <CodecheckPage workspaceId={activeWorkspaceId} />}
             {page === 'knowledge' && <KnowledgePage workspaceId={activeWorkspaceId} />}
           </div>
         </div>
