@@ -20,7 +20,9 @@ class Document(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     workspace_id: Mapped[int | None] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True, index=True)
     filename: Mapped[str] = mapped_column(String(512))
-    stored_filename: Mapped[str] = mapped_column(String(128), unique=True)
+    #: The name of the uploaded original in the upload folder. GitHub digests have no file on disk, so it is NULL
+    #: for them; a UNIQUE column allows any number of NULLs, an upload keeps its own server-generated name.
+    stored_filename: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
     file_type: Mapped[str] = mapped_column(String(32))
     file_size: Mapped[int] = mapped_column(Integer, default=0)
     content_hash: Mapped[str] = mapped_column(String(64), default="")

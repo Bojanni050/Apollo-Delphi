@@ -86,7 +86,7 @@ class GitHubIngestService:
         doc = Document(
             workspace_id=workspace_id,
             filename=f"github:{owner}/{repo}@{branch}",
-            stored_filename="-",
+            stored_filename=None,  # a digest has no file on disk (the column is unique; NULLs may repeat)
             file_type="md",
             file_size=len(digest.encode()),
             content_hash="",

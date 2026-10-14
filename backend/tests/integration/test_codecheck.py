@@ -23,7 +23,7 @@ def _setup(client, db, monkeypatch):
     repo = Document(
         workspace_id=ws,
         filename="github:owner/repo@main",
-        stored_filename="-",
+        stored_filename=None,
         file_type="md",
         file_size=len(DIGEST.encode()),
         content_hash="x",
@@ -90,3 +90,27 @@ def test_empty_docs_and_five_repos_are_rejected(client, db, monkeypatch):
         ).status_code
         == 422
     )
+
+
+def test_several_github_digests_can_coexist(client, db):
+    """De placeholder "-" maakte stored_filename wereldwijd uniek, dus een tweede digest gaf een IntegrityError (500)."""
+    def digest(ws, name):
+        return Document(
+            workspace_id=ws,
+            filename=f"github:owner/{name}@main",
+            stored_filename=None,
+            file_type="md",
+            file_size=1,
+            content_hash="",
+            title=f"owner/{name}",
+            doc_metadata=json.dumps({"github": {"owner": "owner", "repo": name, "branch": "main"}}),
+            indexing_status="pending",
+            source_type="github",
+            source_url=f"https://github.com/owner/{name}/tree/main",
+            repo_path=None,
+        )
+
+    a = client.post("/api/workspaces", json={"name": "A"}).json()["id"]
+    b = client.post("/api/workspaces", json={"name": "B"}).json()["id"]
+    db.add_all([digest(a, "one"), digest(b, "two")])
+    db.commit()  # mag niet meer botsen op documents_stored_filename_key
