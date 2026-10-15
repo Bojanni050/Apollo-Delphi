@@ -12,6 +12,7 @@ from app.core.llm import LLMError, LLMProvider, get_llm_provider
 from app.core.logging import get_logger
 from app.models import Document, DocumentChunk
 from app.services.analysis.claim_extraction import ExtractedClaim, get_claim_extractor
+from app.services.codecheck.progress import codecheck_progress
 from app.services.codecheck.service import (
     MAX_REPOS,
     CodecheckError,
@@ -195,6 +196,7 @@ class CodecheckEngine:
         workspace_id: int | None,
         document_ids: list[int],
         repo_refs: list[dict],
+        run_id: int | None = None,
     ) -> CodecheckResult:
         if not document_ids:
             raise CodecheckError("Kies minstens één document om te toetsen")
@@ -206,12 +208,17 @@ class CodecheckEngine:
             raise CodecheckError(f"Hooguit {MAX_REPOS} repositories per check")
 
         docs = self._load_docs(db, workspace_id, document_ids)
+        codecheck_progress.update(run_id, stage="lezen", documents_total=len(docs))
+        codecheck_progress.event(run_id, "stage", f"Repositories lezen ({len(repo_refs)})")
         code_sections = self._load_code(db, workspace_id, repo_refs)
+        codecheck_progress.event(run_id, "stage", f"Code ingelezen ({len(code_sections)} bestanden); beweringen zoeken")
 
         extractor = get_claim_extractor()
         claims: list[tuple[Document, ExtractedClaim]] = []
         skipped: list[SkippedDocument] = []
-        for doc in docs:
+        for number, doc in enumerate(docs, start=1):
+            codecheck_progress.update(run_id, current_document=doc.filename)
+            codecheck_progress.event(run_id, "document", f"Beweringen zoeken in {doc.filename} ({number} van {len(docs)})")
             text = self._doc_text(db, doc)
             if not text.strip():
                 skipped.append(
@@ -221,10 +228,14 @@ class CodecheckEngine:
                         reason="geen tekst gevonden (document nog niet gelezen?)",
                     )
                 )
+                codecheck_progress.update(run_id, documents_done=number)
                 continue
             # De LLM-extractor beheert zijn eigen event-loop; in async-context via een thread.
+            before = len(claims)
             for claim in await asyncio.to_thread(extractor.extract, text):
                 claims.append((doc, claim))
+            codecheck_progress.update(run_id, documents_done=number)
+            codecheck_progress.event(run_id, "stage", f"{doc.filename}: {len(claims) - before} beweringen")
 
         truncated = len(claims) > MAX_CLAIMS
         claims = claims[:MAX_CLAIMS]
@@ -232,38 +243,41 @@ class CodecheckEngine:
         use_llm = get_settings().llm_provider != "mock"
         llm = self.llm or (get_llm_provider() if use_llm else None)
 
+        codecheck_progress.update(run_id, stage="toetsen", current_document=None)
+        codecheck_progress.event(run_id, "stage", f"Toetsen: {len(claims)} beweringen tegen de code")
+
         checked: list[CheckedClaim] = []
         for doc, claim in claims:
             evidence = find_evidence(claim.statement, claim.value, code_sections)
             if not evidence:
-                checked.append(
-                    CheckedClaim(
-                        document_id=doc.id,
-                        filename=doc.filename,
-                        statement=claim.statement,
-                        quote=claim.quote,
-                        verdict="niet_gevonden",
-                        confidence=0.2,
-                        reasoning=(
-                            "De repositories bevatten geen code"
-                            if not code_sections
-                            else "Geen overlappende code gevonden voor deze bewering"
-                        ),
-                        method="heuristic",
-                        evidence=[],
-                    )
+                result_claim = CheckedClaim(
+                    document_id=doc.id,
+                    filename=doc.filename,
+                    statement=claim.statement,
+                    quote=claim.quote,
+                    verdict="niet_gevonden",
+                    confidence=0.2,
+                    reasoning=(
+                        "De repositories bevatten geen code"
+                        if not code_sections
+                        else "Geen overlappende code gevonden voor deze bewering"
+                    ),
+                    method="heuristic",
+                    evidence=[],
                 )
             elif not use_llm:
                 judged = heuristic_verdict(claim.statement, claim.value, evidence)
-                checked.append(self._checked(doc, claim, judged, evidence, method="heuristic"))
+                result_claim = self._checked(doc, claim, judged, evidence, method="heuristic")
             else:
                 assert llm is not None
-                checked.append(await self._judge(llm, doc, claim, evidence))
+                result_claim = await self._judge(llm, doc, claim, evidence)
+            checked.append(result_claim)
+            codecheck_progress.add_result(run_id, result_claim)
 
         counts = {"bevestigd": 0, "tegengesproken": 0, "niet_gevonden": 0}
         for c in checked:
             counts[c.verdict] += 1
-        return CodecheckResult(
+        result = CodecheckResult(
             repos=sorted({repo for repo, _ in code_sections}),
             checked=checked,
             skipped_documents=skipped,
@@ -275,6 +289,8 @@ class CodecheckEngine:
                 **counts,
             ),
         )
+        codecheck_progress.finish(run_id, result)
+        return result
 
     def _load_docs(self, db: Session, workspace_id: int | None, document_ids: list[int]) -> list[Document]:
         docs: list[Document] = []

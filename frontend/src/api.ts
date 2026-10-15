@@ -622,6 +622,37 @@ export interface CodecheckResult {
   summary: CodecheckSummary
 }
 
+/** Een regel uit de feed van een lopende codecheck: een stap of een gevonden oordeel. */
+export interface CodecheckFeedLine {
+  n: number
+  at: string
+  kind: 'document' | 'claim' | 'stage'
+  text: string
+}
+
+/** Wat een codecheck nu doet, voor het live-paneel tijdens het controleren. */
+export interface CodecheckProgress {
+  run_id: number
+  stage: 'start' | 'lezen' | 'toetsen' | 'klaar' | 'mislukt'
+  finished: boolean
+  documents_total: number
+  documents_done: number
+  current_document: string | null
+  checked: number
+  bevestigd: number
+  tegengesproken: number
+  niet_gevonden: number
+  error: string | null
+  started_at: string
+  /** De tot nu toe getoetste beweringen, live en klikbaar. */
+  results: CheckedClaim[]
+  /** Het volledige resultaat zodra de run klaar is. */
+  result: CodecheckResult | null
+  feed: CodecheckFeedLine[]
+  /** Het nummer van de laatste feedregel: vraag volgende keer wat erna komt. */
+  last: number
+}
+
 export const api = {
   listDocuments: (workspaceId?: number | null) =>
     request<DocumentRecord[]>(`/api/documents${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
@@ -734,6 +765,17 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspace_id: workspaceId ?? null, document_ids, repos }),
     }),
+  /** Start een codecheck op de achtergrond en kom meteen terug; volg hem met `codecheckProgress`. */
+  startCodecheck: (workspaceId: number | null, document_ids: number[], repos: CodecheckRepoRef[]) =>
+    request<{ run_id: number }>('/api/codecheck/run?background=true', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspace_id: workspaceId ?? null, document_ids, repos }),
+    }),
+  codecheckProgress: (runId: number, since = 0) => request<CodecheckProgress>(`/api/codecheck/${runId}/progress?since=${since}`),
+  /** De codecheck die nu in deze werkmap loopt, of null. */
+  runningCodecheck: (workspaceId?: number | null) =>
+    request<CodecheckProgress | null>(`/api/codecheck/running${workspaceId ? `?workspace_id=${workspaceId}` : ''}`),
   listWorkspaces: () => request<Workspace[]>('/api/workspaces'),
   createWorkspace: (name: string, workingDir?: string) =>
     request<Workspace>('/api/workspaces', {

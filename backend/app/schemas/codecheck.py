@@ -16,3 +16,9 @@ class CodecheckRequest(BaseModel):
     document_ids: list[int] = Field(min_length=1, max_length=10)
     #: De code ernaast: hooguit 4 repo's (afgesproken maximum).
     repos: list[RepoRef] = Field(min_length=1, max_length=4)
+
+
+class CodecheckStartOut(BaseModel):
+    """Een op de achtergrond gestarte codecheck: de run_id om de voortgang te volgen."""
+
+    run_id: int
