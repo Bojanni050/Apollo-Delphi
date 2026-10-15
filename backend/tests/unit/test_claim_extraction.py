@@ -1,4 +1,5 @@
 from app.services.analysis.claim_extraction import (
+    ClaimList,
     ExtractedClaim,
     HeuristicClaimExtractor,
     normalize_value,
@@ -37,3 +38,23 @@ def test_normalize_value():
 def test_extracted_claim_model_validation():
     c = ExtractedClaim(statement="s", quote="q", confidence=0.5)
     assert c.qualifiers is None
+
+
+def test_claim_list_accepts_model_variant_key():
+    """The model often returns ``{"claim": "..."}`` instead of statement + quote."""
+    parsed = ClaimList.model_validate({"claims": [{"claim": "Gaia is a life-support system."}]})
+    assert len(parsed.claims) == 1
+    assert parsed.claims[0].statement == "Gaia is a life-support system."
+    assert parsed.claims[0].quote == "Gaia is a life-support system."
+
+
+def test_claim_list_accepts_bare_strings_and_alternative_list_key():
+    parsed = ClaimList.model_validate({"claim": ["one", "two"]})
+    assert [c.statement for c in parsed.claims] == ["one", "two"]
+    assert ClaimList.model_validate([]).claims == []
+
+
+def test_extracted_claim_keeps_explicit_quote():
+    c = ExtractedClaim.model_validate({"text": "The budget is 30k.", "quote": "budget is 30k"})
+    assert c.statement == "The budget is 30k."
+    assert c.quote == "budget is 30k"

@@ -4,7 +4,7 @@ import asyncio
 import re
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from app.core.config import get_settings
 from app.core.llm import LLMError, LLMProvider, get_llm_provider, tier_config
@@ -23,9 +23,51 @@ class ExtractedClaim(BaseModel):
     quote: str = Field(description="The supporting passage in the source text")
     confidence: float = Field(default=0.6)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_model_variants(cls, data):
+        """Accept the shapes models actually return instead of only the exact schema.
+
+        A model often answers with one text field per claim (e.g. ``{"claim": "..."}``)
+        instead of ``statement`` + ``quote``. Without this every window would fail
+        validation and the extractor would silently find nothing. The statement and
+        its quote fall back to the same text; a bare string is a statement too.
+        """
+        if isinstance(data, str):
+            text = data.strip()
+            return {"statement": text, "quote": text} if text else data
+        if isinstance(data, dict):
+            d = dict(data)
+            statement = d.get("statement")
+            if not (isinstance(statement, str) and statement.strip()):
+                for key in ("claim", "text", "content", "fact", "sentence"):
+                    value = d.get(key)
+                    if isinstance(value, str) and value.strip():
+                        statement = value.strip()
+                        break
+            if isinstance(statement, str) and statement.strip():
+                d["statement"] = statement.strip()
+                quote = d.get("quote")
+                if not (isinstance(quote, str) and quote.strip()):
+                    d["quote"] = statement.strip()
+            return d
+        return data
+
 
 class ClaimList(BaseModel):
     claims: list[ExtractedClaim] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_model_variants(cls, data):
+        """Accept a bare list or a differently named list of claims."""
+        if isinstance(data, list):
+            return {"claims": data}
+        if isinstance(data, dict) and "claims" not in data:
+            for key in ("claim", "items", "results", "data", "list"):
+                if isinstance(data.get(key), list):
+                    return {"claims": data[key]}
+        return data
 
 
 class ClaimExtractorBackend(ABC):
