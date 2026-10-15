@@ -114,6 +114,12 @@ export default function GeneratedPage({ workspaceId }: { workspaceId?: number | 
                   <div className="flex gap-2 items-center">
                     <StatusBadge status={selected.status} />
                     <StatusBadge status={selected.verification_status} />
+                    <a
+                      href={api.generatedPdfUrl(selected.id)}
+                      className="px-3.5 py-1.5 rounded-lg text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    >
+                      Download PDF
+                    </a>
                   </div>
                 </div>
                 <div

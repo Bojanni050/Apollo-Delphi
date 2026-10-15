@@ -748,6 +748,10 @@ export const api = {
         .join('&')}`,
     ),
   getVerification: (id: number) => request<VerificationFinding[]>(`/api/documents/generated/${id}/verification`),
+  /** Zet de vindingen van een analyse-run in een rapport en bewaar het in de Generate-geschiedenis. */
+  createAnalysisReport: (runId: number) => request<GeneratedDocument>(`/api/analysis/${runId}/report`, { method: 'POST' }),
+  /** De PDF van een bewaard rapport; open of download deze URL. */
+  generatedPdfUrl: (id: number) => `${API_BASE}/api/documents/generated/${id}/pdf`,
   health: () => request<Record<string, string>>('/api/health'),
   ingestGithub: (repoUrl: string, workspaceId?: number | null) =>
     request<{ repository: string; branch: string; files_selected: number; documents_created: number; errors: string[] }>(

@@ -27,6 +27,7 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
   // Analyse everything, or only the documents of the chosen groups (one, two, more): conflicts are then looked for among those
   const [choices, setChoices] = useState<GroupChoice[]>([])
   const [selected, setSelected] = useState<string[]>([])
+  const [reportBusy, setReportBusy] = useState(false)
 
   const loadIssues = async () => {
     const allIssues = await api.listIssues(undefined, workspaceId)
@@ -140,6 +141,26 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId])
 
+  const downloadReport = async () => {
+    if (!run) return
+    setError(null)
+    setReportBusy(true)
+    try {
+      const report = await api.createAnalysisReport(run.id)
+      const url = api.generatedPdfUrl(report.id)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setReportBusy(false)
+    }
+  }
+
   const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((g) => g !== id) : [...cur, id]))
   const chosenDocs = selected.length === 0 ? null : choices.filter((c) => selected.includes(c.id)).reduce((n, c) => n + c.count, 0)
 
@@ -218,6 +239,14 @@ export default function AnalysisPage({ workspaceId }: { workspaceId?: number | n
               <div className="text-2xl font-semibold">{run.stats.contradictions}</div>
               <div className="text-xs text-slate-500">contradictions</div>
             </div>
+          </div>
+        )}
+        {run && (
+          <div className="mt-3 flex items-center gap-3">
+            <Button variant="secondary" onClick={() => void downloadReport()} disabled={reportBusy}>
+              {reportBusy ? 'Rapport maken…' : 'Rapport (PDF) downloaden'}
+            </Button>
+            <span className="text-xs text-slate-500">Zet de vindingen van deze analyse in een rapport en bewaar het bij Gegenereerd.</span>
           </div>
         )}
         {!run && <p className="text-sm text-slate-400">No analysis yet. Index documents, then run an analysis.</p>}

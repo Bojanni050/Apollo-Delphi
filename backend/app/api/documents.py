@@ -268,3 +268,24 @@ def get_verification(generated_id: int, db: Session = Depends(get_session)):
     if doc is None:
         raise HTTPException(status_code=404, detail="Generated document not found")
     return doc.verification_findings
+
+
+@router.get("/generated/{generated_id}/pdf")
+def get_generated_pdf(generated_id: int, db: Session = Depends(get_session)):
+    """Het bewaarde rapport als PDF, om te bewaren of te printen."""
+    from app.models import GeneratedDocument
+    from app.services.reports.service import render_pdf
+
+    doc = db.get(GeneratedDocument, generated_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Generated document not found")
+    pdf = render_pdf(doc.content or "", doc.title or f"document-{doc.id}")
+    name = f"{doc.title or 'document-' + str(doc.id)}.pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

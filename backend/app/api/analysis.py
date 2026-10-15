@@ -9,11 +9,13 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_session
 from app.models import AnalysisRun, Claim, Issue
 from app.schemas.common import AnalysisProgressOut, AnalysisRunOut, AnalysisStats
+from app.schemas.generated import GeneratedDocumentOut
 from app.schemas.issues import ClaimOut, IssueOut
 from app.core.logging import get_logger
 from app.db.session import SessionLocal
 from app.services.analysis.progress import analysis_progress
 from app.services.analysis.service import AnalysisService
+from app.services.reports.service import ReportError, build_and_store_report
 
 log = get_logger(__name__)
 
@@ -130,3 +132,12 @@ def list_claims(analysis_run_id: int, db: Session = Depends(get_session)):
 @router.get("/{analysis_run_id}/issues", response_model=list[IssueOut])
 def list_analysis_issues(analysis_run_id: int, db: Session = Depends(get_session)):
     return db.query(Issue).filter(Issue.analysis_run_id == analysis_run_id).all()
+
+
+@router.post("/{analysis_run_id}/report", response_model=GeneratedDocumentOut, status_code=201)
+def create_analysis_report(analysis_run_id: int, db: Session = Depends(get_session)):
+    """Zet de vindingen van deze run in een rapport (markdown) en bewaar het in de Generate-geschiedenis."""
+    try:
+        return build_and_store_report(db, analysis_run_id)
+    except ReportError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
